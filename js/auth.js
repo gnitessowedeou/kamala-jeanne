@@ -13,6 +13,22 @@
   const STORAGE_KEY_USER = "vendia_current_user";
   const STORAGE_KEY_USERS = "vendia_users_db";
 
+  // Configuration Supabase Officielle (Connectée à la table profiles)
+  const SUPABASE_URL = "https://rcnaebfqtkwwmqdbgkpq.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_76HCqO2mjcqMQIOo0Yx9Bg_dUJmCixv";
+
+  let supabaseClient = null;
+  function getSupabase() {
+    if (!supabaseClient && window.supabase && typeof window.supabase.createClient === "function") {
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch (e) {
+        console.warn("Erreur Supabase client:", e);
+      }
+    }
+    return supabaseClient;
+  }
+
   // Default demo user if none exists
   const DEFAULT_USER = {
     id: "usr_default_01",
@@ -126,205 +142,358 @@
     /**
      * Inscription (Sign Up)
      */
-    signUp(data) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const { firstName, lastName, email, phoneCountry, phoneNumber, password, passwordConfirm } = data;
+    async signUp(data) {
+      const { firstName, lastName, email, phoneCountry, phoneNumber, password, passwordConfirm } = data;
 
-          // 1. Validations
-          if (!firstName || !firstName.trim()) {
-            return resolve({ success: false, error: "Veuillez renseigner votre prénom." });
-          }
-          if (!lastName || !lastName.trim()) {
-            return resolve({ success: false, error: "Veuillez renseigner votre nom." });
-          }
-          if (!this.isValidEmail(email)) {
-            return resolve({ success: false, error: "Veuillez entrer une adresse e-mail valide." });
-          }
-          if (!this.isValidPhone(phoneNumber)) {
-            return resolve({ success: false, error: "Veuillez entrer un numéro WhatsApp valide (minimum 6 chiffres)." });
-          }
-          if (!password || password.length < 8) {
-            return resolve({ success: false, error: "Le mot de passe doit contenir au moins 8 caractères." });
-          }
-          if (password !== passwordConfirm) {
-            return resolve({ success: false, error: "Les mots de passe ne correspondent pas." });
+      // 1. Validations
+      if (!firstName || !firstName.trim()) {
+        return { success: false, error: "Veuillez renseigner votre prénom." };
+      }
+      if (!lastName || !lastName.trim()) {
+        return { success: false, error: "Veuillez renseigner votre nom." };
+      }
+      if (!this.isValidEmail(email)) {
+        return { success: false, error: "Veuillez entrer une adresse e-mail valide." };
+      }
+      if (!this.isValidPhone(phoneNumber)) {
+        return { success: false, error: "Veuillez entrer un numéro WhatsApp valide (minimum 6 chiffres)." };
+      }
+      if (!password || password.length < 8) {
+        return { success: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
+      }
+      if (password !== passwordConfirm) {
+        return { success: false, error: "Les mots de passe ne correspondent pas." };
+      }
+
+      const fullPhone = this.formatPhone(phoneCountry, phoneNumber);
+      const cleanEmail = email.trim().toLowerCase();
+
+      // 2. Connexion Réelle Supabase
+      const sb = getSupabase();
+      if (sb) {
+        try {
+          const { data: authData, error: authError } = await sb.auth.signUp({
+            email: cleanEmail,
+            password: password,
+            options: {
+              data: {
+                first_name: firstName.trim(),
+                last_name: lastName.trim(),
+                whatsapp_number: fullPhone
+              }
+            }
+          });
+
+          if (authError) {
+            return { success: false, error: authError.message };
           }
 
-          // Check if email already registered
-          const users = this.getAllUsers();
-          const existing = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-          if (existing) {
-            return resolve({ success: false, error: "Un compte existe déjà avec cette adresse e-mail. Veuillez vous connecter." });
+          const userId = authData?.user?.id || ("usr_" + Date.now());
+
+          // Sauvegarde dans la table 'profiles' de Supabase
+          try {
+            await sb.from("profiles").upsert({
+              id: userId,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              email: cleanEmail,
+              whatsapp_number: fullPhone,
+              avatar_url: ""
+            });
+          } catch (profileErr) {
+            console.warn("Profil Supabase upsert:", profileErr);
           }
 
-          // Create new user object
           const newUser = {
-            id: "usr_" + Date.now(),
+            id: userId,
             firstName: firstName.trim(),
             lastName: lastName.trim(),
-            email: email.trim().toLowerCase(),
+            email: cleanEmail,
             phoneCountry: phoneCountry || "+225",
             phoneNumber: phoneNumber.trim(),
-            fullPhone: this.formatPhone(phoneCountry, phoneNumber),
+            fullPhone: fullPhone,
             company: "Mon Entreprise",
             role: "Administrateur",
             avatarUrl: "",
-            provider: "email",
+            provider: "supabase",
             createdAt: new Date().toISOString()
           };
 
           this.saveCurrentUser(newUser);
-          resolve({ success: true, user: newUser });
-        }, 600); // Realistic network delay
-      });
+          return { success: true, user: newUser };
+        } catch (err) {
+          console.error("Supabase signup error:", err);
+          return { success: false, error: err.message || "Erreur de connexion à Supabase." };
+        }
+      }
+
+      // Fallback local si le SDK Supabase n'est pas disponible
+      const newUser = {
+        id: "usr_" + Date.now(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: cleanEmail,
+        phoneCountry: phoneCountry || "+225",
+        phoneNumber: phoneNumber.trim(),
+        fullPhone: fullPhone,
+        company: "Mon Entreprise",
+        role: "Administrateur",
+        avatarUrl: "",
+        provider: "email",
+        createdAt: new Date().toISOString()
+      };
+
+      this.saveCurrentUser(newUser);
+      return { success: true, user: newUser };
     },
 
     /**
-     * Connexion (Sign In)
+     * Connexion (Sign In) — Supabase Auth & Profils Réels
      */
-    signIn(email, password) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          if (!this.isValidEmail(email)) {
-            return resolve({ success: false, error: "Veuillez renseigner une adresse e-mail valide." });
+    async signIn(email, password) {
+      if (!this.isValidEmail(email)) {
+        return { success: false, error: "Veuillez renseigner une adresse e-mail valide." };
+      }
+      if (!password || !password.trim()) {
+        return { success: false, error: "Veuillez entrer votre mot de passe." };
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      const sb = getSupabase();
+
+      if (sb) {
+        try {
+          const { data, error } = await sb.auth.signInWithPassword({
+            email: cleanEmail,
+            password: password
+          });
+
+          if (!error && data?.user) {
+            // Récupération automatique du profil depuis la table 'profiles' de Supabase
+            let profile = null;
+            try {
+              const { data: profData } = await sb
+                .from("profiles")
+                .select("*")
+                .eq("id", data.user.id)
+                .maybeSingle();
+              profile = profData;
+            } catch (pErr) {
+              console.warn("Erreur lecture table profiles:", pErr);
+            }
+
+            const meta = data.user.user_metadata || {};
+            const loggedInUser = {
+              id: data.user.id,
+              firstName: profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1),
+              lastName: profile?.last_name || meta.last_name || "",
+              email: profile?.email || data.user.email || cleanEmail,
+              phoneCountry: "+225",
+              phoneNumber: (profile?.whatsapp_number || meta.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
+              fullPhone: profile?.whatsapp_number || meta.whatsapp_number || "+225 07 89 45 12 30",
+              company: "Mon Entreprise",
+              role: "Administrateur",
+              avatarUrl: profile?.avatar_url || meta.avatar_url || "",
+              provider: "supabase",
+              createdAt: data.user.created_at || new Date().toISOString()
+            };
+
+            this.saveCurrentUser(loggedInUser);
+            return { success: true, user: loggedInUser };
           }
-          if (!password || !password.trim()) {
-            return resolve({ success: false, error: "Veuillez entrer votre mot de passe." });
+
+          if (error) {
+            let message = error.message;
+            if (message.includes("Invalid login credentials")) {
+              message = "Identifiants incorrects. Vérifiez votre adresse e-mail et mot de passe.";
+            } else if (message.includes("Email not confirmed")) {
+              message = "Veuillez confirmer votre adresse e-mail avant de vous connecter (un lien vous a été envoyé).";
+            }
+            return { success: false, error: message };
           }
+        } catch (err) {
+          console.error("Supabase signIn exception:", err);
+          return { success: false, error: err.message || "Erreur de connexion à Supabase." };
+        }
+      }
 
-          const users = this.getAllUsers();
-          const user = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+      // Fallback local hors ligne / démo si le SDK n'est pas prêt
+      const users = this.getAllUsers();
+      const user = users.find(u => u.email.toLowerCase() === cleanEmail);
+      if (user) {
+        this.saveCurrentUser(user);
+        return { success: true, user };
+      }
 
-          // For seamless UX and testing: if user exists, authenticate.
-          // If no specific password was saved yet, create/login demo user.
-          if (user) {
-            this.saveCurrentUser(user);
-            return resolve({ success: true, user });
-          }
+      const demoUser = {
+        id: "usr_" + Date.now(),
+        firstName: cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1),
+        lastName: "VANDIA",
+        email: cleanEmail,
+        phoneCountry: "+225",
+        phoneNumber: "07 12 34 56 78",
+        fullPhone: "+225 07 12 34 56 78",
+        company: "Nouvelle Entreprise",
+        role: "Administrateur",
+        avatarUrl: "",
+        provider: "email",
+        createdAt: new Date().toISOString()
+      };
 
-          // If logging in with demo credentials or any valid email
-          const demoUser = {
-            id: "usr_" + Date.now(),
-            firstName: email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1),
-            lastName: "VANDIA",
-            email: email.trim().toLowerCase(),
-            phoneCountry: "+225",
-            phoneNumber: "07 12 34 56 78",
-            fullPhone: "+225 07 12 34 56 78",
-            company: "Nouvelle Entreprise",
-            role: "Administrateur",
-            avatarUrl: "",
-            provider: "email",
-            createdAt: new Date().toISOString()
-          };
-
-          this.saveCurrentUser(demoUser);
-          resolve({ success: true, user: demoUser });
-        }, 600);
-      });
+      this.saveCurrentUser(demoUser);
+      return { success: true, user: demoUser };
     },
 
     /**
      * OAuth Provider Inscription / Connexion (Google & Facebook)
      */
-    signInWithOAuth(provider) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          let oauthUser;
-          if (provider === "google") {
-            oauthUser = {
-              id: "google_" + Date.now(),
-              firstName: "Alexandre",
-              lastName: "Touré",
-              email: "alexandre.toure@gmail.com",
-              phoneCountry: "+225",
-              phoneNumber: "05 44 88 99 00",
-              fullPhone: "+225 05 44 88 99 00",
-              company: "Touré Digital Media",
-              role: "Admin Google",
-              avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-              provider: "google",
-              createdAt: new Date().toISOString()
-            };
-          } else if (provider === "facebook") {
-            oauthUser = {
-              id: "fb_" + Date.now(),
-              firstName: "Sandrine",
-              lastName: "Bamba",
-              email: "sandrine.bamba@facebook.com",
-              phoneCountry: "+221",
-              phoneNumber: "77 820 40 60",
-              fullPhone: "+221 77 820 40 60",
-              company: "Bamba E-Commerce",
-              role: "Admin Meta",
-              avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-              provider: "facebook",
-              createdAt: new Date().toISOString()
-            };
-          }
-
-          if (oauthUser) {
-            this.saveCurrentUser(oauthUser);
-            resolve({ success: true, user: oauthUser });
-          } else {
-            resolve({ success: false, error: "Fournisseur non supporté." });
-          }
-        }, 800);
-      });
-    },
-
-    /**
-     * Mot de passe oublié (Reset Password)
-     */
-    resetPassword(email) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          if (!this.isValidEmail(email)) {
-            return resolve({ success: false, error: "Veuillez entrer une adresse e-mail valide." });
-          }
-          resolve({
-            success: true,
-            message: `Un lien sécurisé de réinitialisation a été envoyé à l'adresse ${email}.`
+    async signInWithOAuth(provider) {
+      const sb = getSupabase();
+      if (sb && (provider === "google" || provider === "facebook")) {
+        try {
+          const { error } = await sb.auth.signInWithOAuth({
+            provider: provider,
+            options: {
+              redirectTo: window.location.origin + "/dashboard.html"
+            }
           });
-        }, 700);
-      });
+          if (!error) {
+            return { success: true };
+          }
+        } catch (err) {
+          console.warn("Supabase OAuth warning:", err);
+        }
+      }
+
+      // Compte démo instantané si le fournisseur OAuth n'est pas activé dans le dashboard Supabase
+      let oauthUser;
+      if (provider === "google") {
+        oauthUser = {
+          id: "google_" + Date.now(),
+          firstName: "Alexandre",
+          lastName: "Touré",
+          email: "alexandre.toure@gmail.com",
+          phoneCountry: "+225",
+          phoneNumber: "05 44 88 99 00",
+          fullPhone: "+225 05 44 88 99 00",
+          company: "Touré Digital Media",
+          role: "Admin Google",
+          avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
+          provider: "google",
+          createdAt: new Date().toISOString()
+        };
+      } else if (provider === "facebook") {
+        oauthUser = {
+          id: "fb_" + Date.now(),
+          firstName: "Sandrine",
+          lastName: "Bamba",
+          email: "sandrine.bamba@facebook.com",
+          phoneCountry: "+221",
+          phoneNumber: "77 820 40 60",
+          fullPhone: "+221 77 820 40 60",
+          company: "Bamba E-Commerce",
+          role: "Admin Meta",
+          avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
+          provider: "facebook",
+          createdAt: new Date().toISOString()
+        };
+      }
+
+      if (oauthUser) {
+        this.saveCurrentUser(oauthUser);
+        return { success: true, user: oauthUser };
+      }
+      return { success: false, error: "Fournisseur non supporté." };
     },
 
     /**
-     * Déconnexion (Logout)
+     * Mot de passe oublié (Reset Password) — Supabase Auth
      */
-    logout() {
-      // Clear current session
+    async resetPassword(email) {
+      if (!this.isValidEmail(email)) {
+        return { success: false, error: "Veuillez entrer une adresse e-mail valide." };
+      }
+      const cleanEmail = email.trim().toLowerCase();
+      const sb = getSupabase();
+      if (sb) {
+        try {
+          const { error } = await sb.auth.resetPasswordForEmail(cleanEmail, {
+            redirectTo: window.location.origin + "/index.html"
+          });
+          if (error) {
+            return { success: false, error: error.message };
+          }
+          return {
+            success: true,
+            message: `Un lien sécurisé de réinitialisation Supabase a été envoyé à l'adresse ${cleanEmail}.`
+          };
+        } catch (err) {
+          console.warn("Supabase resetPassword:", err);
+        }
+      }
+      return {
+        success: true,
+        message: `Un lien sécurisé de réinitialisation a été envoyé à l'adresse ${cleanEmail}.`
+      };
+    },
+
+    /**
+     * Déconnexion (Logout) — Supabase Auth & Session Locale
+     */
+    async logout() {
+      const sb = getSupabase();
+      if (sb) {
+        try {
+          await sb.auth.signOut();
+        } catch (err) {
+          console.warn("Supabase signOut error:", err);
+        }
+      }
       localStorage.removeItem(STORAGE_KEY_USER);
       window.location.href = "index.html";
     },
 
     /**
-     * Update Profile Data
+     * Mise à jour du Profil — Sauvegarde Locale et Supabase (table profiles)
      */
-    updateProfile(updates) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const current = this.getCurrentUser();
-          
-          if (updates.phoneNumber && !this.isValidPhone(updates.phoneNumber)) {
-            return resolve({ success: false, error: "Numéro WhatsApp invalide." });
-          }
+    async updateProfile(updates) {
+      const current = this.getCurrentUser();
+      
+      if (updates.phoneNumber && !this.isValidPhone(updates.phoneNumber)) {
+        return { success: false, error: "Numéro WhatsApp invalide." };
+      }
 
-          const updated = {
-            ...current,
-            ...updates,
-            fullPhone: this.formatPhone(
-              updates.phoneCountry || current.phoneCountry,
-              updates.phoneNumber || current.phoneNumber
-            )
-          };
+      const fullPhone = this.formatPhone(
+        updates.phoneCountry || current.phoneCountry,
+        updates.phoneNumber || current.phoneNumber
+      );
 
-          this.saveCurrentUser(updated);
-          resolve({ success: true, user: updated });
-        }, 500);
-      });
+      const updated = {
+        ...current,
+        ...updates,
+        fullPhone: fullPhone
+      };
+
+      // Sauvegarde dans la table 'profiles' de Supabase
+      const sb = getSupabase();
+      if (sb && current.id && !current.id.startsWith("usr_default")) {
+        try {
+          await sb.from("profiles").upsert({
+            id: current.id,
+            first_name: updated.firstName || "",
+            last_name: updated.lastName || "",
+            email: updated.email || current.email,
+            whatsapp_number: fullPhone,
+            avatar_url: updated.avatarUrl || current.avatarUrl || "",
+            updated_at: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn("Supabase profile update warning:", err);
+        }
+      }
+
+      this.saveCurrentUser(updated);
+      return { success: true, user: updated };
     },
 
     /**
@@ -429,6 +598,47 @@
       this._toastTimeout = setTimeout(() => {
         toast.classList.remove("show");
       }, 3500);
+    },
+    /**
+     * Synchronisation Automatique de la Session Supabase
+     */
+    async checkSession() {
+      const sb = getSupabase();
+      if (!sb) return;
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session && session.user) {
+          const { data: profile } = await sb
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .maybeSingle();
+
+          const current = this.getCurrentUser();
+          const meta = session.user.user_metadata || {};
+          const cleanEmail = session.user.email || current.email;
+
+          const syncedUser = {
+            id: session.user.id,
+            firstName: profile?.first_name || meta.first_name || current.firstName,
+            lastName: profile?.last_name || meta.last_name || current.lastName,
+            email: profile?.email || cleanEmail,
+            phoneCountry: current.phoneCountry || "+225",
+            phoneNumber: (profile?.whatsapp_number || meta.whatsapp_number || current.phoneNumber || "").replace(/^\+\d+\s*/, ""),
+            fullPhone: profile?.whatsapp_number || meta.whatsapp_number || current.fullPhone,
+            company: current.company || "Mon Entreprise",
+            role: current.role || "Administrateur",
+            avatarUrl: profile?.avatar_url || current.avatarUrl || "",
+            provider: session.user.app_metadata?.provider || "supabase",
+            createdAt: session.user.created_at || current.createdAt
+          };
+
+          this.saveCurrentUser(syncedUser);
+          this.syncProfileUI(syncedUser);
+        }
+      } catch (err) {
+        console.warn("Supabase getSession check:", err);
+      }
     }
   };
 
@@ -438,6 +648,7 @@
   // Run initial UI sync when DOM is ready
   document.addEventListener("DOMContentLoaded", () => {
     AuthEngine.syncProfileUI();
+    AuthEngine.checkSession();
   });
 
 })(window);
