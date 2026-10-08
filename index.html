@@ -27,20 +27,90 @@
     <div class="ambient-blob blob-3"></div>
   </div>
 
-  <!-- Mobile Drawer Menu -->
+  <!-- Mobile Drawer Menu (Ultra-Clean & Structured) -->
   <div class="mobile-drawer" id="mobile-drawer">
-    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Fermer le menu">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-    <a href="#hero" class="nav-link mobile-link">Accueil</a>
-    <a href="#features" class="nav-link mobile-link">Fonctionnalités</a>
-    <a href="#demo" class="nav-link mobile-link demo-nav-trigger">Démo Live</a>
-    <a href="#pricing" class="nav-link mobile-link">Tarifs</a>
-    <a href="#integrations" class="nav-link mobile-link">Intégrations</a>
-    <a href="#faq" class="nav-link mobile-link">FAQ</a>
-    <div style="display: flex; flex-direction: column; gap: 12px; width: 80%; max-width: 280px; margin-top: 20px;">
-      <a href="#pricing" class="btn-primary-pill" style="padding: 12px 24px; font-size: 14px;">Accès Instantané</a>
-      <a href="dashboard.html" class="btn-glass-pill" style="padding: 12px 24px; font-size: 14px;">Connexion</a>
+    <div class="mobile-drawer-header">
+      <a href="#hero" class="nav-brand mobile-link">
+        <div class="brand-icon-box">
+          <svg viewBox="0 0 24 24">
+            <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.78 14.07c-.24.68-1.39 1.33-1.93 1.37-.5.04-1.12.06-3.64-.98-2.6-1.07-4.25-3.73-4.38-3.9-.13-.18-1.06-1.41-1.06-2.69 0-1.28.67-1.91.91-2.17.24-.26.52-.33.7-.33.17 0 .35.01.5.02.16.01.38-.06.59.45.22.52.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.26.44-.13.15-.28.34-.4.46-.13.13-.27.28-.11.55.15.26.68 1.12 1.46 1.81 1.01.89 1.86 1.17 2.12 1.3.26.13.42.11.57-.07.15-.17.65-.76.82-1.02.17-.26.35-.22.59-.13.24.09 1.52.72 1.78.85.26.13.43.2.5.31.06.11.06.66-.18 1.34z"/>
+          </svg>
+        </div>
+        <span class="brand-name">VANDIA</span>
+        <span class="brand-badge">IA</span>
+      </a>
+      <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Fermer le menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Navigation List (Aligned Left with Icons & Chevrons) -->
+    <div class="mobile-drawer-nav">
+      <a href="#hero" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-house"></i></span>
+          <span class="mobile-item-label">Accueil</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="#features" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="mobile-item-label">Fonctionnalités</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="#demo" class="mobile-nav-item mobile-link demo-nav-trigger">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-play"></i></span>
+          <span class="mobile-item-label">Démo Live</span>
+        </div>
+        <span class="mobile-badge-live">Live</span>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="#pricing" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-tags"></i></span>
+          <span class="mobile-item-label">Tarifs & Offres</span>
+        </div>
+        <span class="mobile-badge-discount">-50%</span>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="#integrations" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-network-wired"></i></span>
+          <span class="mobile-item-label">Intégrations</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="#faq" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-circle-question"></i></span>
+          <span class="mobile-item-label">FAQ</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+    </div>
+
+    <!-- Actions Section at bottom -->
+    <div class="mobile-drawer-footer">
+      <a href="#pricing" class="btn-primary-pill mobile-drawer-btn mobile-link">
+        <span class="btn-icon-box"><i class="fa-solid fa-bolt"></i></span>
+        <span class="btn-text-main">Accès Instantané</span>
+        <span class="btn-badge-chip">-50%</span>
+      </a>
+      <a href="dashboard.html" class="btn-glass-pill mobile-drawer-btn mobile-link">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        <span>Connexion / Dashboard</span>
+      </a>
+      <div class="mobile-drawer-meta">
+        <span class="meta-dot"></span> WhatsApp Business API • Coexistence Active
+      </div>
     </div>
   </div>
 
