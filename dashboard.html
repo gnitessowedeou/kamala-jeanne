@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VANDIA AI — Tableau de Bord CRM WhatsApp & Agent IA</title>
+  <meta name="description" content="Tableau de bord VANDIA AI : CRM WhatsApp nouvelle génération piloté par agent IA avec coexistence Meta Cloud API et paiements mobiles.">
+
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+
+  <!-- Glowing Ambient Blobs in Background -->
+  <div class="bg-ambient-blobs" aria-hidden="true">
+    <div class="blob blob-green"></div>
+    <div class="blob blob-purple"></div>
+    <div class="blob blob-cyan"></div>
+  </div>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- Main App Layout -->
+  <div class="app-layout">
+
+    <!-- ======================================================================
+         SIDEBAR (285px Desktop / Off-Canvas Mobile)
+         ====================================================================== -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Logo Header -->
+      <div class="sidebar-logo-container">
+        <a href="#overview" class="logo-brand" id="brand-logo-btn">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.78 14.07c-.24.68-1.39 1.33-1.93 1.37-.5.04-1.12.06-3.64-.98-2.6-1.07-4.25-3.73-4.38-3.9-.13-.18-1.06-1.41-1.06-2.69 0-1.28.67-1.91.91-2.17.24-.26.52-.33.7-.33.17 0 .35.01.5.02.16.01.38-.06.59.45.22.52.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.26.44-.13.15-.28.34-.4.46-.13.13-.27.28-.11.55.15.26.68 1.12 1.46 1.81 1.01.89 1.86 1.17 2.12 1.3.26.13.42.11.57-.07.15-.17.65-.76.82-1.02.17-.26.35-.22.59-.13.24.09 1.52.72 1.78.85.26.13.43.2.5.31.06.11.06.66-.18 1.34z"/>
+            </svg>
+          </div>
+          <span class="logo-text">VANDIA</span>
+          <span class="logo-badge">IA</span>
+        </a>
+        <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Fermer le menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="sidebar-nav-container">
+        <!-- Section: PRINCIPAL -->
+        <div class="nav-section-group">
+          <div class="nav-section-title">PRINCIPAL</div>
+          <ul class="nav-list">
+            <li>
+              <a href="#overview" class="nav-item-link active" data-view="overview" data-title="Tableau de Bord VANDIA IA">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-chart-line nav-item-icon"></i>
+                  <span>Vue d'ensemble</span>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="#inbox" class="nav-item-link" data-view="inbox" data-title="Boîte de Réception WhatsApp">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-inbox nav-item-icon"></i>
+                  <span>Boîte de Réception</span>
+                </div>
+                <span class="badge badge-green">1</span>
+              </a>
+            </li>
+            <li>
+              <a href="#ai-agent" class="nav-item-link" data-view="ai-agent" data-title="Agent IA Vendeur & Paramétrage">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-robot nav-item-icon"></i>
+                  <span>Agent IA Vendeur</span>
+                </div>
+                <span class="badge badge-green">24/7</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Section: VENTE & AUTOMATISATION -->
+        <div class="nav-section-group">
+          <div class="nav-section-title">VENTE & AUTOMATISATION</div>
+          <ul class="nav-list">
+            <li>
+              <a href="#broadcast" class="nav-item-link" data-view="broadcast" data-title="Diffusions WhatsApp de Masse">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-bullhorn nav-item-icon"></i>
+                  <span>Diffusions de ...</span>
+                </div>
+                <span class="badge badge-amber">Anti-ban</span>
+              </a>
+            </li>
+            <li>
+              <a href="#automations" class="nav-item-link" data-view="automations" data-title="Flow Builder & Tunnels de Vente">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-diagram-project nav-item-icon"></i>
+                  <span>Flow Builder (Funnels)</span>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="#contacts" class="nav-item-link" data-view="contacts" data-title="Contacts WhatsApp & CRM">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-users nav-item-icon"></i>
+                  <span>Contacts & CRM</span>
+                </div>
+                <span class="badge badge-subtle">5 280</span>
+              </a>
+            </li>
+            <li>
+              <a href="#templates" class="nav-item-link" data-view="templates" data-title="Modèles WhatsApp Approuvés par Meta">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-file-lines nav-item-icon"></i>
+                  <span>Modèles WhatsApp</span>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Section: SYSTÈME & CONFIGURATION -->
+        <div class="nav-section-group">
+          <div class="nav-section-title">SYSTÈME & CONFIGURATION</div>
+          <ul class="nav-list">
+            <li>
+              <a href="#devices" class="nav-item-link" data-view="devices" data-title="Numéros & Coexistence WhatsApp">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-mobile-screen-button nav-item-icon"></i>
+                  <span>Numéros & Coexist...</span>
+                </div>
+                <span class="badge badge-green">1 lié</span>
+              </a>
+            </li>
+            <li>
+              <a href="#integrations" class="nav-item-link" data-view="integrations" data-title="Intégrations & Moyens de Paiement">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-plug-circle-bolt nav-item-icon"></i>
+                  <span>Intégrations & Paiements</span>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="#analytics" class="nav-item-link" data-view="analytics" data-title="Statistiques Avancées & ROI Commercial">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-chart-pie nav-item-icon"></i>
+                  <span>Statistiques & ROI</span>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="#settings" class="nav-item-link" data-view="settings" data-title="Paramètres Généraux & Équipe">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-gear nav-item-icon"></i>
+                  <span>Paramètres & Équipe</span>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer (Abonnement + Profil) -->
+      <div class="sidebar-footer">
+        <!-- Carte Formule -->
+        <div class="sub-card">
+          <div class="sub-header">
+            <span class="sub-plan-title">Formule Basic 🦾</span>
+            <span class="badge badge-green">-50% À VIE</span>
+          </div>
+          <div class="sub-progress-info">
+            <span>Jetons IA utilisés</span>
+            <span id="sub-token-pct">14.2%</span>
+          </div>
+          <div class="sub-progress-bar">
+            <div class="sub-progress-fill" id="sub-token-fill" style="width: 14.2%;"></div>
+          </div>
+          <div class="sub-limits">
+            <span id="sub-tokens-used">14 200 jetons</span>
+            <span>Max 100k</span>
+          </div>
+        </div>
+
+        <!-- Profil Utilisateur -->
+        <div class="user-profile-row">
+          <div class="user-meta" id="user-profile-card" style="cursor: pointer;" title="Cliquer pour modifier votre profil">
+            <div class="user-avatar" id="user-avatar-badge">G</div>
+            <div class="user-details">
+              <span class="user-name" id="user-display-name">gnitou</span>
+              <span class="user-role" id="user-display-role">Admin Entreprise</span>
+            </div>
+          </div>
+          <button class="btn-logout" id="btn-logout" aria-label="Se déconnecter" title="Déconnexion">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ======================================================================
+         MAIN WRAPPER (Header + Scrollable Views Area)
+         ====================================================================== -->
+    <div class="main-wrapper">
+      
+      <!-- Sticky Top Header (72px) -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Ouvrir le menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-title-wrapper">
+            <i class="fa-solid fa-chart-line header-brand-icon" id="header-brand-icon"></i>
+            <h1 class="header-title" id="page-title">Tableau de Bord VANDIA IA</h1>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Search Button -->
+          <button class="header-search-btn" id="header-search-btn" aria-label="Rechercher">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span>Rechercher...</span>
+            <kbd class="header-search-shortcut">⌘K</kbd>
+          </button>
+
+          <!-- Connected Status Pill -->
+          <div class="status-connected-pill">
+            <span class="status-dot-pulse"></span>
+            <span id="header-connected-num">+226 05158494 (Coexistence Active)</span>
+          </div>
+
+          <!-- Currency Switcher Toggle -->
+          <div class="currency-switcher" id="currency-switcher">
+            <button class="currency-btn" data-currency="USD">USD ($)</button>
+            <button class="currency-btn active" data-currency="XOF">XOF (FCFA)</button>
+          </div>
+
+          <!-- Notification Bell -->
+          <button class="header-icon-btn" id="btn-notifications" aria-label="Notifications" title="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-badge-dot"></span>
+          </button>
+
+          <!-- Site Public / Aide Button -->
+          <a href="index.html" class="header-link-btn" id="btn-help-doc" title="Site Public VANDIA AI">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Site Public</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Scrollable Main Content -->
+      <main class="main-body-content">
+
+        <!-- ==================================================================
+             VIEW 1: VUE D'ENSEMBLE (#overview)
+             ================================================================== -->
+        <section class="view-section active" id="view-overview">
+          
+          <!-- Welcome Banner -->
+          <div class="overview-banner">
+            <div class="banner-left">
+              <h2 class="banner-title">
+                <span>Bienvenue sur votre espace VANDIA IA, <span class="welcome-name">gnitou</span></span>
+                <span>👋</span>
+              </h2>
+              <p class="banner-subtitle">
+                Votre commercial IA est actif en continu. Vos tunnels de vente WhatsApp et relances automatiques génèrent des commandes même pendant vos heures de fermeture.
+              </p>
+              <div class="banner-badges-row">
+                <div class="banner-pill">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <span>Protocole Meta Cloud API Certifié</span>
+                </div>
+                <div class="banner-pill">
+                  <i class="fa-solid fa-bolt"></i>
+                  <span>Réponse Instantanée &lt; 1s</span>
+                </div>
+                <div class="banner-pill">
+                  <i class="fa-solid fa-money-bill-wave"></i>
+                  <span>Passerelles Wave &amp; Mobile Money Actives</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="banner-actions">
+              <button class="btn-primary-glow btn-open-broadcast">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Créer une Diffusion</span>
+              </button>
+              <button class="btn-secondary-glass" id="btn-banner-agent">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Ajuster l'Agent IA</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 KPI Cards Grid -->
+          <div class="kpi-grid">
+            <!-- KPI 1: Revenus -->
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Revenus WhatsApp Encaissés</span>
+                <div class="kpi-icon-box kpi-icon-green">
+                  <i class="fa-solid fa-dollar-sign"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-row">
+                  <span class="kpi-value kpi-val-currency" data-usd="8420" data-xof="5180000">5 180 000 XOF</span>
+                  <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> +34.5%</span>
+                </div>
+                <p class="kpi-note">dont 68% collectés via Wave &amp; Orange Money</p>
+              </div>
+            </div>
+
+            <!-- KPI 2: Conversations Traitées -->
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Conversations Traitées</span>
+                <div class="kpi-icon-box kpi-icon-purple">
+                  <i class="fa-solid fa-comments"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-row">
+                  <span class="kpi-value">1,248</span>
+                  <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> +18.2%</span>
+                </div>
+                <p class="kpi-note">98.4% prises en charge à 100% par l'IA</p>
+              </div>
+            </div>
+
+            <!-- KPI 3: Taux de Conversion -->
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Taux de Conversion Vente</span>
+                <div class="kpi-icon-box kpi-icon-cyan">
+                  <i class="fa-solid fa-bullseye"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-row">
+                  <span class="kpi-value">28.4%</span>
+                  <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> +340%</span>
+                </div>
+                <p class="kpi-note">vs moyenne marché e-commerce (2.5%)</p>
+              </div>
+            </div>
+
+            <!-- KPI 4: Paniers Abandonnés -->
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Paniers Abandonnés Récupérés</span>
+                <div class="kpi-icon-box kpi-icon-amber">
+                  <i class="fa-solid fa-cart-shopping"></i>
+                </div>
+              </div>
+              <div>
+                <div class="kpi-value-row">
+                  <span class="kpi-value">142</span>
+                  <span class="kpi-badge-trend"><i class="fa-solid fa-check"></i> 74% relancés</span>
+                </div>
+                <p class="kpi-note">Revenus sauvés : <strong class="kpi-val-currency" data-usd="2180" data-xof="1340000">1 340 000 XOF</strong></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart & Payment Methods Row -->
+          <div class="chart-payment-row">
+            <!-- Chart Card -->
+            <div class="glass-panel chart-card">
+              <div class="card-top-header">
+                <div>
+                  <h3 class="card-heading">Progression des Ventes &amp; Activité WhatsApp</h3>
+                  <p class="card-subheading">Suivi en direct des ventes encaissées et volume de conversations automatisées</p>
+                </div>
+                <div class="chart-filter-pills" id="chart-filter-group">
+                  <button class="chart-pill-btn active" data-period="14">14 Jours</button>
+                  <button class="chart-pill-btn" data-period="30">30 Jours</button>
+                  <button class="chart-pill-btn" data-period="90">Trimestre</button>
+                </div>
+              </div>
+
+              <!-- Custom Legend -->
+              <div class="chart-legend-row">
+                <div class="legend-item">
+                  <span class="legend-dot legend-dot-green"></span>
+                  <span id="chart-legend-sales-label">Ventes Encaissées (FCFA)</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-dot-purple"></span>
+                  <span>Conversations Automatisées IA</span>
+                </div>
+              </div>
+
+              <!-- Chart.js Container -->
+              <div class="chart-canvas-container">
+                <canvas id="salesActivityChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Payment Breakdown Card -->
+            <div class="glass-panel payment-card">
+              <div class="card-top-header">
+                <div>
+                  <h3 class="card-heading">Moyens de Paiement Encaissés</h3>
+                  <p class="card-subheading">Répartition des transactions finalisées</p>
+                </div>
+              </div>
+
+              <div class="payment-list">
+                <!-- Wave -->
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <div class="payment-item-brand">
+                      <i class="fa-solid fa-water" style="color: var(--cyan);"></i>
+                      <span>Wave Mobile Money</span>
+                    </div>
+                    <span class="payment-item-stats"><strong>48%</strong> (4 041 600 XOF)</span>
+                  </div>
+                  <div class="payment-progress-track">
+                    <div class="payment-progress-bar bar-cyan" style="width: 48%;"></div>
+                  </div>
+                </div>
+
+                <!-- Orange Money -->
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <div class="payment-item-brand">
+                      <i class="fa-solid fa-circle" style="color: #f97316;"></i>
+                      <span>Orange Money</span>
+                    </div>
+                    <span class="payment-item-stats"><strong>26%</strong> (2 189 200 XOF)</span>
+                  </div>
+                  <div class="payment-progress-track">
+                    <div class="payment-progress-bar bar-orange" style="width: 26%;"></div>
+                  </div>
+                </div>
+
+                <!-- Carte Bancaire (Stripe) -->
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <div class="payment-item-brand">
+                      <i class="fa-regular fa-credit-card" style="color: var(--purple);"></i>
+                      <span>Carte Bancaire (Stripe)</span>
+                    </div>
+                    <span class="payment-item-stats"><strong>16%</strong> (1 347 000 XOF)</span>
+                  </div>
+                  <div class="payment-progress-track">
+                    <div class="payment-progress-bar bar-purple" style="width: 16%;"></div>
+                  </div>
+                </div>
+
+                <!-- MTN MoMo -->
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <div class="payment-item-brand">
+                      <i class="fa-solid fa-bolt" style="color: var(--amber);"></i>
+                      <span>MTN MoMo</span>
+                    </div>
+                    <span class="payment-item-stats"><strong>10%</strong> (842 000 XOF)</span>
+                  </div>
+                  <div class="payment-progress-track">
+                    <div class="payment-progress-bar bar-yellow" style="width: 10%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Activity Feed & Shortcuts Row -->
+          <div class="activity-shortcuts-row">
+            <!-- Activités & Événements en Direct -->
+            <div class="glass-panel activity-feed-card">
+              <div class="card-top-header">
+                <div>
+                  <h3 class="card-heading">Activités &amp; Événements en Direct</h3>
+                  <p class="card-subheading">Transactions et actions automatiques de votre agent IA</p>
+                </div>
+                <span class="badge badge-green">Temps réel</span>
+              </div>
+
+              <div class="activity-list" id="activity-live-list">
+                <!-- Event 1 -->
+                <div class="activity-item">
+                  <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
+                    <i class="fa-solid fa-check"></i>
+                  </div>
+                  <div class="activity-info">
+                    <div class="activity-text">
+                      Paiement reçu de <strong>Amina Traoré</strong> via Wave (<strong>25 000 XOF</strong>) après recommandation de l'Agent IA.
+                    </div>
+                    <div class="activity-meta">Il y a 3 minutes • Tunnel Vente Flash WhatsApp</div>
+                  </div>
+                </div>
+
+                <!-- Event 2 -->
+                <div class="activity-item">
+                  <div class="activity-icon-wrapper" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">
+                    <i class="fa-solid fa-bullhorn"></i>
+                  </div>
+                  <div class="activity-info">
+                    <div class="activity-text">
+                      Diffusion "<strong>Promo Flash VIP</strong>" achevée avec succès pour <strong>1 500 contacts</strong> (94.2% de taux d'ouverture).
+                    </div>
+                    <div class="activity-meta">Il y a 42 minutes • Protection SafeSend™ active</div>
+                  </div>
+                </div>
+
+                <!-- Event 3 -->
+                <div class="activity-item">
+                  <div class="activity-icon-wrapper" style="background: rgba(139, 92, 246, 0.15); color: var(--purple);">
+                    <i class="fa-solid fa-rotate"></i>
+                  </div>
+                  <div class="activity-info">
+                    <div class="activity-text">
+                      Relance automatique de panier abandonné envoyée à <strong>Marc Koffi</strong> (+225 05 99 22 11).
+                    </div>
+                    <div class="activity-meta">Il y a 1 heure • Synchronisation Shopify</div>
+                  </div>
+                </div>
+
+                <!-- Event 4 -->
+                <div class="activity-item">
+                  <div class="activity-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">
+                    <i class="fa-solid fa-user-plus"></i>
+                  </div>
+                  <div class="activity-info">
+                    <div class="activity-text">
+                      <strong>48 nouveaux prospects</strong> qualifiés ajoutés à votre CRM depuis le widget WhatsApp de votre site.
+                    </div>
+                    <div class="activity-meta">Il y a 2 heures • Entonnoir Webhook</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Raccourcis & Opérations -->
+            <div class="glass-panel shortcuts-card">
+              <div class="card-top-header">
+                <div>
+                  <h3 class="card-heading">Raccourcis &amp; Opérations</h3>
+                  <p class="card-subheading">Actions rapides pour votre équipe</p>
+                </div>
+              </div>
+
+              <div class="shortcuts-grid">
+                <button class="shortcut-action-tile" data-action="go-inbox">
+                  <i class="fa-solid fa-comment-dots" style="color: var(--whatsapp-green);"></i>
+                  <span class="shortcut-tile-title">Ouvrir le Live Chat</span>
+                  <span class="shortcut-tile-desc">Répondre aux clients en direct</span>
+                </button>
+
+                <button class="shortcut-action-tile btn-open-broadcast">
+                  <i class="fa-solid fa-paper-plane" style="color: var(--cyan);"></i>
+                  <span class="shortcut-tile-title">Nouvelle Diffusion</span>
+                  <span class="shortcut-tile-desc">Envoyer offre à 5k contacts</span>
+                </button>
+
+                <button class="shortcut-action-tile" data-action="go-automations">
+                  <i class="fa-solid fa-diagram-project" style="color: var(--purple);"></i>
+                  <span class="shortcut-tile-title">Éditer un Funnel</span>
+                  <span class="shortcut-tile-desc">Arbre de décision WhatsApp</span>
+                </button>
+
+                <button class="shortcut-action-tile btn-open-qr">
+                  <i class="fa-solid fa-qrcode" style="color: var(--amber);"></i>
+                  <span class="shortcut-tile-title">Lier un Numéro</span>
+                  <span class="shortcut-tile-desc">Scanner le QR Code Meta</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dernières Interactions IA Table -->
+          <div class="glass-panel table-card">
+            <div class="card-top-header">
+              <div>
+                <h3 class="card-heading">Dernières Interactions IA</h3>
+                <p class="card-subheading">Conversations récentes traitées de manière autonome</p>
+              </div>
+              <button class="btn-secondary-glass" data-action="go-contacts">
+                <span>Voir tout le CRM</span>
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="custom-table" id="recent-interactions-table">
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Date &amp; Heure</th>
+                    <th>Action / Tunnel</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="table-interactions-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================================================================
+             VIEW 2: BOÎTE DE RÉCEPTION (#inbox)
+             ================================================================== -->
+        <section class="view-section" id="view-inbox">
+          <div class="inbox-layout">
+            <!-- Left Conversations List -->
+            <div class="inbox-sidebar">
+              <div class="inbox-search-header">
+                <div class="search-input-wrap">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="inbox-search-input" placeholder="Rechercher une discussion...">
+                </div>
+                <div class="inbox-tabs">
+                  <button class="inbox-tab-btn active" data-filter="all">Tous</button>
+                  <button class="inbox-tab-btn" data-filter="unread">Non lus (1)</button>
+                  <button class="inbox-tab-btn" data-filter="ai">Gérés par IA</button>
+                </div>
+              </div>
+
+              <div class="inbox-conversation-list" id="inbox-conversation-list">
+                <!-- Dynamically populated conversations -->
+              </div>
+            </div>
+
+            <!-- Right Active Chat Window -->
+            <div class="inbox-chat-pane">
+              <!-- Chat Header -->
+              <div class="chat-header">
+                <div class="chat-contact-info">
+                  <div class="conv-avatar" id="active-chat-avatar">AT</div>
+                  <div>
+                    <h3 class="chat-contact-title" id="active-chat-name">Amina Traoré</h3>
+                    <div class="chat-contact-phone" id="active-chat-phone">+225 07 48 99 12 • Abidjan, CI</div>
+                  </div>
+                </div>
+
+                <div class="chat-mode-toggle">
+                  <div class="chat-mode-badge" id="chat-ai-status-badge">
+                    <i class="fa-solid fa-robot"></i>
+                    <span>IA Active (Vente Automatisée)</span>
+                  </div>
+                  <button class="header-icon-btn" id="btn-toggle-human" title="Prendre la main / Manuel">
+                    <i class="fa-solid fa-headset"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Messages Stream -->
+              <div class="chat-messages-container" id="chat-messages-stream">
+                <!-- Message Bubbles injected via JS -->
+              </div>
+
+              <!-- Quick Replies Chips -->
+              <div class="chat-quick-actions">
+                <button class="quick-chip" data-text="Voici le lien direct de paiement sécurisé Wave : https://pay.wave.com/m/vendia-pack">
+                  <i class="fa-solid fa-link"></i> Lien Paiement Wave
+                </button>
+                <button class="quick-chip" data-text="Je peux vous appliquer un code promotionnel exclusif de -15% aujourd'hui. Souhaitez-vous en profiter ?">
+                  <i class="fa-solid fa-tag"></i> Offre Réduction -15%
+                </button>
+                <button class="quick-chip" data-text="Votre commande est bien confirmée ! Notre équipe prépare votre colis pour expédition ce matin.">
+                  <i class="fa-solid fa-box"></i> Confirmation Envoi
+                </button>
+              </div>
+
+              <!-- Chat Input Bar -->
+              <form class="chat-input-bar" id="chat-input-form">
+                <button type="button" class="header-icon-btn" aria-label="Joindre un fichier">
+                  <i class="fa-solid fa-paperclip"></i>
+                </button>
+                <input type="text" id="chat-message-input" placeholder="Répondre au client ou laisser l'IA répondre..." autocomplete="off">
+                <button type="submit" class="btn-send-msg" aria-label="Envoyer le message">
+                  <i class="fa-solid fa-paper-plane"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3: AGENT IA (#ai-agent)
+             ================================================================== -->
+        <section class="view-section" id="view-ai-agent">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Configuration de l'Agent Commercial IA</h2>
+              <p class="section-desc">Personnalisez le comportement, les instructions de vente et les règles de négociation de votre agent WhatsApp.</p>
+            </div>
+            <button class="btn-primary-glow" id="btn-save-agent">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Enregistrer les Paramètres</span>
+            </button>
+          </div>
+
+          <div class="agent-config-grid">
+            <!-- Left: Settings Form -->
+            <div class="glass-panel" style="padding: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                  <h3 style="font-size: 16px;">Statut de l'Agent IA</h3>
+                  <p class="card-subheading">Activer la prise en charge automatique des conversations</p>
+                </div>
+                <label class="switch-control">
+                  <input type="checkbox" id="agent-active-switch" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Nom public de l'Agent</label>
+                <input type="text" class="form-control" id="agent-name-input" value="Sarah - Conseillère Commerciale VANDIA">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Ton de communication</label>
+                <div class="tag-selector-row" id="tone-selector">
+                  <button type="button" class="tag-select-btn active">Chaleureux &amp; Persuasif</button>
+                  <button type="button" class="tag-select-btn">Professionnel &amp; Formel</button>
+                  <button type="button" class="tag-select-btn">Direct &amp; Synthétique</button>
+                  <button type="button" class="tag-select-btn">Local / Proche (Abidjan/Dakar)</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Instructions système &amp; Stratégie de vente (Prompt)</label>
+                <textarea class="form-control form-control-textarea" id="agent-prompt-input" rows="6">Tu es le commercial d'élite de la boutique. Ton objectif est d'accueillir les prospects avec bienveillance, répondre à leurs questions sur le catalogue, comprendre leurs besoins et leur proposer la formule idéale. Propose toujours le lien de paiement direct Wave ou Orange Money lorsque le client manifeste une intention d'achat. En cas d'hésitation, propose une remise exceptionnelle de 10% valable aujourd'hui.</textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Délai avant relance automatique d'un panier</label>
+                <select class="form-control" id="agent-reminder-delay">
+                  <option value="15">15 minutes après abandon</option>
+                  <option value="30" selected>30 minutes après abandon</option>
+                  <option value="60">1 heure après abandon</option>
+                  <option value="120">2 heures après abandon</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Right: Real-time Simulator / Info -->
+            <div class="glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+              <h3 style="font-size: 16px;">Performances de l'Agent</h3>
+              
+              <div style="background: rgba(8, 12, 20, 0.6); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                  <span style="font-size: 12.5px; color: var(--text-secondary);">Taux de conversion IA</span>
+                  <span style="font-weight: 700; color: var(--whatsapp-green);">28.4%</span>
+                </div>
+                <div class="sub-progress-bar">
+                  <div class="sub-progress-fill" style="width: 28.4%;"></div>
+                </div>
+              </div>
+
+              <div style="background: rgba(8, 12, 20, 0.6); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                  <span style="font-size: 12.5px; color: var(--text-secondary);">Temps moyen de réponse</span>
+                  <span style="font-weight: 700; color: var(--cyan);">0.8 seconde</span>
+                </div>
+                <div class="sub-progress-bar">
+                  <div class="sub-progress-fill" style="width: 85%; background: var(--cyan);"></div>
+                </div>
+              </div>
+
+              <div style="background: rgba(8, 12, 20, 0.6); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <h4 style="font-size: 13.5px; margin-bottom: 6px;">Protection Anti-Hallucination</h4>
+                <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                  L'IA ne vend que les articles présents dans votre catalogue synchronisé. Si une question dépasse ses compétences, elle transfère immédiatement la discussion à un conseiller humain.
+                </p>
+              </div>
+
+              <button class="btn-secondary-glass" data-action="go-inbox" style="margin-top: auto; justify-content: center;">
+                <i class="fa-solid fa-comments"></i>
+                <span>Tester en direct dans le Chat</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 4: BROADCAST / DIFFUSIONS (#broadcast)
+             ================================================================== -->
+        <section class="view-section" id="view-broadcast">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Diffusions WhatsApp de Masse</h2>
+              <p class="section-desc">Envoyez des messages marketing et alertes promotionnelles à vos listes de contacts avec protection anti-bannissement.</p>
+            </div>
+            <button class="btn-primary-glow btn-open-broadcast">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>Nouvelle Diffusion</span>
+            </button>
+          </div>
+
+          <!-- Broadcast Stats -->
+          <div class="kpi-grid">
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Messages Diffusés ce mois</span>
+              <div class="kpi-value-row"><span class="kpi-value">18 450</span></div>
+              <span class="kpi-note" style="color: var(--whatsapp-green);"><i class="fa-solid fa-check"></i> 99.8% Livrés</span>
+            </div>
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Taux d'Ouverture Moyen</span>
+              <div class="kpi-value-row"><span class="kpi-value">96.4%</span></div>
+              <span class="kpi-note">vs 22% par email</span>
+            </div>
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Taux de Clic / Réponse</span>
+              <div class="kpi-value-row"><span class="kpi-value">42.1%</span></div>
+              <span class="kpi-note" style="color: var(--cyan);"><i class="fa-solid fa-arrow-up"></i> +15% ce trimestre</span>
+            </div>
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Algorithme SafeSend™</span>
+              <div class="kpi-value-row"><span class="kpi-value" style="color: var(--whatsapp-green);">Actif</span></div>
+              <span class="kpi-note">Envois espacés intelligemment</span>
+            </div>
+          </div>
+
+          <!-- Campaigns Table -->
+          <div class="glass-panel table-card">
+            <div class="card-top-header">
+              <h3 class="card-heading">Historique des Campagnes de Diffusion</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Nom de la Campagne</th>
+                    <th>Audience Cible</th>
+                    <th>Destinataires</th>
+                    <th>Ouverture</th>
+                    <th>Date d'Envoi</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="broadcast-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 5: AUTOMATIONS (#automations)
+             ================================================================== -->
+        <section class="view-section" id="view-automations">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Flow Builder &amp; Automatisations</h2>
+              <p class="section-desc">Gérez vos tunnels de vente, arbres décisionnels et relances programmées WhatsApp.</p>
+            </div>
+            <button class="btn-primary-glow" id="btn-create-funnel">
+              <i class="fa-solid fa-plus"></i>
+              <span>Nouveau Funnel</span>
+            </button>
+          </div>
+
+          <div class="automations-grid" id="automations-grid-container">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 6: CONTACTS / CRM (#contacts)
+             ================================================================== -->
+        <section class="view-section" id="view-contacts">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Contacts &amp; CRM WhatsApp</h2>
+              <p class="section-desc">Liste de l'ensemble des prospects et clients capturés via vos flux WhatsApp et widgets.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn-secondary-glass" id="btn-export-crm">
+                <i class="fa-solid fa-download"></i>
+                <span>Exporter CSV</span>
+              </button>
+              <button class="btn-primary-glow" id="btn-add-contact">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Ajouter un Contact</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel table-card">
+            <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+              <div class="search-input-wrap" style="flex: 1; min-width: 260px;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="contacts-search-input" placeholder="Filtrer par nom, numéro ou tag...">
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="tag-select-btn active" data-filter="all">Tous</button>
+                <button class="tag-select-btn" data-filter="VIP">Clients VIP</button>
+                <button class="tag-select-btn" data-filter="Chaud">Prospects Chauds</button>
+                <button class="tag-select-btn" data-filter="Panier">Panier Récupéré</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Nom du Contact</th>
+                    <th>Numéro WhatsApp</th>
+                    <th>Dernière Interaction</th>
+                    <th>Segment / Tag</th>
+                    <th>Valeur Cumulée</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="contacts-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 7: TEMPLATES (#templates)
+             ================================================================== -->
+        <section class="view-section" id="view-templates">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Modèles WhatsApp Approuvés par Meta</h2>
+              <p class="section-desc">Modèles officiels Meta Cloud API nécessaires pour initier des conversations sortantes et diffusions.</p>
+            </div>
+            <button class="btn-primary-glow" id="btn-new-template">
+              <i class="fa-solid fa-plus"></i>
+              <span>Créer un Modèle Meta</span>
+            </button>
+          </div>
+
+          <div class="templates-grid" id="templates-grid-container">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 8: DEVICES / APPAREILS (#devices)
+             ================================================================== -->
+        <section class="view-section" id="view-devices">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Numéros &amp; Coexistence WhatsApp</h2>
+              <p class="section-desc">Gérez vos lignes WhatsApp Business connectées à l'API Meta Cloud avec coexistence active.</p>
+            </div>
+            <button class="btn-primary-glow btn-open-qr">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>Connecter un Numéro</span>
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px;">
+            <!-- Active Number Card -->
+            <div class="glass-panel" style="padding: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 20px;">
+                    <i class="fa-brands fa-whatsapp"></i>
+                  </div>
+                  <div>
+                    <h3 style="font-size: 16px;">+226 05158494</h3>
+                    <span style="font-size: 12px; color: var(--text-muted);">Ligne Principale Vente</span>
+                  </div>
+                </div>
+                <span class="badge badge-green">En Ligne &amp; Actif</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); margin: 16px 0;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Protocole :</span>
+                  <strong>Meta Cloud API v19.0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Mode Coexistence :</span>
+                  <strong style="color: var(--whatsapp-green);">Activé (Double Réception)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Santé du Webhook :</span>
+                  <strong style="color: var(--cyan);">100% opérationnel</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Tier d'envoi Meta :</span>
+                  <strong>Tier 2 (10 000 conv./jour)</strong>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 18px;">
+                <button class="btn-secondary-glass" style="flex: 1; justify-content: center;" id="btn-test-webhook">
+                  <i class="fa-solid fa-vial"></i> Tester Webhook
+                </button>
+                <button class="btn-secondary-glass btn-open-qr" style="flex: 1; justify-content: center;">
+                  <i class="fa-solid fa-arrows-rotate"></i> Reconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 9: INTEGRATIONS (#integrations)
+             ================================================================== -->
+        <section class="view-section" id="view-integrations">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Intégrations &amp; Passerelles de Paiement</h2>
+              <p class="section-desc">Connectez vos comptes Wave, Mobile Money, boutiques e-commerce et CRM externes.</p>
+            </div>
+          </div>
+
+          <div class="integrations-grid" id="integrations-grid-container">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 10: ANALYTICS (#analytics)
+             ================================================================== -->
+        <section class="view-section" id="view-analytics">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Statistiques Avancées &amp; ROI Commercial</h2>
+              <p class="section-desc">Mesurez l'impact direct de votre agent WhatsApp IA sur votre chiffre d'affaires.</p>
+            </div>
+            <div class="chart-filter-pills">
+              <button class="chart-pill-btn active">Ce Mois</button>
+              <button class="chart-pill-btn">Trimestre</button>
+              <button class="chart-pill-btn">Cette Année</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Retour sur Investissement (ROI)</span>
+              <div class="kpi-value-row"><span class="kpi-value" style="color: var(--whatsapp-green);">x14.8</span></div>
+              <span class="kpi-note">Généré vs coût d'abonnement</span>
+            </div>
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Panier Moyen WhatsApp</span>
+              <div class="kpi-value-row"><span class="kpi-value kpi-val-currency" data-usd="42" data-xof="26000">26 000 XOF</span></div>
+              <span class="kpi-note">+18% par rapport au site web</span>
+            </div>
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Temps Moyen de Conversion</span>
+              <div class="kpi-value-row"><span class="kpi-value">4 min 12s</span></div>
+              <span class="kpi-note">Du premier message au paiement</span>
+            </div>
+            <div class="glass-panel kpi-card">
+              <span class="kpi-title">Coût Moyen par Message</span>
+              <div class="kpi-value-row"><span class="kpi-value">$0.008</span></div>
+              <span class="kpi-note">Tarification officielle Meta</span>
+            </div>
+          </div>
+
+          <!-- Secondary Chart Row -->
+          <div class="chart-payment-row">
+            <div class="glass-panel chart-card">
+              <div class="card-top-header">
+                <div>
+                  <h3 class="card-heading">Activité par Tranche Horaire</h3>
+                  <p class="card-subheading">Heures de forte conversion des clients sur WhatsApp</p>
+                </div>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="hourlyActivityChart"></canvas>
+              </div>
+            </div>
+
+            <div class="glass-panel payment-card">
+              <div class="card-top-header">
+                <div>
+                  <h3 class="card-heading">Origine du Trafic WhatsApp</h3>
+                  <p class="card-subheading">Sources d'acquisition des conversations</p>
+                </div>
+              </div>
+              <div class="payment-list">
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <span>Widget WhatsApp Site Web</span>
+                    <strong>45%</strong>
+                  </div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-cyan" style="width: 45%;"></div></div>
+                </div>
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <span>Publicités Click-to-WhatsApp Meta</span>
+                    <strong>32%</strong>
+                  </div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-purple" style="width: 32%;"></div></div>
+                </div>
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <span>Relances Paniers Abandonnés</span>
+                    <strong>15%</strong>
+                  </div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-orange" style="width: 15%;"></div></div>
+                </div>
+                <div class="payment-item">
+                  <div class="payment-item-top">
+                    <span>Bouche-à-oreille &amp; Liens Directs</span>
+                    <strong>8%</strong>
+                  </div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-yellow" style="width: 8%;"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 11: SETTINGS / PARAMÈTRES (#settings)
+             ================================================================== -->
+        <section class="view-section" id="view-settings">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Paramètres Généraux &amp; Équipe</h2>
+              <p class="section-desc">Gérez les accès administrateurs, la sécurité et la configuration de votre instance VANDIA AI.</p>
+            </div>
+          </div>
+
+          <!-- Mon Profil Personnel -->
+          <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
+            <div class="card-top-header" style="margin-bottom: 20px;">
+              <div>
+                <h3 class="card-heading">Mon Profil Administrateur</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Vos coordonnées, numéro WhatsApp officiel et photo de profil.</p>
+              </div>
+              <button type="button" class="btn-primary-glow btn-open-profile-modal" id="btn-edit-profile-settings" style="padding: 8px 18px; font-size: 13px;">
+                <i class="fa-solid fa-pen-to-square"></i> Modifier mon profil
+              </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+              <div class="avatar-preview-box" id="settings-avatar-display" style="width: 72px; height: 72px; flex-shrink: 0;">
+                <span class="avatar-preview-initials" style="font-size: 24px;">G</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; flex: 1;">
+                <div>
+                  <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Nom &amp; Prénom</div>
+                  <div style="font-size: 15px; font-weight: 700; color: #ffffff;" id="settings-display-fullname">Gnitou Kamala</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">E-mail</div>
+                  <div style="font-size: 15px; font-weight: 600; color: var(--cyan);" id="settings-display-email">gnitou@vandia.ai</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Numéro WhatsApp</div>
+                  <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green);" id="settings-display-phone">+225 07 89 45 12 30</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Rôle &amp; Statut</div>
+                  <div style="font-size: 14px;"><span class="badge badge-purple" id="settings-display-role">Propriétaire</span> <span class="badge badge-green">Vérifié</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-panel" style="padding: 24px;">
+            <div class="card-top-header">
+              <h3 class="card-heading">Membres de l'Équipe &amp; Permissions</h3>
+              <button class="btn-primary-glow" id="btn-invite-team" style="padding: 8px 16px; font-size: 13px;">
+                <i class="fa-solid fa-user-plus"></i> Inviter un membre
+              </button>
+            </div>
+            
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Membre</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>gnitou</strong></td>
+                    <td>gnitou@vandia.ai</td>
+                    <td><span class="badge badge-purple">Propriétaire</span></td>
+                    <td><span class="badge badge-green">Actif</span></td>
+                    <td><button class="btn-secondary-glass" style="padding: 4px 10px;">Gérer</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Amina Traoré</strong></td>
+                    <td>amina.t@entreprise.com</td>
+                    <td><span class="badge badge-cyan">Admin Commercial</span></td>
+                    <td><span class="badge badge-green">Actif</span></td>
+                    <td><button class="btn-secondary-glass" style="padding: 4px 10px;">Gérer</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Marc Koffi</strong></td>
+                    <td>marc.k@support.com</td>
+                    <td><span class="badge badge-subtle">Agent Support</span></td>
+                    <td><span class="badge badge-green">Actif</span></td>
+                    <td><button class="btn-secondary-glass" style="padding: 4px 10px;">Gérer</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       FLOATING WHATSAPP PULSE BUTTON
+       ========================================================================== -->
+  <button class="whatsapp-float-btn" id="floating-whatsapp-btn" aria-label="Ouvrir le support ou live chat" title="Ouvrir WhatsApp Live">
+    <i class="fa-brands fa-whatsapp"></i>
+  </button>
+
+  <!-- ==========================================================================
+       MODAL 1: NOUVELLE DIFFUSION WHATSAPP (#broadcast-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="broadcast-modal" role="dialog" aria-modal="true" aria-labelledby="modal-broadcast-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-broadcast-title">Nouvelle Diffusion WhatsApp</h3>
+        <button class="modal-close-btn" data-close-modal="broadcast-modal" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="broadcast-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="broadcast-name">Nom de la Campagne</label>
+            <input type="text" class="form-control" id="broadcast-name" placeholder="Ex: Offre Flash Fin de Semaine" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="broadcast-audience">Audience Cible</label>
+            <select class="form-control" id="broadcast-audience">
+              <option value="all">Tous les contacts qualifiés (5 280 contacts)</option>
+              <option value="vip">Clients VIP &amp; Récents (1 420 contacts)</option>
+              <option value="abandoned">Paniers non payés récents (142 contacts)</option>
+              <option value="prospects">Nouveaux prospects sans commande (850 contacts)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="broadcast-template">Modèle WhatsApp à utiliser</label>
+            <select class="form-control" id="broadcast-template">
+              <option value="promo_flash_vip">Promo Flash VIP avec Bouton Wave (Approuvé Meta)</option>
+              <option value="relance_panier">Relance Panier Douce &amp; Remise 10% (Approuvé Meta)</option>
+              <option value="nouveau_produit">Lancement Nouvelle Collection (Approuvé Meta)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="broadcast-message">Message personnalisé (aperçu variables)</label>
+            <textarea class="form-control form-control-textarea" id="broadcast-message" rows="4">Bonjour {{prenom}} ! 🌟 Offre exclusive réservée à nos meilleurs clients : profitez de 20% sur toute la collection avec livraison offerte. Cliquez ci-dessous pour commander directement via WhatsApp !</textarea>
+          </div>
+
+          <div style="background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.25); padding: 12px; border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); display: flex; gap: 10px; align-items: center;">
+            <i class="fa-solid fa-shield-halved" style="color: var(--whatsapp-green); font-size: 18px;"></i>
+            <span>Protection SafeSend™ activée : cadencement adaptatif des paquets de messages pour prévenir tout blocage par Meta.</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-glass" data-close-modal="broadcast-modal">Annuler</button>
+          <button type="submit" class="btn-primary-glow">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Lancer la Diffusion</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: QR CODE WHATSAPP (#qr-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="qr-modal" role="dialog" aria-modal="true" aria-labelledby="modal-qr-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-qr-title">Connecter WhatsApp (Coexistence)</h3>
+        <button class="modal-close-btn" data-close-modal="qr-modal" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body qr-container">
+        <p style="font-size: 13.5px; color: var(--text-secondary);">
+          Scannez ce QR Code avec votre téléphone dans <strong>WhatsApp &gt; Appareils Connectés</strong> pour synchroniser vos discussions en coexistence avec l'Agent IA.
+        </p>
+
+        <!-- Clean High-Tech SVG QR Code -->
+        <div class="qr-code-box">
+          <div class="qr-scan-beam"></div>
+          <svg viewBox="0 0 200 200" width="180" height="180">
+            <!-- Background -->
+            <rect width="200" height="200" fill="#ffffff" rx="6"/>
+            <!-- Top-Left Finder -->
+            <rect x="15" y="15" width="45" height="45" rx="4" fill="#080c14"/>
+            <rect x="23" y="23" width="29" height="29" rx="2" fill="#ffffff"/>
+            <rect x="29" y="29" width="17" height="17" rx="2" fill="#25d366"/>
+            <!-- Top-Right Finder -->
+            <rect x="140" y="15" width="45" height="45" rx="4" fill="#080c14"/>
+            <rect x="148" y="23" width="29" height="29" rx="2" fill="#ffffff"/>
+            <rect x="154" y="29" width="17" height="17" rx="2" fill="#25d366"/>
+            <!-- Bottom-Left Finder -->
+            <rect x="15" y="140" width="45" height="45" rx="4" fill="#080c14"/>
+            <rect x="23" y="148" width="29" height="29" rx="2" fill="#ffffff"/>
+            <rect x="29" y="154" width="17" height="17" rx="2" fill="#25d366"/>
+            <!-- Data Grid dots -->
+            <rect x="70" y="20" width="8" height="8" fill="#080c14"/>
+            <rect x="85" y="20" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="20" width="8" height="8" fill="#080c14"/>
+            <rect x="115" y="20" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="35" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="35" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="50" width="8" height="8" fill="#080c14"/>
+            <rect x="85" y="50" width="8" height="8" fill="#080c14"/>
+            <rect x="115" y="50" width="8" height="8" fill="#080c14"/>
+            <rect x="20" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="35" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="50" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="85" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="115" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="130" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="145" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="160" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="175" y="70" width="8" height="8" fill="#080c14"/>
+            <rect x="20" y="85" width="8" height="8" fill="#080c14"/>
+            <rect x="50" y="85" width="8" height="8" fill="#080c14"/>
+            <rect x="130" y="85" width="8" height="8" fill="#080c14"/>
+            <rect x="160" y="85" width="8" height="8" fill="#080c14"/>
+            <rect x="20" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="35" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="50" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="85" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="115" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="145" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="160" y="100" width="8" height="8" fill="#080c14"/>
+            <rect x="20" y="115" width="8" height="8" fill="#080c14"/>
+            <rect x="50" y="115" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="115" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="115" width="8" height="8" fill="#080c14"/>
+            <rect x="130" y="115" width="8" height="8" fill="#080c14"/>
+            <rect x="175" y="115" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="85" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="115" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="145" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="160" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="175" y="130" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="145" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="145" width="8" height="8" fill="#080c14"/>
+            <rect x="130" y="145" width="8" height="8" fill="#080c14"/>
+            <rect x="160" y="145" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="160" width="8" height="8" fill="#080c14"/>
+            <rect x="85" y="160" width="8" height="8" fill="#080c14"/>
+            <rect x="115" y="160" width="8" height="8" fill="#080c14"/>
+            <rect x="145" y="160" width="8" height="8" fill="#080c14"/>
+            <rect x="175" y="160" width="8" height="8" fill="#080c14"/>
+            <rect x="70" y="175" width="8" height="8" fill="#080c14"/>
+            <rect x="100" y="175" width="8" height="8" fill="#080c14"/>
+            <rect x="130" y="175" width="8" height="8" fill="#080c14"/>
+            <!-- Center WhatsApp Pill Logo -->
+            <circle cx="100" cy="100" r="18" fill="#ffffff"/>
+            <circle cx="100" cy="100" r="15" fill="#25d366"/>
+            <path d="M96 93.5c-.3.7-1.1 1.4-1.6 1.4-.4 0-.9 0-3-.8-2.1-.9-3.5-3-3.6-3.1-.1-.2-.9-1.2-.9-2.2 0-1.1.6-1.6.8-1.8.2-.2.4-.3.6-.3s.3 0 .4 0c.1 0 .3 0 .5.4.2.4.6 1.5.7 1.6.1.1.1.2 0 .4-.1.1-.1.2-.2.4-.1.1-.2.3-.3.4-.1.1-.2.2-.1.4.1.2.5.9 1.2 1.5.8.7 1.5.9 1.7 1 .2.1.3.1.5-.1.1-.1.5-.6.7-.8.1-.2.3-.2.5-.1.2.1 1.2.6 1.4.7.2.1.4.2.4.3.1.2.1.6-.2 1.2z" fill="#ffffff"/>
+          </svg>
+        </div>
+
+        <div class="qr-instructions-list">
+          <div><strong>1.</strong> Ouvrez WhatsApp sur votre smartphone.</div>
+          <div><strong>2.</strong> Allez dans <strong>Réglages / Menu</strong> &gt; <strong>Appareils connectés</strong>.</div>
+          <div><strong>3.</strong> Appuyez sur <strong>Connecter un appareil</strong>.</div>
+          <div><strong>4.</strong> Pointez votre caméra vers ce code pour valider la liaison.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary-glass" data-close-modal="qr-modal">Fermer</button>
+        <button type="button" class="btn-primary-glow" id="btn-simulate-scan">
+          <i class="fa-solid fa-check"></i>
+          <span>Simuler Scan Réussi</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 3: QUICK SEARCH MODAL (⌘K)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="search-modal" role="dialog" aria-modal="true" aria-labelledby="modal-search-title">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="search-input-wrap" style="flex: 1; margin-right: 12px;">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="global-search-input" placeholder="Rechercher une section, contact, commande..." style="border: none; background: transparent; padding-left: 32px; font-size: 15px;">
+        </div>
+        <button class="modal-close-btn" data-close-modal="search-modal" aria-label="Fermer la recherche">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px; max-height: 380px; overflow-y: auto;" id="global-search-results">
+        <!-- Results injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 4: MODIFICATION DU PROFIL UTILISATEUR (#profile-modal)
+       ========================================================================== -->
+  <div class="profile-modal-backdrop" id="profile-modal" role="dialog" aria-modal="true" aria-labelledby="modal-profile-title">
+    <div class="profile-dialog">
+      <div class="profile-dialog-header">
+        <div class="auth-header-brand">
+          <div class="brand-icon-box" style="width: 34px; height: 34px; border-radius: 8px;">
+            <i class="fa-solid fa-user-gear" style="color: var(--whatsapp-green); font-size: 16px;"></i>
+          </div>
+          <div>
+            <h3 id="modal-profile-title" style="font-size: 17px; font-weight: 700; color: #ffffff; margin: 0;">Modifier mon Profil</h3>
+            <p style="font-size: 11.5px; color: #94a3b8; margin: 0;">Informations personnelles &amp; WhatsApp</p>
+          </div>
+        </div>
+        <button class="auth-dialog-close" id="profile-modal-close" aria-label="Fermer la fenêtre">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-edit-profile" novalidate>
+        <div class="profile-dialog-body">
+          
+          <!-- Avatar Section with File Picker -->
+          <div class="profile-avatar-section">
+            <div class="profile-avatar-picker-wrap" id="avatar-click-zone" title="Cliquez pour choisir une photo">
+              <div class="avatar-preview-box" id="profile-avatar-preview">
+                <span class="avatar-preview-initials">G</span>
+              </div>
+              <div class="avatar-hover-overlay">
+                <i class="fa-solid fa-camera"></i>
+              </div>
+            </div>
+
+            <!-- Hidden file input for real image upload -->
+            <input type="file" id="profile-avatar-input" accept="image/*" style="display: none;">
+
+            <div class="profile-avatar-actions">
+              <div style="font-size: 13.5px; font-weight: 700; color: #ffffff;">Photo de profil</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn-upload-photo" id="btn-trigger-avatar-upload">
+                  <i class="fa-solid fa-upload"></i>
+                  <span>Changer la photo</span>
+                </button>
+                <button type="button" class="btn-remove-photo" id="btn-remove-avatar">
+                  <i class="fa-solid fa-trash-can"></i>
+                  <span>Supprimer</span>
+                </button>
+              </div>
+              <div style="font-size: 11px; color: #64748b;">JPG, PNG ou WebP. Recadrée automatiquement en cercle.</div>
+            </div>
+          </div>
+
+          <!-- Prénom & Nom -->
+          <div class="auth-form-row">
+            <div class="profile-form-group">
+              <label class="profile-label" for="profile-firstname">Prénom <span class="required">*</span></label>
+              <input type="text" class="profile-input" id="profile-firstname" placeholder="Prénom" required>
+            </div>
+            <div class="profile-form-group">
+              <label class="profile-label" for="profile-lastname">Nom <span class="required">*</span></label>
+              <input type="text" class="profile-input" id="profile-lastname" placeholder="Nom" required>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="profile-form-group">
+            <label class="profile-label" for="profile-email">Adresse e-mail <span class="required">*</span></label>
+            <input type="email" class="profile-input" id="profile-email" placeholder="nom@entreprise.com" required>
+          </div>
+
+          <!-- Numéro WhatsApp -->
+          <div class="profile-form-group">
+            <label class="profile-label" for="profile-phone-number">Numéro WhatsApp (avec indicatif) <span class="required">*</span></label>
+            <div class="phone-input-group">
+              <select class="country-code-select" id="profile-phone-country" aria-label="Indicatif pays WhatsApp">
+                <option value="+225">🇨🇮 +225</option>
+                <option value="+221">🇸🇳 +221</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+237">🇨🇲 +237</option>
+                <option value="+229">🇧🇯 +229</option>
+                <option value="+226">🇧🇫 +226</option>
+                <option value="+228">🇹🇬 +228</option>
+                <option value="+243">🇨🇩 +243</option>
+                <option value="+212">🇲🇦 +212</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+              </select>
+              <input type="tel" class="profile-input" id="profile-phone-number" placeholder="07 89 45 12 30" required style="flex: 1;">
+            </div>
+          </div>
+
+          <!-- Entreprise & Rôle -->
+          <div class="auth-form-row">
+            <div class="profile-form-group">
+              <label class="profile-label" for="profile-company">Entreprise / Marque</label>
+              <input type="text" class="profile-input" id="profile-company" placeholder="Nom d'entreprise">
+            </div>
+            <div class="profile-form-group">
+              <label class="profile-label" for="profile-role">Rôle / Titre</label>
+              <input type="text" class="profile-input" id="profile-role" placeholder="Ex: Fondateur">
+            </div>
+          </div>
+
+        </div>
+
+        <div class="profile-dialog-footer">
+          <button type="button" class="btn-profile-cancel" id="btn-profile-cancel">Annuler</button>
+          <button type="submit" class="btn-profile-save" id="btn-profile-save">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Enregistrer les modifications</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Dashboard JavaScript Logic -->
+  <script src="js/auth.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
