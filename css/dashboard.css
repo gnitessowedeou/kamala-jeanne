@@ -458,6 +458,61 @@
   box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
 }
 
+/* Data Mode Toggle (Mode Réel vs Mode Démo) */
+.data-mode-toggle {
+  display: flex;
+  background: rgba(16, 23, 38, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  align-items: center;
+}
+
+.mode-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+}
+
+.mode-pill-btn:hover {
+  color: var(--text-primary);
+}
+
+.mode-pill-btn.active[data-mode="real"] {
+  background: rgba(37, 211, 102, 0.16);
+  color: #25d366;
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(37, 211, 102, 0.2);
+}
+
+.mode-pill-btn.active[data-mode="demo"] {
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.25);
+}
+
+.mode-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #25d366;
+  display: inline-block;
+  animation: pulse-dot 1.8s infinite;
+}
+
 /* Header Action Buttons */
 .header-icon-btn {
   position: relative;

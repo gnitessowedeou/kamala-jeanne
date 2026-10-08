@@ -242,6 +242,18 @@
             <span id="header-connected-num">+226 05158494 (Coexistence Active)</span>
           </div>
 
+          <!-- Data Mode Switcher Toggle (Mode Réel vs Démo) -->
+          <div class="data-mode-toggle" id="data-mode-toggle" title="Basculer entre vos données réelles et les données de démonstration">
+            <button type="button" class="mode-pill-btn active" id="btn-mode-real" data-mode="real">
+              <span class="mode-pulse-dot"></span>
+              <span>Mode Réel</span>
+            </button>
+            <button type="button" class="mode-pill-btn" id="btn-mode-demo" data-mode="demo">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Démo</span>
+            </button>
+          </div>
+
           <!-- Currency Switcher Toggle -->
           <div class="currency-switcher" id="currency-switcher">
             <button class="currency-btn" data-currency="USD">USD ($)</button>
@@ -320,10 +332,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value kpi-val-currency" data-usd="8420" data-xof="5180000">5 180 000 XOF</span>
-                  <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> +34.5%</span>
+                  <span class="kpi-value kpi-val-currency" id="kpi-sales-val" data-usd="8420" data-xof="5180000">5 180 000 XOF</span>
+                  <span class="kpi-badge-trend" id="kpi-sales-trend"><i class="fa-solid fa-arrow-up"></i> +34.5%</span>
                 </div>
-                <p class="kpi-note">dont 68% collectés via Wave &amp; Orange Money</p>
+                <p class="kpi-note" id="kpi-sales-note">dont 68% collectés via Wave &amp; Orange Money</p>
               </div>
             </div>
 
@@ -337,10 +349,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value">1,248</span>
-                  <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> +18.2%</span>
+                  <span class="kpi-value" id="kpi-convs-val">1,248</span>
+                  <span class="kpi-badge-trend" id="kpi-convs-trend"><i class="fa-solid fa-arrow-up"></i> +18.2%</span>
                 </div>
-                <p class="kpi-note">98.4% prises en charge à 100% par l'IA</p>
+                <p class="kpi-note" id="kpi-convs-note">98.4% prises en charge à 100% par l'IA</p>
               </div>
             </div>
 
@@ -354,10 +366,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value">28.4%</span>
-                  <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> +340%</span>
+                  <span class="kpi-value" id="kpi-rate-val">28.4%</span>
+                  <span class="kpi-badge-trend" id="kpi-rate-trend"><i class="fa-solid fa-arrow-up"></i> +340%</span>
                 </div>
-                <p class="kpi-note">vs moyenne marché e-commerce (2.5%)</p>
+                <p class="kpi-note" id="kpi-rate-note">vs moyenne marché e-commerce (2.5%)</p>
               </div>
             </div>
 
@@ -371,10 +383,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value">142</span>
-                  <span class="kpi-badge-trend"><i class="fa-solid fa-check"></i> 74% relancés</span>
+                  <span class="kpi-value" id="kpi-carts-val">142</span>
+                  <span class="kpi-badge-trend" id="kpi-carts-trend"><i class="fa-solid fa-check"></i> 74% relancés</span>
                 </div>
-                <p class="kpi-note">Revenus sauvés : <strong class="kpi-val-currency" data-usd="2180" data-xof="1340000">1 340 000 XOF</strong></p>
+                <p class="kpi-note" id="kpi-carts-note">Revenus sauvés : <strong class="kpi-val-currency" id="kpi-saved-val" data-usd="2180" data-xof="1340000">1 340 000 XOF</strong></p>
               </div>
             </div>
           </div>

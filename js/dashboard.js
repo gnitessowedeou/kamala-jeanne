@@ -319,6 +319,7 @@ function initDashboard() {
   setupMobileSidebar();
   setupModals();
   setupCurrencyToggle();
+  setupDataModeToggle();
   setupChartFilters();
   setupInboxInteraction();
   setupSearch();
@@ -326,6 +327,8 @@ function initDashboard() {
   setupProfileSystem();
 
   // Populate view contents
+  renderKpis();
+  renderActivityFeed();
   renderRecentInteractions();
   renderBroadcastCampaigns();
   renderAutomations();
@@ -581,8 +584,14 @@ function initSalesActivityChart() {
   const ctx = document.getElementById("salesActivityChart");
   if (!ctx) return;
 
+  const isReal = currentDataMode === "real";
   const dataset = MOCK_DATA.chartData["14"];
-  const salesData = currentCurrency === "XOF" ? dataset.salesXof : dataset.salesUsd;
+  const salesData = isReal 
+    ? dataset.labels.map(() => 0)
+    : (currentCurrency === "XOF" ? dataset.salesXof : dataset.salesUsd);
+  const convData = isReal 
+    ? dataset.labels.map(() => 0)
+    : dataset.conversations;
 
   salesChartInstance = new Chart(ctx, {
     type: "line",
@@ -614,7 +623,7 @@ function initSalesActivityChart() {
         },
         {
           label: "Conversations Automatisées IA",
-          data: dataset.conversations,
+          data: convData,
           borderColor: "#8b5cf6",
           borderDash: [5, 4],
           borderWidth: 2,
@@ -772,16 +781,246 @@ function setupChartFilters() {
 function updateChartPeriod(periodKey) {
   if (!salesChartInstance || !MOCK_DATA.chartData[periodKey]) return;
 
+  const isReal = currentDataMode === "real";
   const data = MOCK_DATA.chartData[periodKey];
   salesChartInstance.data.labels = data.labels;
-  salesChartInstance.data.datasets[0].data = currentCurrency === "XOF" ? data.salesXof : data.salesUsd;
-  salesChartInstance.data.datasets[1].data = data.conversations;
+
+  if (isReal) {
+    salesChartInstance.data.datasets[0].data = data.labels.map(() => 0);
+    salesChartInstance.data.datasets[1].data = data.labels.map(() => 0);
+  } else {
+    salesChartInstance.data.datasets[0].data = currentCurrency === "XOF" ? data.salesXof : data.salesUsd;
+    salesChartInstance.data.datasets[1].data = data.conversations;
+  }
   salesChartInstance.update();
 }
 
+function updateHourlyChart() {
+  if (!hourlyChartInstance) return;
+  const isReal = currentDataMode === "real";
+  hourlyChartInstance.data.datasets[0].data = isReal ? [0, 0, 0, 0, 0, 0, 0, 0, 0] : [12, 28, 45, 62, 85, 110, 95, 60, 25];
+  hourlyChartInstance.data.datasets[1].data = isReal ? [0, 0, 0, 0, 0, 0, 0, 0, 0] : [40, 75, 120, 160, 210, 280, 240, 150, 60];
+  hourlyChartInstance.update();
+}
+
 // ==============================================================================
-// 8. CURRENCY TOGGLE (USD vs XOF)
+// 8. DATA MODE TOGGLE (Mode Réel vs Mode Démo) & CURRENCY
 // ==============================================================================
+let currentDataMode = localStorage.getItem("vendia_data_mode") || "real";
+
+function setupDataModeToggle() {
+  const modeBtns = document.querySelectorAll("#data-mode-toggle .mode-pill-btn");
+  if (!modeBtns || !modeBtns.length) return;
+
+  updateDataModeUI(currentDataMode);
+
+  modeBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const mode = btn.getAttribute("data-mode");
+      if (mode === currentDataMode) return;
+
+      currentDataMode = mode;
+      localStorage.setItem("vendia_data_mode", currentDataMode);
+      updateDataModeUI(currentDataMode);
+
+      // Re-render UI
+      renderKpis();
+      renderActivityFeed();
+      renderRecentInteractions();
+      renderConversationList();
+      renderContacts();
+
+      const activePill = document.querySelector("#chart-filter-group .chart-pill-btn.active");
+      const currentPeriod = activePill ? activePill.getAttribute("data-period") : "14";
+      updateChartPeriod(currentPeriod);
+      updateHourlyChart();
+
+      if (currentDataMode === "real") {
+        showToast("Mode Réel activé • Votre tableau de bord personnel à zéro", "info");
+      } else {
+        showToast("Mode Démo activé • Données d'exemple chargées", "success");
+      }
+    });
+  });
+}
+
+function updateDataModeUI(mode) {
+  const modeBtns = document.querySelectorAll("#data-mode-toggle .mode-pill-btn");
+  modeBtns.forEach(btn => {
+    if (btn.getAttribute("data-mode") === mode) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+
+function renderKpis() {
+  const isReal = currentDataMode === "real";
+
+  const kpiSalesVal = document.getElementById("kpi-sales-val");
+  const kpiSalesTrend = document.getElementById("kpi-sales-trend");
+  const kpiSalesNote = document.getElementById("kpi-sales-note");
+
+  const kpiConvsVal = document.getElementById("kpi-convs-val");
+  const kpiConvsTrend = document.getElementById("kpi-convs-trend");
+  const kpiConvsNote = document.getElementById("kpi-convs-note");
+
+  const kpiRateVal = document.getElementById("kpi-rate-val");
+  const kpiRateTrend = document.getElementById("kpi-rate-trend");
+  const kpiRateNote = document.getElementById("kpi-rate-note");
+
+  const kpiCartsVal = document.getElementById("kpi-carts-val");
+  const kpiCartsTrend = document.getElementById("kpi-carts-trend");
+  const kpiCartsNote = document.getElementById("kpi-carts-note");
+
+  if (isReal) {
+    if (kpiSalesVal) {
+      kpiSalesVal.setAttribute("data-usd", "0");
+      kpiSalesVal.setAttribute("data-xof", "0");
+      kpiSalesVal.textContent = currentCurrency === "USD" ? "$0" : "0 XOF";
+    }
+    if (kpiSalesTrend) {
+      kpiSalesTrend.innerHTML = '<i class="fa-solid fa-sparkles"></i> Nouveau compte';
+      kpiSalesTrend.className = "kpi-badge-trend badge-subtle";
+    }
+    if (kpiSalesNote) {
+      kpiSalesNote.textContent = "En attente de vos premiers paiements Wave & Mobile Money";
+    }
+
+    if (kpiConvsVal) kpiConvsVal.textContent = "0";
+    if (kpiConvsTrend) {
+      kpiConvsTrend.innerHTML = '<i class="fa-solid fa-clock"></i> En attente';
+      kpiConvsTrend.className = "kpi-badge-trend badge-subtle";
+    }
+    if (kpiConvsNote) {
+      kpiConvsNote.textContent = "Scannez votre QR code pour lier votre numéro WhatsApp";
+    }
+
+    if (kpiRateVal) kpiRateVal.textContent = "0%";
+    if (kpiRateTrend) {
+      kpiRateTrend.innerHTML = '<i class="fa-solid fa-chart-line"></i> 0 vente';
+      kpiRateTrend.className = "kpi-badge-trend badge-subtle";
+    }
+    if (kpiRateNote) {
+      kpiRateNote.textContent = "Vos conversions de vente apparaîtront ici";
+    }
+
+    if (kpiCartsVal) kpiCartsVal.textContent = "0";
+    if (kpiCartsTrend) {
+      kpiCartsTrend.innerHTML = '<i class="fa-solid fa-check"></i> Prêt';
+      kpiCartsTrend.className = "kpi-badge-trend badge-subtle";
+    }
+    if (kpiCartsNote) {
+      kpiCartsNote.innerHTML = `Relances prêtes : <strong>${currentCurrency === "USD" ? "$0" : "0 XOF"}</strong>`;
+    }
+  } else {
+    // Mode Démo
+    if (kpiSalesVal) {
+      kpiSalesVal.setAttribute("data-usd", "8420");
+      kpiSalesVal.setAttribute("data-xof", "5180000");
+      kpiSalesVal.textContent = currentCurrency === "USD" ? "$8,420" : "5 180 000 XOF";
+    }
+    if (kpiSalesTrend) {
+      kpiSalesTrend.innerHTML = '<i class="fa-solid fa-arrow-up"></i> +34.5%';
+      kpiSalesTrend.className = "kpi-badge-trend";
+    }
+    if (kpiSalesNote) {
+      kpiSalesNote.textContent = "dont 68% collectés via Wave & Orange Money";
+    }
+
+    if (kpiConvsVal) kpiConvsVal.textContent = "1,248";
+    if (kpiConvsTrend) {
+      kpiConvsTrend.innerHTML = '<i class="fa-solid fa-arrow-up"></i> +18.2%';
+      kpiConvsTrend.className = "kpi-badge-trend";
+    }
+    if (kpiConvsNote) {
+      kpiConvsNote.textContent = "98.4% prises en charge à 100% par l'IA";
+    }
+
+    if (kpiRateVal) kpiRateVal.textContent = "28.4%";
+    if (kpiRateTrend) {
+      kpiRateTrend.innerHTML = '<i class="fa-solid fa-arrow-up"></i> +340%';
+      kpiRateTrend.className = "kpi-badge-trend";
+    }
+    if (kpiRateNote) {
+      kpiRateNote.textContent = "vs moyenne marché e-commerce (2.5%)";
+    }
+
+    if (kpiCartsVal) kpiCartsVal.textContent = "142";
+    if (kpiCartsTrend) {
+      kpiCartsTrend.innerHTML = '<i class="fa-solid fa-check"></i> 74% relancés';
+      kpiCartsTrend.className = "kpi-badge-trend";
+    }
+    if (kpiCartsNote) {
+      kpiCartsNote.innerHTML = `Revenus sauvés : <strong class="kpi-val-currency" id="kpi-saved-val" data-usd="2180" data-xof="1340000">${currentCurrency === "USD" ? "$2,180" : "1 340 000 XOF"}</strong>`;
+    }
+  }
+}
+
+function renderActivityFeed() {
+  const container = document.getElementById("activity-live-list");
+  if (!container) return;
+
+  if (currentDataMode === "real") {
+    container.innerHTML = `
+      <div style="padding: 24px 16px; text-align: center; color: var(--text-muted);">
+        <i class="fa-solid fa-bolt" style="font-size: 22px; color: var(--whatsapp-green); margin-bottom: 8px; display: block;"></i>
+        <strong style="color: #ffffff; font-size: 13px;">Flux en direct actif</strong>
+        <p style="margin: 4px 0 0 0; font-size: 11.5px;">En écoute des événements WhatsApp. Vos ventes et relances IA s'inscriront ici en direct.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="activity-item">
+      <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <div class="activity-info">
+        <div class="activity-text">
+          Paiement reçu de <strong>Amina Traoré</strong> via Wave (<strong>25 000 XOF</strong>) après recommandation de l'Agent IA.
+        </div>
+        <div class="activity-meta">Il y a 3 minutes • Tunnel Vente Flash WhatsApp</div>
+      </div>
+    </div>
+    <div class="activity-item">
+      <div class="activity-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">
+        <i class="fa-solid fa-cart-arrow-down"></i>
+      </div>
+      <div class="activity-info">
+        <div class="activity-text">
+          Relance automatique panier abandonné envoyée à <strong>Marc Koffi</strong> (Panier: 45 000 XOF).
+        </div>
+        <div class="activity-meta">Il y a 14 minutes • Relance Panier 48h</div>
+      </div>
+    </div>
+    <div class="activity-item">
+      <div class="activity-icon-wrapper" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">
+        <i class="fa-solid fa-robot"></i>
+      </div>
+      <div class="activity-info">
+        <div class="activity-text">
+          L'Agent IA a répondu à <strong>Fatou Diallo</strong> concernant les délais de livraison à Dakar.
+        </div>
+        <div class="activity-meta">Il y a 32 minutes • FAQ &amp; Service Client Auto</div>
+      </div>
+    </div>
+    <div class="activity-item">
+      <div class="activity-icon-wrapper" style="background: rgba(139, 92, 246, 0.15); color: var(--purple);">
+        <i class="fa-solid fa-paper-plane"></i>
+      </div>
+      <div class="activity-info">
+        <div class="activity-text">
+          Campagne <em>Promo Flash VIP Weekend</em> terminée : <strong>1 500 contacts</strong> touchés, 94.2% taux d'ouverture.
+        </div>
+        <div class="activity-meta">Il y a 1 heure • Diffusion SafeSend™</div>
+      </div>
+    </div>
+  `;
+}
+
 function setupCurrencyToggle() {
   const currencyBtns = document.querySelectorAll("#currency-switcher .currency-btn");
   currencyBtns.forEach(btn => {
@@ -794,15 +1033,7 @@ function setupCurrencyToggle() {
       btn.classList.add("active");
 
       // Update KPI currency values
-      document.querySelectorAll(".kpi-val-currency").forEach(el => {
-        const usdVal = el.getAttribute("data-usd");
-        const xofVal = el.getAttribute("data-xof");
-        if (currentCurrency === "USD") {
-          el.textContent = `$${Number(usdVal).toLocaleString()}`;
-        } else {
-          el.textContent = `${Number(xofVal).toLocaleString()} XOF`;
-        }
-      });
+      renderKpis();
 
       // Update Chart label & dataset
       const legendSales = document.getElementById("chart-legend-sales-label");
@@ -910,6 +1141,44 @@ function renderConversationList() {
   const listContainer = document.getElementById("inbox-conversation-list");
   if (!listContainer) return;
 
+  if (currentDataMode === "real") {
+    listContainer.innerHTML = `
+      <div style="padding: 32px 16px; text-align: center; color: var(--text-muted);">
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(37, 211, 102, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; color: var(--whatsapp-green); font-size: 20px;">
+          <i class="fa-brands fa-whatsapp"></i>
+        </div>
+        <strong style="display: block; color: #ffffff; font-size: 13.5px; margin-bottom: 6px;">Aucun message reçu</strong>
+        <p style="font-size: 11.5px; line-height: 1.5; margin: 0;">
+          Dès qu'un client vous écrit sur votre numéro WhatsApp lié, la conversation s'affichera ici instantanément.
+        </p>
+      </div>
+    `;
+
+    const nameEl = document.getElementById("active-chat-name");
+    const phoneEl = document.getElementById("active-chat-phone");
+    const avatarEl = document.getElementById("active-chat-avatar");
+    const stream = document.getElementById("chat-messages-stream");
+
+    if (nameEl) nameEl.textContent = "Boîte de Réception Vierge";
+    if (phoneEl) phoneEl.textContent = "En attente de messages clients";
+    if (avatarEl) avatarEl.textContent = "IA";
+    if (stream) {
+      stream.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-muted); padding: 20px;">
+          <div style="width: 52px; height: 52px; border-radius: 12px; background: rgba(37, 211, 102, 0.12); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 24px; margin-bottom: 14px;">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <h4 style="color: #ffffff; font-size: 15px; margin: 0 0 8px 0;">Agent IA Vendeur Prêt</h4>
+          <p style="font-size: 12.5px; max-width: 420px; margin: 0 0 16px 0; line-height: 1.5;">
+            Votre agent IA est configuré pour répondre en continu en moins de 1 seconde et encaisser via Wave et Orange Money.
+          </p>
+          <span class="badge badge-green" style="font-size: 11px; padding: 5px 12px;">En écoute 24h/24 &amp; 7j/7</span>
+        </div>
+      `;
+    }
+    return;
+  }
+
   listContainer.innerHTML = MOCK_DATA.conversations.map((conv, idx) => `
     <div class="conv-item ${idx === 0 ? 'active' : ''}" data-conv-id="${conv.id}">
       <div class="conv-avatar">
@@ -942,6 +1211,10 @@ function renderConversationList() {
       }
     });
   });
+
+  if (MOCK_DATA.conversations.length > 0) {
+    loadConversation(MOCK_DATA.conversations[0]);
+  }
 }
 
 function loadConversation(conv) {
@@ -1014,6 +1287,30 @@ function simulateClientResponse() {
 function renderRecentInteractions() {
   const tbody = document.getElementById("table-interactions-body");
   if (!tbody) return;
+
+  if (currentDataMode === "real") {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 36px 20px;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text-muted);">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(37, 211, 102, 0.1); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 20px;">
+              <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <strong style="color: #ffffff; font-size: 14.5px;">Votre compte VANDIA est prêt pour vos premières ventes</strong>
+            <p style="margin: 0; font-size: 12.5px; max-width: 440px;">
+              Liez votre numéro WhatsApp pour démarrer. Vos messages clients et paiements Wave apparaîtront automatiquement ici en temps réel.
+            </p>
+            <button type="button" class="btn-primary-glow btn-open-qr" style="margin-top: 8px; font-size: 12.5px; padding: 7px 16px;">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>Lier mon WhatsApp maintenant</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    tbody.querySelectorAll(".btn-open-qr").forEach(btn => btn.addEventListener("click", openQrModal));
+    return;
+  }
 
   tbody.innerHTML = MOCK_DATA.recentInteractions.map(item => `
     <tr>
@@ -1096,6 +1393,21 @@ function renderAutomations() {
 function renderContacts() {
   const tbody = document.getElementById("contacts-table-body");
   if (!tbody) return;
+
+  if (currentDataMode === "real") {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 36px 16px; color: var(--text-muted);">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(6, 182, 212, 0.1); display: flex; align-items: center; justify-content: center; color: var(--cyan); font-size: 20px; margin: 0 auto 10px auto;">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <strong style="color: #ffffff; font-size: 14px; display: block; margin-bottom: 4px;">0 contact enregistré</strong>
+          <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Chaque prospect ou client qui contacte votre WhatsApp sera automatiquement ajouté dans ce CRM.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   tbody.innerHTML = MOCK_DATA.contacts.map(c => `
     <tr>
