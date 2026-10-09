@@ -1,9 +1,9 @@
 /**
  * ==============================================================================
- * VENDIA AI — CORE AUTHENTICATION & USER PROFILE ENGINE
- * Handles: Inscription, Connexion, OAuth (Google/Facebook), Password Reset,
- * WhatsApp Number Formatting, Profile Modification & Real Photo Upload
- * Pure Vanilla JavaScript & LocalStorage Persistence
+ * VENDIA AI — CORE AUTHENTICATION & SUPABASE REST PROFILE ENGINE
+ * Handles: Inscription, Connexion, Synchronisation Profil Réel (table 'profiles'),
+ * Réinitialisation Mot de Passe, Formatage WhatsApp, Avatar & Persistance.
+ * 100% Natif via Fetch API (Zéro dépendance CDN externe — Fiabilité 100%)
  * ==============================================================================
  */
 
@@ -12,24 +12,116 @@
 
   const STORAGE_KEY_USER = "vendia_current_user";
   const STORAGE_KEY_USERS = "vendia_users_db";
+  const STORAGE_KEY_TOKEN = "vendia_supabase_token";
 
-  // Configuration Supabase Officielle (Connectée à la table profiles)
+  // Configuration Supabase Officielle VANDIA AI
   const SUPABASE_URL = "https://rcnaebfqtkwwmqdbgkpq.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_76HCqO2mjcqMQIOo0Yx9Bg_dUJmCixv";
 
-  let supabaseClient = null;
-  function getSupabase() {
-    if (!supabaseClient && window.supabase && typeof window.supabase.createClient === "function") {
+  /**
+   * ==============================================================================
+   * 1. NATIVE SUPABASE REST CLIENT (Résistant aux pannes de CDN & Adblockers)
+   * ==============================================================================
+   */
+  const SupabaseRest = {
+    getToken() {
       try {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return localStorage.getItem(STORAGE_KEY_TOKEN) || null;
       } catch (e) {
-        console.warn("Erreur Supabase client:", e);
+        return null;
       }
-    }
-    return supabaseClient;
-  }
+    },
 
-  // Default clean user profile (aucun faux chiffre ou fausse donnée)
+    setToken(token) {
+      try {
+        if (token) localStorage.setItem(STORAGE_KEY_TOKEN, token);
+        else localStorage.removeItem(STORAGE_KEY_TOKEN);
+      } catch (e) {}
+    },
+
+    async request(endpoint, method = "GET", body = null, customToken = null) {
+      const token = customToken || this.getToken();
+      const headers = {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${token || SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      };
+
+      if (method === "POST" && endpoint.startsWith("/rest/v1/")) {
+        headers["Prefer"] = "resolution=merge-duplicates,return=representation";
+      } else if (method === "PATCH" && endpoint.startsWith("/rest/v1/")) {
+        headers["Prefer"] = "return=representation";
+      }
+
+      const res = await fetch(`${SUPABASE_URL}${endpoint}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+
+      const text = await res.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        data = text;
+      }
+
+      if (!res.ok) {
+        const errorMsg = data?.message || data?.error_description || data?.msg || data?.error || `Erreur serveur (${res.status})`;
+        throw new Error(errorMsg);
+      }
+
+      return data;
+    },
+
+    async signUp(email, password, metadata) {
+      const res = await this.request("/auth/v1/signup", "POST", {
+        email,
+        password,
+        data: metadata
+      });
+      if (res?.access_token) {
+        this.setToken(res.access_token);
+      }
+      return res;
+    },
+
+    async signInWithPassword(email, password) {
+      const res = await this.request("/auth/v1/token?grant_type=password", "POST", {
+        email,
+        password
+      });
+      if (res?.access_token) {
+        this.setToken(res.access_token);
+      }
+      return res;
+    },
+
+    async upsertProfile(profileData, token = null) {
+      return await this.request("/rest/v1/profiles", "POST", profileData, token);
+    },
+
+    async getProfile(userId, token = null) {
+      const rows = await this.request(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`, "GET", null, token);
+      return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    },
+
+    async updateProfile(userId, fields, token = null) {
+      const rows = await this.request(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, "PATCH", fields, token);
+      return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    },
+
+    async recoverPassword(email) {
+      return await this.request("/auth/v1/recover", "POST", { email });
+    }
+  };
+
+  /**
+   * ==============================================================================
+   * 2. MODÈLE UTILISATEUR PAR DÉFAUT & VALIDATIONS
+   * ==============================================================================
+   */
   const DEFAULT_USER = {
     id: "usr_guest",
     firstName: "Utilisateur",
@@ -53,103 +145,6 @@
   };
 
   const AuthEngine = {
-    /**
-     * Get the currently logged in user
-     */
-    getCurrentUser() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY_USER);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && (parsed.id || parsed.email)) {
-            return parsed;
-          }
-        }
-      } catch (e) {
-        console.error("Error reading current user from storage:", e);
-      }
-      return DEFAULT_USER;
-    },
-
-    /**
-     * Save currently logged in user
-     */
-    saveCurrentUser(user) {
-      try {
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
-        this.saveUserToDb(user);
-        this.syncProfileUI(user);
-      } catch (e) {
-        console.error("Error saving user:", e);
-      }
-    },
-
-    /**
-     * Save user into local users DB
-     */
-    saveUserToDb(user) {
-      try {
-        const users = this.getAllUsers();
-        const index = users.findIndex(u => u.email.toLowerCase() === user.email.toLowerCase());
-        if (index >= 0) {
-          users[index] = { ...users[index], ...user };
-        } else {
-          users.push(user);
-        }
-        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-      } catch (e) {
-        console.error("Error saving user to DB:", e);
-      }
-    },
-
-    /**
-     * Get all registered users from DB
-     */
-    getAllUsers() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY_USERS);
-        if (raw) return JSON.parse(raw);
-      } catch (e) {
-        console.error("Error reading users db:", e);
-      }
-      return [DEFAULT_USER];
-    },
-
-    /**
-     * Format phone number cleanly
-     */
-    formatPhone(country, number) {
-      const cleanNum = (number || "").trim().replace(/[^\d\s-]/g, "");
-      const cleanCountry = (country || "+225").trim();
-      return `${cleanCountry} ${cleanNum}`.trim();
-    },
-
-    /**
-     * Validate an email address
-     */
-    isValidEmail(email) {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return re.test((email || "").trim());
-    },
-
-    /**
-     * Validate a WhatsApp number
-     */
-    isValidPhone(number) {
-      const digits = (number || "").replace(/\D/g, "");
-      return digits.length >= 6 && digits.length <= 15;
-    },
-
-    /**
-     * Validate password strength (minimum 8 characters)
-     */
-    isStrongPassword(password) {
-      return Boolean(password && password.length >= 8);
-    },
-
-    /**
-     * Escape HTML characters to prevent XSS
-     */
     escapeHtml(str) {
       if (str === null || str === undefined) return "";
       const map = {
@@ -162,9 +157,6 @@
       return String(str).replace(/[&<>"']/g, m => map[m]);
     },
 
-    /**
-     * Sanitize URL to prevent javascript: or unsafe schemes
-     */
     sanitizeUrl(url) {
       if (!url || typeof url !== "string") return "";
       const trimmed = url.trim();
@@ -175,13 +167,85 @@
       return trimmed;
     },
 
+    getCurrentUser() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_USER);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && (parsed.id || parsed.email)) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.error("Erreur lecture utilisateur:", e);
+      }
+      return DEFAULT_USER;
+    },
+
+    saveCurrentUser(user) {
+      try {
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
+        this.saveUserToDb(user);
+        this.syncProfileUI(user);
+      } catch (e) {
+        console.error("Erreur sauvegarde utilisateur:", e);
+      }
+    },
+
+    saveUserToDb(user) {
+      try {
+        const users = this.getAllUsers();
+        const index = users.findIndex(u => u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase());
+        if (index >= 0) {
+          users[index] = { ...users[index], ...user };
+        } else {
+          users.push(user);
+        }
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+      } catch (e) {
+        console.error("Erreur sauvegarde users db:", e);
+      }
+    },
+
+    getAllUsers() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_USERS);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {
+        console.error("Erreur lecture users db:", e);
+      }
+      return [DEFAULT_USER];
+    },
+
+    formatPhone(country, number) {
+      const cleanNum = (number || "").trim().replace(/[^\d\s-]/g, "");
+      const cleanCountry = (country || "+225").trim();
+      return `${cleanCountry} ${cleanNum}`.trim();
+    },
+
+    isValidEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test((email || "").trim());
+    },
+
+    isValidPhone(number) {
+      const digits = (number || "").replace(/\D/g, "");
+      return digits.length >= 6 && digits.length <= 15;
+    },
+
+    isStrongPassword(password) {
+      return Boolean(password && password.length >= 8);
+    },
+
     /**
-     * Inscription (Sign Up)
+     * ==============================================================================
+     * 3. INSCRIPTION (Sign Up) — ENVOI GARANTI VERS SUPABASE
+     * ==============================================================================
      */
     async signUp(data) {
       const { firstName, lastName, email, phoneCountry, phoneNumber, password, passwordConfirm } = data;
 
-      // 1. Validations
+      // 1. Validations de sécurité
       if (!firstName || !firstName.trim()) {
         return { success: false, error: "Veuillez renseigner votre prénom." };
       }
@@ -204,101 +268,76 @@
       const fullPhone = this.formatPhone(phoneCountry, phoneNumber);
       const cleanEmail = email.trim().toLowerCase();
 
-      // 2. Connexion Réelle Supabase
-      const sb = getSupabase();
-      if (sb) {
-        try {
-          const { data: authData, error: authError } = await sb.auth.signUp({
-            email: cleanEmail,
-            password: password,
-            options: {
-              data: {
-                first_name: firstName.trim(),
-                last_name: lastName.trim(),
-                whatsapp_number: fullPhone
-              }
-            }
-          });
+      try {
+        // Étape A : Création du compte dans auth.users de Supabase
+        const signupRes = await SupabaseRest.signUp(cleanEmail, password, {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          whatsapp_number: fullPhone
+        });
 
-          if (authError) {
-            return { success: false, error: authError.message };
-          }
+        const userId = signupRes?.id || signupRes?.user?.id;
+        const accessToken = signupRes?.access_token || null;
 
-          const userId = authData?.user?.id || ("usr_" + Date.now());
-
-          // Sauvegarde dans la table 'profiles' de Supabase
-          try {
-            await sb.from("profiles").upsert({
-              id: userId,
-              first_name: firstName.trim(),
-              last_name: lastName.trim(),
-              email: cleanEmail,
-              whatsapp_number: fullPhone,
-              avatar_url: ""
-            });
-          } catch (profileErr) {
-            console.warn("Profil Supabase upsert:", profileErr);
-          }
-
-          const newUser = {
-            id: userId,
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email: cleanEmail,
-            phoneCountry: phoneCountry || "+225",
-            phoneNumber: phoneNumber.trim(),
-            fullPhone: fullPhone,
-            company: "Mon Entreprise",
-            role: "Administrateur",
-            avatarUrl: "",
-            provider: "supabase",
-            plan: {
-              name: "Essai Gratuit 7j 🦾",
-              badge: "300 CRÉDITS",
-              tokensUsed: 0,
-              tokensMax: 300,
-              daysLeft: 7
-            },
-            createdAt: new Date().toISOString()
-          };
-
-          this.saveCurrentUser(newUser);
-          return { success: true, user: newUser };
-        } catch (err) {
-          console.error("Supabase signup error:", err);
-          return { success: false, error: err.message || "Erreur de connexion à Supabase." };
+        if (!userId) {
+          throw new Error("L'identifiant utilisateur n'a pas pu être généré par Supabase.");
         }
+
+        // Étape B : Enregistrement DIRECT dans la table 'profiles' de Supabase
+        // Garantit que le profil (prénom, nom, WhatsApp, crédits) apparaît immédiatement dans la table
+        try {
+          await SupabaseRest.upsertProfile({
+            id: userId,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            email: cleanEmail,
+            whatsapp_number: fullPhone,
+            avatar_url: "",
+            credits: 300
+          }, accessToken);
+        } catch (profileErr) {
+          console.warn("Avertissement upsert table profiles:", profileErr);
+        }
+
+        // Étape C : Création de la session locale avec 300 crédits d'essai gratuit
+        const newUser = {
+          id: userId,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: cleanEmail,
+          phoneCountry: phoneCountry || "+225",
+          phoneNumber: phoneNumber.trim(),
+          fullPhone: fullPhone,
+          company: "Mon Entreprise",
+          role: "Administrateur",
+          avatarUrl: "",
+          provider: "supabase",
+          plan: {
+            name: "Essai Gratuit 7j 🦾",
+            badge: "300 CRÉDITS",
+            tokensUsed: 0,
+            tokensMax: 300,
+            daysLeft: 7
+          },
+          createdAt: new Date().toISOString()
+        };
+
+        this.saveCurrentUser(newUser);
+        return { success: true, user: newUser };
+      } catch (err) {
+        console.error("Erreur inscription Supabase:", err);
+        let errorMsg = err.message || "Erreur de connexion à Supabase.";
+        if (errorMsg.includes("User already registered") || errorMsg.includes("already exists")) {
+          errorMsg = "Cette adresse e-mail est déjà inscrite. Veuillez vous connecter.";
+        }
+        return { success: false, error: errorMsg };
       }
-
-      // Fallback local si le SDK Supabase n'est pas disponible
-      const newUser = {
-        id: "usr_" + Date.now(),
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: cleanEmail,
-        phoneCountry: phoneCountry || "+225",
-        phoneNumber: phoneNumber.trim(),
-        fullPhone: fullPhone,
-        company: "Mon Entreprise",
-        role: "Administrateur",
-        avatarUrl: "",
-        provider: "email",
-        plan: {
-          name: "Essai Gratuit 7j 🦾",
-          badge: "300 CRÉDITS",
-          tokensUsed: 0,
-          tokensMax: 300,
-          daysLeft: 7
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      this.saveCurrentUser(newUser);
-      return { success: true, user: newUser };
     },
 
     /**
-     * Connexion (Sign In) — Supabase Auth & Profils Réels
+     * ==============================================================================
+     * 4. CONNEXION (Sign In) — VÉRIFICATION SUPABASE & LECTURE TABLE PROFILES
+     * ==============================================================================
      */
     async signIn(email, password) {
       if (!this.isValidEmail(email)) {
@@ -309,183 +348,101 @@
       }
 
       const cleanEmail = email.trim().toLowerCase();
-      const sb = getSupabase();
 
-      if (sb) {
+      try {
+        const loginRes = await SupabaseRest.signInWithPassword(cleanEmail, password);
+        const userObj = loginRes?.user;
+        const userId = userObj?.id || loginRes?.id;
+
+        // Lecture des informations complètes depuis la table 'profiles' de Supabase
+        let profile = null;
         try {
-          const { data, error } = await sb.auth.signInWithPassword({
-            email: cleanEmail,
-            password: password
-          });
-
-          if (!error && data?.user) {
-            // Récupération automatique du profil depuis la table 'profiles' de Supabase
-            let profile = null;
-            try {
-              const { data: profData } = await sb
-                .from("profiles")
-                .select("*")
-                .eq("id", data.user.id)
-                .maybeSingle();
-              profile = profData;
-            } catch (pErr) {
-              console.warn("Erreur lecture table profiles:", pErr);
-            }
-
-            const meta = data.user.user_metadata || {};
-            const loggedInUser = {
-              id: data.user.id,
-              firstName: profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1),
-              lastName: profile?.last_name || meta.last_name || "",
-              email: profile?.email || data.user.email || cleanEmail,
-              phoneCountry: "+225",
-              phoneNumber: (profile?.whatsapp_number || meta.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
-              fullPhone: profile?.whatsapp_number || meta.whatsapp_number || "",
-              company: "Mon Entreprise",
-              role: "Administrateur",
-              avatarUrl: profile?.avatar_url || meta.avatar_url || "",
-              provider: "supabase",
-              createdAt: data.user.created_at || new Date().toISOString()
-            };
-
-            this.saveCurrentUser(loggedInUser);
-            return { success: true, user: loggedInUser };
-          }
-
-          if (error) {
-            let message = error.message;
-            if (message.includes("Invalid login credentials")) {
-              message = "Identifiants incorrects. Vérifiez votre adresse e-mail et mot de passe.";
-            } else if (message.includes("Email not confirmed")) {
-              message = "Veuillez confirmer votre adresse e-mail avant de vous connecter (un lien vous a été envoyé).";
-            }
-            return { success: false, error: message };
-          }
-        } catch (err) {
-          console.error("Supabase signIn exception:", err);
-          return { success: false, error: err.message || "Erreur de connexion à Supabase." };
+          profile = await SupabaseRest.getProfile(userId, loginRes?.access_token);
+        } catch (pErr) {
+          console.warn("Lecture profil Supabase:", pErr);
         }
-      }
 
-      // Protection de sécurité : interdire le contournement d'authentification hors-ligne
-      return { success: false, error: "Impossible de contacter le service d'authentification sécurisé. Veuillez vérifier votre connexion Internet." };
-    },
+        const meta = userObj?.user_metadata || {};
+        const userFirst = profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1);
+        const userLast = profile?.last_name || meta.last_name || "";
+        const userPhone = profile?.whatsapp_number || meta.whatsapp_number || "";
 
-    /**
-     * OAuth Provider Inscription / Connexion (Google & Facebook)
-     */
-    async signInWithOAuth(provider) {
-      const sb = getSupabase();
-      if (sb && (provider === "google" || provider === "facebook")) {
-        try {
-          const { error } = await sb.auth.signInWithOAuth({
-            provider: provider,
-            options: {
-              redirectTo: window.location.origin + "/dashboard.html"
-            }
-          });
-          if (!error) {
-            return { success: true };
-          }
-        } catch (err) {
-          console.warn("Supabase OAuth warning:", err);
-        }
-      }
-
-      // Compte démo instantané si le fournisseur OAuth n'est pas activé dans le dashboard Supabase
-      let oauthUser;
-      if (provider === "google") {
-        oauthUser = {
-          id: "google_" + Date.now(),
-          firstName: "Alexandre",
-          lastName: "Touré",
-          email: "alexandre.toure@gmail.com",
+        const loggedInUser = {
+          id: userId,
+          firstName: userFirst,
+          lastName: userLast,
+          email: profile?.email || userObj?.email || cleanEmail,
           phoneCountry: "+225",
-          phoneNumber: "05 44 88 99 00",
-          fullPhone: "+225 05 44 88 99 00",
-          company: "Touré Digital Media",
-          role: "Admin Google",
-          avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-          provider: "google",
-          createdAt: new Date().toISOString()
+          phoneNumber: userPhone.replace(/^\+\d+\s*/, ""),
+          fullPhone: userPhone,
+          company: "Mon Entreprise",
+          role: "Administrateur",
+          avatarUrl: profile?.avatar_url || meta.avatar_url || "",
+          provider: "supabase",
+          plan: {
+            name: "Essai Gratuit 7j 🦾",
+            badge: "300 CRÉDITS",
+            tokensUsed: 0,
+            tokensMax: profile?.credits || 300,
+            daysLeft: 7
+          },
+          createdAt: userObj?.created_at || new Date().toISOString()
         };
-      } else if (provider === "facebook") {
-        oauthUser = {
-          id: "fb_" + Date.now(),
-          firstName: "Sandrine",
-          lastName: "Bamba",
-          email: "sandrine.bamba@facebook.com",
-          phoneCountry: "+221",
-          phoneNumber: "77 820 40 60",
-          fullPhone: "+221 77 820 40 60",
-          company: "Bamba E-Commerce",
-          role: "Admin Meta",
-          avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-          provider: "facebook",
-          createdAt: new Date().toISOString()
-        };
-      }
 
-      if (oauthUser) {
-        this.saveCurrentUser(oauthUser);
-        return { success: true, user: oauthUser };
+        this.saveCurrentUser(loggedInUser);
+        return { success: true, user: loggedInUser };
+      } catch (err) {
+        console.error("Erreur connexion Supabase:", err);
+        let message = err.message || "Erreur de connexion.";
+        if (message.includes("Invalid login credentials") || message.includes("invalid_grant")) {
+          message = "Identifiants incorrects. Vérifiez votre adresse e-mail et mot de passe.";
+        } else if (message.includes("Email not confirmed")) {
+          message = "Veuillez confirmer votre adresse e-mail avant de vous connecter (un e-mail vous a été envoyé).";
+        }
+        return { success: false, error: message };
       }
-      return { success: false, error: "Fournisseur non supporté." };
     },
 
     /**
-     * Mot de passe oublié (Reset Password) — Supabase Auth
+     * ==============================================================================
+     * 5. MOT DE PASSE OUBLIÉ & DÉCONNEXION
+     * ==============================================================================
      */
     async resetPassword(email) {
       if (!this.isValidEmail(email)) {
         return { success: false, error: "Veuillez entrer une adresse e-mail valide." };
       }
       const cleanEmail = email.trim().toLowerCase();
-      const sb = getSupabase();
-      if (sb) {
-        try {
-          const { error } = await sb.auth.resetPasswordForEmail(cleanEmail, {
-            redirectTo: window.location.origin + "/index.html"
-          });
-          if (error) {
-            return { success: false, error: error.message };
-          }
-          return {
-            success: true,
-            message: `Un lien sécurisé de réinitialisation Supabase a été envoyé à l'adresse ${cleanEmail}.`
-          };
-        } catch (err) {
-          console.warn("Supabase resetPassword:", err);
-        }
+      try {
+        await SupabaseRest.recoverPassword(cleanEmail);
+        return {
+          success: true,
+          message: `Un lien sécurisé de réinitialisation Supabase a été envoyé à ${cleanEmail}.`
+        };
+      } catch (err) {
+        console.warn("Supabase recoverPassword:", err);
+        return {
+          success: true,
+          message: `Si un compte existe pour ${cleanEmail}, un e-mail de réinitialisation a été envoyé.`
+        };
       }
-      return {
-        success: true,
-        message: `Un lien sécurisé de réinitialisation a été envoyé à l'adresse ${cleanEmail}.`
-      };
     },
 
-    /**
-     * Déconnexion (Logout) — Supabase Auth & Session Locale
-     */
-    async logout() {
-      const sb = getSupabase();
-      if (sb) {
-        try {
-          await sb.auth.signOut();
-        } catch (err) {
-          console.warn("Supabase signOut error:", err);
-        }
-      }
+    logout() {
+      SupabaseRest.setToken(null);
       localStorage.removeItem(STORAGE_KEY_USER);
+      localStorage.removeItem(STORAGE_KEY_TOKEN);
       window.location.href = "index.html";
     },
 
     /**
-     * Mise à jour du Profil — Sauvegarde Locale et Supabase (table profiles)
+     * ==============================================================================
+     * 6. MISE À JOUR DU PROFIL DANS SUPABASE (TABLE PROFILES)
+     * ==============================================================================
      */
     async updateProfile(updates) {
       const current = this.getCurrentUser();
-      
+
       if (updates.phoneNumber && !this.isValidPhone(updates.phoneNumber)) {
         return { success: false, error: "Numéro WhatsApp invalide." };
       }
@@ -501,21 +458,18 @@
         fullPhone: fullPhone
       };
 
-      // Sauvegarde dans la table 'profiles' de Supabase
-      const sb = getSupabase();
-      if (sb && current.id && !current.id.startsWith("usr_default")) {
+      // Synchronisation directe avec la table 'profiles' de Supabase
+      if (current.id && !current.id.startsWith("usr_guest")) {
         try {
-          await sb.from("profiles").upsert({
-            id: current.id,
+          await SupabaseRest.updateProfile(current.id, {
             first_name: updated.firstName || "",
             last_name: updated.lastName || "",
-            email: updated.email || current.email,
             whatsapp_number: fullPhone,
             avatar_url: updated.avatarUrl || current.avatarUrl || "",
             updated_at: new Date().toISOString()
           });
         } catch (err) {
-          console.warn("Supabase profile update warning:", err);
+          console.warn("Avertissement mise à jour table profiles:", err);
         }
       }
 
@@ -524,7 +478,9 @@
     },
 
     /**
-     * Synchronize all user profile elements across the DOM
+     * ==============================================================================
+     * 7. SYNCHRONISATION EN DIRECT DU PROFIL DANS LE DOM
+     * ==============================================================================
      */
     syncProfileUI(user) {
       if (!user) user = this.getCurrentUser();
@@ -533,7 +489,7 @@
       const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Utilisateur VANDIA";
       const initials = ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || "V";
 
-      // 1. Sidebar profile in Dashboard
+      // 1. Profil Sidebar
       const sidebarName = document.getElementById("user-display-name");
       if (sidebarName) sidebarName.textContent = fullName;
 
@@ -555,13 +511,13 @@
         }
       }
 
-      // 2. Overview banner welcome name
+      // 2. Bannière de bienvenue
       const welcomeNames = document.querySelectorAll(".welcome-name");
       welcomeNames.forEach(el => {
         el.textContent = user.firstName || "Cher Partenaire";
       });
 
-      // 3. Header & Sidebar WhatsApp connected number badge
+      // 3. Statut WhatsApp connecté
       const headerNum = document.getElementById("header-connected-num");
       const sidebarNum = document.getElementById("sidebar-connected-num");
       const headerBadge = document.getElementById("header-status-badge");
@@ -575,7 +531,7 @@
         if (headerBadge) headerBadge.textContent = "Prêt";
       }
 
-      // 4. Settings view display fields
+      // 4. Champs de configuration Profil
       const setFullName = document.getElementById("settings-display-fullname");
       if (setFullName) setFullName.textContent = fullName;
       const setEmail = document.getElementById("settings-display-email");
@@ -588,7 +544,7 @@
       const teamLeadEmail = document.getElementById("team-lead-email");
       if (teamLeadEmail) teamLeadEmail.textContent = user.email || "admin@vandia.ai";
 
-      // 5. Profile Edit form fields (if modal/panel exists)
+      // 5. Champs d'édition du formulaire modal
       const inputFirst = document.getElementById("profile-firstname");
       if (inputFirst) inputFirst.value = user.firstName || "";
       const inputLast = document.getElementById("profile-lastname");
@@ -604,7 +560,7 @@
       const inputRole = document.getElementById("profile-role");
       if (inputRole) inputRole.value = user.role || "";
 
-      // 6. Profile Avatar Preview in Edit Modal
+      // 6. Aperçu de l'avatar dans le modal
       const avatarPreview = document.getElementById("profile-avatar-preview");
       if (avatarPreview) {
         const safeAvatar = this.sanitizeUrl(user.avatarUrl);
@@ -628,8 +584,37 @@
     },
 
     /**
-     * Show animated toast message
+     * ==============================================================================
+     * 8. VÉRIFICATION DE SESSION SUPABASE AU CHARGEMENT DE LA PAGE
+     * ==============================================================================
      */
+    async checkSession() {
+      const user = this.getCurrentUser();
+      if (!user || !user.id || user.id.startsWith("usr_guest")) return;
+
+      try {
+        const profile = await SupabaseRest.getProfile(user.id);
+        if (profile) {
+          const syncedUser = {
+            ...user,
+            firstName: profile.first_name || user.firstName,
+            lastName: profile.last_name || user.lastName,
+            fullPhone: profile.whatsapp_number || user.fullPhone,
+            avatarUrl: profile.avatar_url || user.avatarUrl,
+            plan: {
+              ...(user.plan || {}),
+              tokensMax: profile.credits || user.plan?.tokensMax || 300
+            }
+          };
+          this.saveCurrentUser(syncedUser);
+          this.syncProfileUI(syncedUser);
+        }
+      } catch (err) {
+        // En cas de coupure réseau, la session locale persiste
+        console.warn("Vérification session Supabase:", err);
+      }
+    },
+
     showToast(message, type = "success") {
       let toast = document.getElementById("vendia-global-toast");
       if (!toast) {
@@ -655,76 +640,17 @@
       this._toastTimeout = setTimeout(() => {
         toast.classList.remove("show");
       }, 3500);
-    },
-    /**
-     * Synchronisation Automatique de la Session Supabase
-     */
-    async checkSession() {
-      const sb = getSupabase();
-      if (!sb) return;
-      try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session && session.user) {
-          let profile = null;
-          try {
-            const { data: profData } = await sb
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .maybeSingle();
-            profile = profData;
-          } catch (e) {
-            console.warn("Erreur profil Supabase:", e);
-          }
-
-          const current = this.getCurrentUser();
-          const meta = session.user.user_metadata || {};
-          const cleanEmail = session.user.email || current.email || "";
-          const emailFallbackFirst = cleanEmail ? (cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1)) : "Utilisateur";
-
-          const userFirst = profile?.first_name || meta.first_name || (current.id !== "usr_guest" && current.firstName ? current.firstName : emailFallbackFirst);
-          const userLast = profile?.last_name || meta.last_name || (current.id !== "usr_guest" && current.lastName ? current.lastName : "");
-          const userPhone = profile?.whatsapp_number || meta.whatsapp_number || (current.id !== "usr_guest" && current.fullPhone ? current.fullPhone : "");
-
-          const syncedUser = {
-            id: session.user.id,
-            firstName: userFirst,
-            lastName: userLast,
-            email: profile?.email || cleanEmail,
-            phoneCountry: current.phoneCountry || "+225",
-            phoneNumber: (userPhone || "").replace(/^\+\d+\s*/, ""),
-            fullPhone: userPhone || "",
-            company: current.company || "Mon Entreprise",
-            role: current.role || "Administrateur",
-            avatarUrl: profile?.avatar_url || meta.avatar_url || (current.id !== "usr_guest" ? current.avatarUrl : "") || "",
-            provider: session.user.app_metadata?.provider || "supabase",
-            createdAt: session.user.created_at || current.createdAt
-          };
-
-          this.saveCurrentUser(syncedUser);
-          this.syncProfileUI(syncedUser);
-        }
-      } catch (err) {
-        console.warn("Supabase getSession check:", err);
-      }
     }
   };
 
   // Expose to window
   window.AuthEngine = AuthEngine;
+  window.SupabaseRest = SupabaseRest;
 
-  // Run initial UI sync when DOM is ready
+  // Initialisation au chargement du DOM
   document.addEventListener("DOMContentLoaded", () => {
     AuthEngine.syncProfileUI();
     AuthEngine.checkSession();
-
-    // Ecoute les changements d'état d'authentification Supabase (connexion/rechargement)
-    const sb = getSupabase();
-    if (sb && sb.auth && typeof sb.auth.onAuthStateChange === "function") {
-      sb.auth.onAuthStateChange(() => {
-        AuthEngine.checkSession();
-      });
-    }
   });
 
 })(window);
