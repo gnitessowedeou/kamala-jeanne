@@ -615,7 +615,7 @@ function initSalesActivityChart() {
   const ctx = document.getElementById("salesActivityChart");
   if (!ctx) return;
 
-  const dataset = MOCK_DATA.chartData["14"];
+  const dataset = getSalesChartData("14");
   const salesData = currentCurrency === "XOF" ? dataset.salesXof : dataset.salesUsd;
 
   salesChartInstance = new Chart(ctx, {
@@ -803,10 +803,60 @@ function setupChartFilters() {
   });
 }
 
-function updateChartPeriod(periodKey) {
-  if (!salesChartInstance || !MOCK_DATA.chartData[periodKey]) return;
+function isCurrentUserDemo() {
+  if (typeof window !== "undefined" && window.AuthEngine) {
+    const user = window.AuthEngine.getCurrentUser();
+    if (user && user.id && user.id !== "usr_default_01" && user.email !== "gnitou@vandia.ai") {
+      return false; // Real registered user
+    }
+  }
+  return true; // Demo user
+}
 
-  const data = MOCK_DATA.chartData[periodKey];
+function getUserKpis() {
+  if (!isCurrentUserDemo()) {
+    return {
+      salesUsd: 0,
+      salesXof: 0,
+      salesTrend: "0%",
+      salesNote: "En attente de vos premières commandes WhatsApp",
+      conversations: 0,
+      conversationsTrend: "0%",
+      conversationsNote: "Votre commercial IA est prêt et en attente",
+      conversionRate: "0.0%",
+      conversionTrend: "0%",
+      conversionNote: "Taux calculé dès vos premières commandes",
+      abandonedRecovered: 0,
+      abandonedRecoveredRate: "0 relancé",
+      abandonedSavedUsd: 0,
+      abandonedSavedXof: 0
+    };
+  }
+  return {
+    ...MOCK_DATA.kpis,
+    salesNote: "dont 68% collectés via Wave & Orange Money",
+    conversationsNote: "98.4% prises en charge à 100% par l'IA",
+    conversionNote: "vs moyenne marché e-commerce (2.5%)"
+  };
+}
+
+function getSalesChartData(periodKey) {
+  const base = MOCK_DATA.chartData[periodKey] || MOCK_DATA.chartData["14"];
+  if (!isCurrentUserDemo()) {
+    return {
+      labels: base.labels,
+      salesUsd: base.salesUsd.map(() => 0),
+      salesXof: base.salesXof.map(() => 0),
+      conversations: base.conversations.map(() => 0)
+    };
+  }
+  return base;
+}
+
+function updateChartPeriod(periodKey) {
+  if (!salesChartInstance) return;
+
+  const data = getSalesChartData(periodKey);
   salesChartInstance.data.labels = data.labels;
   salesChartInstance.data.datasets[0].data = currentCurrency === "XOF" ? data.salesXof : data.salesUsd;
   salesChartInstance.data.datasets[1].data = data.conversations;
@@ -817,6 +867,7 @@ function updateChartPeriod(periodKey) {
 // 8. KPI & LIVE ACTIVITY FEED RENDERING
 // ==============================================================================
 function renderKpis() {
+  const kpis = getUserKpis();
   const kpiSalesVal = document.getElementById("kpi-sales-val");
   const kpiSalesTrend = document.getElementById("kpi-sales-trend");
   const kpiSalesNote = document.getElementById("kpi-sales-note");
@@ -835,44 +886,44 @@ function renderKpis() {
 
   if (kpiSalesVal) {
     kpiSalesVal.textContent = currentCurrency === "USD" 
-      ? `$${MOCK_DATA.kpis.salesUsd.toLocaleString()}` 
-      : `${MOCK_DATA.kpis.salesXof.toLocaleString()} XOF`;
+      ? `$${kpis.salesUsd.toLocaleString()}` 
+      : `${kpis.salesXof.toLocaleString()} XOF`;
   }
   if (kpiSalesTrend) {
-    kpiSalesTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${MOCK_DATA.kpis.salesTrend}`;
+    kpiSalesTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${kpis.salesTrend}`;
     kpiSalesTrend.className = "kpi-badge-trend";
   }
   if (kpiSalesNote) {
-    kpiSalesNote.textContent = "dont 68% collectés via Wave & Orange Money";
+    kpiSalesNote.textContent = kpis.salesNote;
   }
 
-  if (kpiConvsVal) kpiConvsVal.textContent = MOCK_DATA.kpis.conversations.toLocaleString();
+  if (kpiConvsVal) kpiConvsVal.textContent = kpis.conversations.toLocaleString();
   if (kpiConvsTrend) {
-    kpiConvsTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${MOCK_DATA.kpis.conversationsTrend}`;
+    kpiConvsTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${kpis.conversationsTrend}`;
     kpiConvsTrend.className = "kpi-badge-trend";
   }
   if (kpiConvsNote) {
-    kpiConvsNote.textContent = "98.4% prises en charge à 100% par l'IA";
+    kpiConvsNote.textContent = kpis.conversationsNote;
   }
 
-  if (kpiRateVal) kpiRateVal.textContent = MOCK_DATA.kpis.conversionRate;
+  if (kpiRateVal) kpiRateVal.textContent = kpis.conversionRate;
   if (kpiRateTrend) {
-    kpiRateTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${MOCK_DATA.kpis.conversionTrend}`;
+    kpiRateTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${kpis.conversionTrend}`;
     kpiRateTrend.className = "kpi-badge-trend";
   }
   if (kpiRateNote) {
-    kpiRateNote.textContent = "vs moyenne marché e-commerce (2.5%)";
+    kpiRateNote.textContent = kpis.conversionNote;
   }
 
-  if (kpiCartsVal) kpiCartsVal.textContent = MOCK_DATA.kpis.abandonedRecovered.toLocaleString();
+  if (kpiCartsVal) kpiCartsVal.textContent = kpis.abandonedRecovered.toLocaleString();
   if (kpiCartsTrend) {
-    kpiCartsTrend.innerHTML = `<i class="fa-solid fa-check"></i> ${MOCK_DATA.kpis.abandonedRecoveredRate}`;
+    kpiCartsTrend.innerHTML = `<i class="fa-solid fa-check"></i> ${kpis.abandonedRecoveredRate}`;
     kpiCartsTrend.className = "kpi-badge-trend";
   }
   if (kpiCartsNote) {
     const savedFormatted = currentCurrency === "USD" 
-      ? `$${MOCK_DATA.kpis.abandonedSavedUsd.toLocaleString()}` 
-      : `${MOCK_DATA.kpis.abandonedSavedXof.toLocaleString()} XOF`;
+      ? `$${kpis.abandonedSavedUsd.toLocaleString()}` 
+      : `${kpis.abandonedSavedXof.toLocaleString()} XOF`;
     kpiCartsNote.innerHTML = `Revenus sauvés : <strong class="kpi-val-currency">${savedFormatted}</strong>`;
   }
 }
@@ -880,6 +931,23 @@ function renderKpis() {
 function renderActivityFeed() {
   const container = document.getElementById("activity-live-list");
   if (!container) return;
+
+  if (!isCurrentUserDemo()) {
+    container.innerHTML = `
+      <div class="activity-item">
+        <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <div class="activity-info">
+          <div class="activity-text">
+            <strong>Votre instance VANDIA IA est active et prête !</strong> Les commandes WhatsApp et paiements Wave/OM apparaîtront ici en direct.
+          </div>
+          <div class="activity-meta">À l'instant • Mode Réel Actif</div>
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   container.innerHTML = `
     <div class="activity-item">
@@ -1172,6 +1240,17 @@ function renderRecentInteractions() {
   const tbody = document.getElementById("table-interactions-body");
   if (!tbody) return;
 
+  if (!isCurrentUserDemo()) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          Aucune conversation client pour l'instant. Votre agent commercial attend vos premiers prospects.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   tbody.innerHTML = MOCK_DATA.recentInteractions.map(item => `
     <tr>
       <td>
@@ -1192,6 +1271,17 @@ function renderRecentInteractions() {
 function renderBroadcastCampaigns() {
   const tbody = document.getElementById("broadcast-table-body");
   if (!tbody) return;
+
+  if (!isCurrentUserDemo()) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          Aucune campagne de diffusion enregistrée. Cliquez sur « Nouvelle Diffusion » pour programmer votre premier envoi.
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   tbody.innerHTML = MOCK_DATA.campaigns.map(camp => `
     <tr>
@@ -1253,6 +1343,17 @@ function renderAutomations() {
 function renderContacts() {
   const tbody = document.getElementById("contacts-table-body");
   if (!tbody) return;
+
+  if (!isCurrentUserDemo()) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          Votre base CRM est prête. Vos prospects WhatsApp seront enregistrés automatiquement dès leur premier message.
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   tbody.innerHTML = MOCK_DATA.contacts.map(c => `
     <tr>
