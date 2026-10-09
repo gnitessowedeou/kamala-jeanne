@@ -11,7 +11,6 @@
   height: 100vh;
   overflow: hidden;
   background-color: var(--bg-main);
-  z-index: 1;
 }
 
 /* ==========================================================================
@@ -89,9 +88,25 @@
 
 .sidebar-close-btn {
   display: none;
-  font-size: 20px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--text-secondary);
-  padding: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-close-btn:hover,
+.sidebar-close-btn:active {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: var(--rose);
 }
 
 /* Sidebar Navigation Scrollable Area */
@@ -296,16 +311,19 @@
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  z-index: 95;
+  background: rgba(4, 7, 13, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1040;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity var(--transition-normal);
+  transition: opacity 0.28s ease, visibility 0.28s ease;
 }
 
 .sidebar-backdrop.active {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 
@@ -344,10 +362,38 @@
 
 .mobile-menu-btn {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #ffffff;
   font-size: 18px;
-  color: var(--text-primary);
-  padding: 8px;
-  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mobile-menu-btn:hover,
+.mobile-menu-btn:active {
+  background: rgba(37, 211, 102, 0.15);
+  border-color: rgba(37, 211, 102, 0.4);
+  color: var(--whatsapp-green);
+  transform: scale(0.96);
+}
+
+/* Base style for mobile utilities container in sidebar (hidden on desktop) */
+.sidebar-mobile-utilities {
+  display: none;
+}
+
+/* Base style for mobile header user avatar button (hidden on desktop) */
+.header-user-avatar-mobile {
+  display: none;
 }
 
 .header-title-wrapper {
@@ -1869,14 +1915,24 @@
 
 /* Mobile & Tablet Portrait Breakpoint */
 @media (max-width: 768px) {
-  /* Sidebar becomes Off-Canvas */
+  /* Sidebar becomes Off-Canvas Drawer */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
+    width: 310px;
+    max-width: 86vw;
+    height: 100dvh;
+    background: #0d1424;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     transform: translateX(-100%);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.7);
+    box-shadow: 15px 0 45px rgba(0, 0, 0, 0.85);
+    z-index: 1050;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .sidebar.open {
@@ -1884,58 +1940,222 @@
   }
 
   .sidebar-close-btn {
-    display: block;
+    display: flex;
   }
 
   .mobile-menu-btn {
-    display: block;
+    display: flex;
   }
 
-  /* Header adjustments */
+  /* Utilities incorporated inside mobile drawer */
+  .sidebar-mobile-utilities {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: rgba(13, 20, 36, 0.75);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .sidebar-status-card {
+    background: rgba(37, 211, 102, 0.06);
+    border: 1px solid rgba(37, 211, 102, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sidebar-status-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sidebar-status-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sidebar-status-phone {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .sidebar-status-phone i {
+    color: var(--whatsapp-green);
+    font-size: 14px;
+  }
+
+  .sidebar-search-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-subtle);
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: all var(--transition-fast);
+  }
+
+  .sidebar-search-btn:active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(37, 211, 102, 0.35);
+  }
+
+  .sidebar-search-shortcut {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+  }
+
+  .sidebar-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .sidebar-currency-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sidebar-currency-label {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .sidebar-public-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .sidebar-public-btn:active {
+    color: var(--whatsapp-green);
+    border-color: rgba(37, 211, 102, 0.4);
+  }
+
+  /* Header Clean Mobile Layout - Zero Overlap */
   .top-header {
     padding: 0 14px;
-    height: 64px;
+    height: 60px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
   }
 
   .header-left {
+    display: flex;
+    align-items: center;
     gap: 10px;
     min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .header-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .header-brand-icon {
+    display: none;
   }
 
   .header-title {
     font-size: 15px;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .header-right {
+    display: flex;
+    align-items: center;
     gap: 8px;
     flex-shrink: 0;
   }
 
-  /* Sur mobile, masquer le long numéro pour garder un badge épuré et aligné */
-  .status-connected-pill #header-connected-num {
-    display: none;
+  /* Cache les boutons encombrants du header sur mobile (intégrés dans le tiroir latéral) */
+  .header-search-btn,
+  .status-connected-pill,
+  .currency-switcher,
+  .header-link-btn {
+    display: none !important;
   }
 
-  .status-connected-pill {
-    padding: 5px 9px;
-    gap: 6px;
-    font-size: 11px;
+  .header-icon-btn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  .header-link-btn span {
-    display: none;
+  .header-user-avatar-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(6, 182, 212, 0.2));
+    border: 1px solid rgba(37, 211, 102, 0.35);
+    color: var(--whatsapp-green);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    user-select: none;
+    transition: all var(--transition-fast);
   }
 
-  .header-search-btn span, .header-search-shortcut {
-    display: none;
-  }
-
-  .header-search-btn {
-    padding: 7px 10px;
+  .header-user-avatar-mobile:active {
+    background: rgba(37, 211, 102, 0.3);
+    border-color: var(--whatsapp-green);
+    transform: scale(0.96);
   }
 
   /* Main body padding */

@@ -465,20 +465,51 @@ function setupMobileSidebar() {
   const backdrop = document.getElementById("sidebar-backdrop");
   const sidebar = document.getElementById("sidebar");
 
+  function openMenu(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (sidebar) sidebar.classList.add("open");
+    if (backdrop) backdrop.classList.add("active");
+    document.body.classList.add("sidebar-open-lock");
+  }
+
+  function closeMenu(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (sidebar) sidebar.classList.remove("open");
+    if (backdrop) backdrop.classList.remove("active");
+    document.body.classList.remove("sidebar-open-lock");
+  }
+
   if (toggleBtn) {
-    toggleBtn.addEventListener("click", () => {
-      sidebar.classList.add("open");
-      backdrop.classList.add("active");
-    });
+    toggleBtn.addEventListener("click", openMenu);
   }
 
   if (closeBtn) {
-    closeBtn.addEventListener("click", closeMobileSidebar);
+    closeBtn.addEventListener("click", closeMenu);
   }
 
   if (backdrop) {
-    backdrop.addEventListener("click", closeMobileSidebar);
+    backdrop.addEventListener("click", closeMenu);
   }
+
+  // Empêche la fermeture quand on clique à l'intérieur du tiroir
+  if (sidebar) {
+    sidebar.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // Fermeture avec la touche Échap
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sidebar && sidebar.classList.contains("open")) {
+      closeMenu(e);
+    }
+  });
 }
 
 function closeMobileSidebar() {
@@ -486,6 +517,7 @@ function closeMobileSidebar() {
   const backdrop = document.getElementById("sidebar-backdrop");
   if (sidebar) sidebar.classList.remove("open");
   if (backdrop) backdrop.classList.remove("active");
+  document.body.classList.remove("sidebar-open-lock");
 }
 
 // ==============================================================================
@@ -898,15 +930,16 @@ function renderActivityFeed() {
 }
 
 function setupCurrencyToggle() {
-  const currencyBtns = document.querySelectorAll("#currency-switcher .currency-btn");
+  const currencyBtns = document.querySelectorAll(".currency-btn");
   currencyBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       const selected = btn.getAttribute("data-currency");
       if (selected === currentCurrency) return;
 
       currentCurrency = selected;
-      currencyBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+      document.querySelectorAll(".currency-btn").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-currency") === selected);
+      });
 
       // Update KPI currency values
       renderKpis();
@@ -1300,16 +1333,26 @@ function renderIntegrations() {
 // ==============================================================================
 function setupSearch() {
   const searchBtn = document.getElementById("header-search-btn");
+  const sidebarSearchBtn = document.getElementById("sidebar-search-btn");
   const searchModal = document.getElementById("search-modal");
   const searchInput = document.getElementById("global-search-input");
   const searchResults = document.getElementById("global-search-results");
 
-  if (searchBtn && searchModal) {
-    searchBtn.addEventListener("click", () => {
+  function openSearchModal() {
+    closeMobileSidebar();
+    if (searchModal) {
       searchModal.classList.add("active");
       if (searchInput) searchInput.focus();
       renderSearchResults("");
-    });
+    }
+  }
+
+  if (searchBtn) {
+    searchBtn.addEventListener("click", openSearchModal);
+  }
+
+  if (sidebarSearchBtn) {
+    sidebarSearchBtn.addEventListener("click", openSearchModal);
   }
 
   // Keyboard shortcut Ctrl+K or Cmd+K
@@ -1618,6 +1661,9 @@ function setupProfileSystem() {
 
   const avatarBadge = document.getElementById("user-avatar-badge");
   if (avatarBadge) avatarBadge.addEventListener("click", openProfileModal);
+
+  const mobileAvatarBtn = document.getElementById("header-mobile-profile-btn");
+  if (mobileAvatarBtn) mobileAvatarBtn.addEventListener("click", openProfileModal);
 
   document.querySelectorAll(".btn-open-profile-modal, #btn-edit-profile-settings").forEach(btn => {
     btn.addEventListener("click", openProfileModal);

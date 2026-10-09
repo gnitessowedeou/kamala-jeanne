@@ -28,14 +28,14 @@
     <div class="blob blob-cyan"></div>
   </div>
 
-  <!-- Mobile Sidebar Backdrop -->
-  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
-
   <!-- Toast Container -->
   <div id="toast-container" aria-live="polite"></div>
 
   <!-- Main App Layout -->
   <div class="app-layout">
+
+    <!-- Mobile Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <!-- ======================================================================
          SIDEBAR (285px Desktop / Off-Canvas Mobile)
@@ -52,9 +52,47 @@
           <span class="logo-text">VANDIA</span>
           <span class="logo-badge">IA</span>
         </a>
-        <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Fermer le menu">
+        <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Fermer le menu" type="button">
           <i class="fa-solid fa-xmark"></i>
         </button>
+      </div>
+
+      <!-- Mobile Only Utilities (Incorpore les contrôles d'en-tête dans le tiroir mobile) -->
+      <div class="sidebar-mobile-utilities" id="sidebar-mobile-utilities">
+        <!-- Carte Statut WhatsApp Mobile -->
+        <div class="sidebar-status-card">
+          <div class="sidebar-status-card-top">
+            <span class="status-dot-pulse"></span>
+            <span class="sidebar-status-title">WhatsApp Connecté</span>
+            <span class="status-badge-mini">Actif</span>
+          </div>
+          <div class="sidebar-status-phone">
+            <i class="fa-brands fa-whatsapp"></i>
+            <span id="sidebar-connected-num">+225 07 89 45 12 30</span>
+          </div>
+        </div>
+
+        <!-- Recherche Mobile dans le Menu -->
+        <button class="sidebar-search-btn" id="sidebar-search-btn" type="button" aria-label="Rechercher">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>Rechercher...</span>
+          <kbd class="sidebar-search-shortcut">⌘K</kbd>
+        </button>
+
+        <!-- Ligne Devise & Site Public Mobile -->
+        <div class="sidebar-meta-row">
+          <div class="sidebar-currency-wrapper">
+            <span class="sidebar-currency-label">Devise :</span>
+            <div class="currency-switcher">
+              <button class="currency-btn" data-currency="USD" type="button">USD</button>
+              <button class="currency-btn active" data-currency="XOF" type="button">FCFA</button>
+            </div>
+          </div>
+          <a href="index.html" class="sidebar-public-btn" title="Voir le site public">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Site Public</span>
+          </a>
+        </div>
       </div>
 
       <!-- Navigation Links -->
@@ -253,6 +291,11 @@
           <button class="header-icon-btn" id="btn-notifications" aria-label="Notifications" title="Notifications">
             <i class="fa-regular fa-bell"></i>
             <span class="notification-badge-dot"></span>
+          </button>
+
+          <!-- Avatar Profil Mobile (Accès direct profil sur mobile) -->
+          <button class="header-user-avatar-mobile" id="header-mobile-profile-btn" type="button" aria-label="Mon profil" title="Mon profil">
+            <span id="header-avatar-initial">G</span>
           </button>
 
           <!-- Site Public / Aide Button -->

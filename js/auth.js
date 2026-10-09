@@ -514,12 +514,15 @@
       if (sidebarRole) sidebarRole.textContent = user.role || "Admin Entreprise";
 
       const avatarBadge = document.getElementById("user-avatar-badge");
+      const mobileAvatarBadge = document.getElementById("header-avatar-initial");
       if (avatarBadge) {
         if (user.avatarUrl) {
           avatarBadge.innerHTML = `<img src="${user.avatarUrl}" alt="${fullName}" class="user-avatar-img">`;
+          if (mobileAvatarBadge) mobileAvatarBadge.innerHTML = `<img src="${user.avatarUrl}" alt="${fullName}" class="user-avatar-img">`;
         } else {
           avatarBadge.textContent = initials;
           avatarBadge.classList.add("avatar-initials");
+          if (mobileAvatarBadge) mobileAvatarBadge.textContent = initials;
         }
       }
 
@@ -529,10 +532,15 @@
         el.textContent = user.firstName || "Cher Partenaire";
       });
 
-      // 3. Header WhatsApp connected number badge
+      // 3. Header & Sidebar WhatsApp connected number badge
       const headerNum = document.getElementById("header-connected-num");
+      const sidebarNum = document.getElementById("sidebar-connected-num");
+      const formattedPhone = user.fullPhone || "+225 07 89 45 12 30";
       if (headerNum) {
-        headerNum.textContent = `${user.fullPhone || "+225 07 89 45 12 30"} (Coexistence Active)`;
+        headerNum.textContent = `${formattedPhone} (Coexistence Active)`;
+      }
+      if (sidebarNum) {
+        sidebarNum.textContent = formattedPhone;
       }
 
       // 4. Settings view team table (row 1)
