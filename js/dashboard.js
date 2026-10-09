@@ -7,6 +7,31 @@
  */
 
 // ==============================================================================
+// 0. SECURITY & SANITIZATION UTILITIES (Protection Anti-XSS & Injections)
+// ==============================================================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  };
+  return String(str).replace(/[&<>"']/g, m => map[m]);
+}
+
+function sanitizeUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (/^(javascript|vbscript):/i.test(trimmed)) return "";
+  if (trimmed.startsWith("data:") && !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(trimmed)) {
+    return "";
+  }
+  return trimmed;
+}
+
+// ==============================================================================
 // 1. MOCK DATA STORE (Prêt pour injection Supabase)
 // ==============================================================================
 const MOCK_DATA = {
@@ -1271,7 +1296,7 @@ function renderChatMessages() {
     if (msg.sender === "system") {
       return `
         <div style="text-align: center; margin: 4px 0;">
-          <span class="badge badge-subtle" style="font-size: 11px; padding: 4px 10px;">${msg.text}</span>
+          <span class="badge badge-subtle" style="font-size: 11px; padding: 4px 10px;">${escapeHtml(msg.text)}</span>
         </div>
       `;
     }
@@ -1279,9 +1304,9 @@ function renderChatMessages() {
     const isOutgoing = msg.sender === "agent";
     return `
       <div class="message-bubble ${isOutgoing ? 'outgoing' : 'incoming'}">
-        <p>${msg.text}</p>
+        <p>${escapeHtml(msg.text)}</p>
         <div class="message-meta">
-          <span>${msg.time}</span>
+          <span>${escapeHtml(msg.time)}</span>
           ${isOutgoing ? `<i class="fa-solid fa-check-double double-tick"></i>` : ''}
         </div>
       </div>
@@ -1594,7 +1619,7 @@ function renderSearchResults(query) {
     : searchableItems.slice(0, 6);
 
   if (filtered.length === 0) {
-    resultsContainer.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--text-muted);">Aucun résultat trouvé pour "${query}".</div>`;
+    resultsContainer.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--text-muted);">Aucun résultat trouvé pour "${escapeHtml(query)}".</div>`;
     return;
   }
 
@@ -1735,7 +1760,7 @@ function showToast(message, type = "info") {
 
   toast.innerHTML = `
     <i class="fa-solid ${iconMap[type] || 'fa-circle-info'}" style="color: ${iconColor[type] || 'var(--cyan)'}; font-size: 16px;"></i>
-    <span style="flex: 1;">${message}</span>
+    <span style="flex: 1;">${escapeHtml(message)}</span>
     <button style="color: var(--text-muted); padding: 2px 6px;" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
   `;
 
@@ -1794,10 +1819,11 @@ function setupProfileSystem() {
 
     const avatarBox = document.getElementById("settings-avatar-display");
     if (avatarBox) {
-      if (user.avatarUrl) {
-        avatarBox.innerHTML = `<img src="${user.avatarUrl}" class="avatar-preview-img" alt="${fullName}">`;
+      const safeAvatar = sanitizeUrl(user.avatarUrl);
+      if (safeAvatar) {
+        avatarBox.innerHTML = `<img src="${safeAvatar}" class="avatar-preview-img" alt="${escapeHtml(fullName)}">`;
       } else {
-        avatarBox.innerHTML = `<span class="avatar-preview-initials">${initials}</span>`;
+        avatarBox.innerHTML = `<span class="avatar-preview-initials">${escapeHtml(initials)}</span>`;
       }
     }
   };
@@ -1832,10 +1858,11 @@ function setupProfileSystem() {
     // Set Avatar Preview in Modal
     const initials = ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || "V";
     if (avatarPreview) {
-      if (user.avatarUrl) {
-        avatarPreview.innerHTML = `<img src="${user.avatarUrl}" class="avatar-preview-img" alt="Photo de profil">`;
+      const safeAvatar = sanitizeUrl(user.avatarUrl);
+      if (safeAvatar) {
+        avatarPreview.innerHTML = `<img src="${safeAvatar}" class="avatar-preview-img" alt="Photo de profil">`;
       } else {
-        avatarPreview.innerHTML = `<span class="avatar-preview-initials">${initials}</span>`;
+        avatarPreview.innerHTML = `<span class="avatar-preview-initials">${escapeHtml(initials)}</span>`;
       }
     }
 
@@ -1890,8 +1917,9 @@ function setupProfileSystem() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (!file.type.startsWith("image/")) {
-        alert("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP).");
+      const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      if (!allowedMimes.includes(file.type.toLowerCase())) {
+        alert("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP). Les formats vectoriels SVG ne sont pas autorisés pour des raisons de sécurité.");
         return;
       }
 
@@ -1902,9 +1930,12 @@ function setupProfileSystem() {
 
       const reader = new FileReader();
       reader.onload = (loadEvent) => {
-        tempAvatarBase64 = loadEvent.target.result;
-        if (avatarPreview) {
-          avatarPreview.innerHTML = `<img src="${tempAvatarBase64}" class="avatar-preview-img" alt="Aperçu photo">`;
+        const dataUrl = loadEvent.target.result;
+        if (typeof dataUrl === "string" && sanitizeUrl(dataUrl)) {
+          tempAvatarBase64 = dataUrl;
+          if (avatarPreview) {
+            avatarPreview.innerHTML = `<img src="${sanitizeUrl(tempAvatarBase64)}" class="avatar-preview-img" alt="Aperçu photo">`;
+          }
         }
       };
       reader.readAsDataURL(file);

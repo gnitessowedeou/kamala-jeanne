@@ -148,6 +148,34 @@
     },
 
     /**
+     * Escape HTML characters to prevent XSS
+     */
+    escapeHtml(str) {
+      if (str === null || str === undefined) return "";
+      const map = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      };
+      return String(str).replace(/[&<>"']/g, m => map[m]);
+    },
+
+    /**
+     * Sanitize URL to prevent javascript: or unsafe schemes
+     */
+    sanitizeUrl(url) {
+      if (!url || typeof url !== "string") return "";
+      const trimmed = url.trim();
+      if (/^(javascript|vbscript):/i.test(trimmed)) return "";
+      if (trimmed.startsWith("data:") && !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(trimmed)) {
+        return "";
+      }
+      return trimmed;
+    },
+
+    /**
      * Inscription (Sign Up)
      */
     async signUp(data) {
@@ -339,31 +367,8 @@
         }
       }
 
-      // Fallback local hors ligne / démo si le SDK n'est pas prêt
-      const users = this.getAllUsers();
-      const user = users.find(u => u.email.toLowerCase() === cleanEmail);
-      if (user) {
-        this.saveCurrentUser(user);
-        return { success: true, user };
-      }
-
-      const demoUser = {
-        id: "usr_" + Date.now(),
-        firstName: cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1),
-        lastName: "",
-        email: cleanEmail,
-        phoneCountry: "+225",
-        phoneNumber: "",
-        fullPhone: "",
-        company: "Mon Entreprise",
-        role: "Administrateur",
-        avatarUrl: "",
-        provider: "email",
-        createdAt: new Date().toISOString()
-      };
-
-      this.saveCurrentUser(demoUser);
-      return { success: true, user: demoUser };
+      // Protection de sécurité : interdire le contournement d'authentification hors-ligne
+      return { success: false, error: "Impossible de contacter le service d'authentification sécurisé. Veuillez vérifier votre connexion Internet." };
     },
 
     /**
@@ -538,9 +543,11 @@
       const avatarBadge = document.getElementById("user-avatar-badge");
       const mobileAvatarBadge = document.getElementById("header-avatar-initial");
       if (avatarBadge) {
-        if (user.avatarUrl) {
-          avatarBadge.innerHTML = `<img src="${user.avatarUrl}" alt="${fullName}" class="user-avatar-img">`;
-          if (mobileAvatarBadge) mobileAvatarBadge.innerHTML = `<img src="${user.avatarUrl}" alt="${fullName}" class="user-avatar-img">`;
+        const safeAvatar = this.sanitizeUrl(user.avatarUrl);
+        const safeName = this.escapeHtml(fullName);
+        if (safeAvatar) {
+          avatarBadge.innerHTML = `<img src="${safeAvatar}" alt="${safeName}" class="user-avatar-img">`;
+          if (mobileAvatarBadge) mobileAvatarBadge.innerHTML = `<img src="${safeAvatar}" alt="${safeName}" class="user-avatar-img">`;
         } else {
           avatarBadge.textContent = initials;
           avatarBadge.classList.add("avatar-initials");
@@ -600,10 +607,12 @@
       // 6. Profile Avatar Preview in Edit Modal
       const avatarPreview = document.getElementById("profile-avatar-preview");
       if (avatarPreview) {
-        if (user.avatarUrl) {
-          avatarPreview.innerHTML = `<img src="${user.avatarUrl}" alt="${fullName}" class="avatar-preview-img">`;
+        const safeAvatar = this.sanitizeUrl(user.avatarUrl);
+        const safeName = this.escapeHtml(fullName);
+        if (safeAvatar) {
+          avatarPreview.innerHTML = `<img src="${safeAvatar}" alt="${safeName}" class="avatar-preview-img">`;
         } else {
-          avatarPreview.innerHTML = `<span class="avatar-preview-initials">${initials}</span>`;
+          avatarPreview.innerHTML = `<span class="avatar-preview-initials">${this.escapeHtml(initials)}</span>`;
         }
       }
 
@@ -638,7 +647,7 @@
       toast.innerHTML = `
         <div class="toast-content">
           ${icon}
-          <span>${message}</span>
+          <span>${this.escapeHtml(message)}</span>
         </div>
       `;
 
