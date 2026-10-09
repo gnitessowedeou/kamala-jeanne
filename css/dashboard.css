@@ -3160,3 +3160,825 @@
     font-size: 22px;
   }
 }
+
+/* =============================================================================
+   FORFAITS & ABONNEMENT + PROGRAMME PARTENAIRES (STYLE COMPLET VANDIA AI)
+   ============================================================================= */
+
+/* 1. Header & Sidebar Upgrade CTA Buttons */
+.header-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(37, 211, 102, 0.12));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #ffffff;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.header-plan-badge:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(37, 211, 102, 0.22));
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+}
+
+.plan-badge-mini {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.btn-sidebar-upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(6, 182, 212, 0.2));
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sidebar-upgrade:hover {
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.35), rgba(6, 182, 212, 0.35));
+  border-color: var(--whatsapp-green);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+}
+
+.btn-sidebar-upgrade i {
+  color: #f59e0b;
+}
+
+/* 2. Billing Current Subscription Card */
+.billing-current-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 26px 30px;
+  margin-bottom: 28px;
+  background: linear-gradient(135deg, rgba(16, 24, 39, 0.95), rgba(6, 78, 59, 0.35)) !important;
+  border: 1px solid rgba(37, 211, 102, 0.35) !important;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.billing-current-left {
+  flex: 1;
+}
+
+.current-plan-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.current-plan-badge {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--whatsapp-green);
+  letter-spacing: 0.3px;
+}
+
+.billing-current-title {
+  font-size: 21px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.billing-current-subtitle {
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.55;
+  max-width: 680px;
+  margin-bottom: 18px;
+}
+
+.billing-stats-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.billing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.billing-pill i {
+  color: var(--whatsapp-green);
+  font-size: 13px;
+}
+
+.billing-current-right {
+  flex-shrink: 0;
+}
+
+/* 3. Billing Toggle Frequency */
+.pricing-toggle-wrap-dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 32px 0 24px 0;
+  padding: 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pricing-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+
+.pricing-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.pricing-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: 0.3s;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pricing-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.pricing-switch input:checked + .pricing-slider {
+  background-color: var(--whatsapp-green);
+}
+
+.pricing-switch input:checked + .pricing-slider:before {
+  transform: translateX(24px);
+}
+
+.toggle-freq-lbl {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  user-select: none;
+}
+
+.toggle-freq-lbl.active {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* 4. Billing Plans Grid */
+.billing-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-bottom: 32px;
+}
+
+.plan-tier-card {
+  padding: 28px 24px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  background: rgba(13, 20, 31, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-tier-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(37, 211, 102, 0.3);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.plan-tier-featured {
+  background: linear-gradient(180deg, rgba(37, 211, 102, 0.08) 0%, rgba(13, 22, 33, 0.95) 100%) !important;
+  border: 2px solid var(--whatsapp-green) !important;
+  box-shadow: 0 12px 35px rgba(37, 211, 102, 0.15) !important;
+  transform: scale(1.02);
+}
+
+.plan-tier-featured:hover {
+  transform: scale(1.02) translateY(-4px);
+  box-shadow: 0 16px 40px rgba(37, 211, 102, 0.25) !important;
+}
+
+.featured-ribbon {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--whatsapp-green);
+  color: #080c14;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 4px 14px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+}
+
+.plan-tier-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.plan-tier-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.plan-tier-emoji {
+  font-size: 22px;
+}
+
+.plan-tier-summary {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.45;
+  min-height: 38px;
+  margin-bottom: 16px;
+}
+
+.plan-tier-price-box {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-tier-price-val {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dash-plan-price {
+  font-size: 34px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.dash-plan-curr {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--whatsapp-green);
+}
+
+.dash-plan-freq {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.plan-tier-price-sub {
+  font-size: 12px;
+  color: #64748b;
+  display: block;
+  margin-top: 4px;
+}
+
+.plan-tier-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  flex: 1;
+}
+
+.plan-tier-features li {
+  font-size: 13px;
+  color: #cbd5e1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.4;
+}
+
+.plan-tier-features li i {
+  color: var(--whatsapp-green);
+  font-size: 12.5px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.btn-tier-select {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* 5. Affiliate Program View (Image 1 replica inside dashboard) */
+.partner-banner-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  background: linear-gradient(135deg, rgba(8, 20, 16, 0.98), rgba(12, 28, 22, 0.95)) !important;
+  border: 1px solid rgba(37, 211, 102, 0.35) !important;
+  border-radius: 20px;
+  padding: 34px 38px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+}
+
+.partner-banner-left {
+  flex: 1;
+  max-width: 60%;
+}
+
+.partner-banner-right {
+  flex: 0 0 35%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.partner-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+
+.partner-tag-text {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--whatsapp-green);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.partner-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.25;
+  margin-bottom: 12px;
+}
+
+.partner-desc {
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.partner-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.partner-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #e2e8f0;
+}
+
+.partner-checklist li i {
+  color: var(--whatsapp-green);
+  font-size: 15px;
+}
+
+.passive-income-box {
+  background: rgba(13, 20, 28, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.passive-income-coins {
+  margin-bottom: 14px;
+}
+
+.gold-coins-glow {
+  font-size: 44px;
+  color: #f59e0b;
+  filter: drop-shadow(0 0 18px rgba(245, 158, 11, 0.6));
+}
+
+.passive-income-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.passive-income-text {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.affiliate-link-card {
+  padding: 24px 28px;
+}
+
+.referral-link-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.referral-link-box {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0 16px;
+}
+
+.referral-input {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: monospace;
+  width: 100%;
+  padding: 12px 0;
+  outline: none;
+}
+
+.btn-copy-affiliate {
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-share-whatsapp {
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+/* 6. Plan Modal (#plan-modal) */
+.plan-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.plan-select-card {
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  display: block;
+}
+
+.plan-select-card:hover {
+  border-color: rgba(37, 211, 102, 0.4);
+}
+
+.plan-select-card.selected {
+  border-color: var(--whatsapp-green) !important;
+  background: rgba(37, 211, 102, 0.08) !important;
+  box-shadow: 0 0 15px rgba(37, 211, 102, 0.15);
+}
+
+.plan-select-card input[type="radio"] {
+  display: none;
+}
+
+.plan-badge-popular {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  background: var(--whatsapp-green);
+  color: #080c14;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+}
+
+.plan-select-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.plan-select-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.plan-select-price {
+  margin: 8px 0;
+  font-size: 18px;
+  color: var(--whatsapp-green);
+  font-weight: 800;
+}
+
+.plan-select-price small {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.plan-select-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 11.5px;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cycle-selector-row {
+  display: flex;
+  gap: 10px;
+}
+
+.cycle-pill {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  color: #cbd5e1;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.cycle-pill input[type="radio"] {
+  display: none;
+}
+
+.cycle-pill.active {
+  border-color: var(--whatsapp-green);
+  background: rgba(37, 211, 102, 0.1);
+  color: #ffffff;
+}
+
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.pay-method-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: block;
+}
+
+.pay-method-card input[type="radio"] {
+  display: none;
+}
+
+.pay-method-card.active {
+  border-color: var(--whatsapp-green);
+  background: rgba(37, 211, 102, 0.08);
+}
+
+.pay-method-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pay-method-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.pay-method-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pay-method-text strong {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.pay-method-text small {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.payment-summary-box {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-top: 16px;
+}
+
+.payment-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.payment-summary-row.total-highlight {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 7. Responsive Rules for Billing and Affiliate */
+@media (max-width: 900px) {
+  .billing-current-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+  }
+
+  .billing-current-right {
+    margin-top: 10px;
+  }
+
+  .billing-current-right .btn-primary-glow {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .billing-plans-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-tier-featured {
+    transform: none;
+  }
+
+  .plan-tier-featured:hover {
+    transform: translateY(-4px);
+  }
+
+  .partner-banner-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 24px 20px;
+  }
+
+  .partner-banner-left {
+    max-width: 100%;
+  }
+
+  .partner-banner-right {
+    flex: 1;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .plan-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cycle-selector-row {
+    flex-direction: column;
+  }
+
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-plan-badge span:first-of-type {
+    display: none;
+  }
+
+  .header-plan-badge {
+    padding: 6px 10px;
+  }
+
+  .referral-link-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .referral-link-box {
+    width: 100%;
+  }
+
+  .btn-copy-affiliate,
+  .btn-share-whatsapp {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

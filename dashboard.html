@@ -127,6 +127,15 @@
                 <span class="badge badge-green">24/7</span>
               </a>
             </li>
+            <li>
+              <a href="#billing" class="nav-item-link" data-view="billing" data-title="Mon Forfait & Abonnement">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-credit-card nav-item-icon"></i>
+                  <span>Forfaits &amp; Abonnement</span>
+                </div>
+                <span class="badge badge-amber" id="nav-badge-plan">Essai 7j</span>
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -166,6 +175,22 @@
                   <i class="fa-solid fa-file-lines nav-item-icon"></i>
                   <span>Modèles WhatsApp</span>
                 </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Section: PARTENARIAT & AFFILIATION -->
+        <div class="nav-section-group">
+          <div class="nav-section-title">PARTENARIAT &amp; AFFILIATION</div>
+          <ul class="nav-list">
+            <li>
+              <a href="#affiliate" class="nav-item-link" data-view="affiliate" data-title="Programme Partenaires (20% par mois)">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-handshake nav-item-icon" style="color: var(--whatsapp-green);"></i>
+                  <span>Programme Partenaires</span>
+                </div>
+                <span class="badge badge-green">20%/mois</span>
               </a>
             </li>
           </ul>
@@ -217,7 +242,7 @@
         <!-- Carte Formule -->
         <div class="sub-card">
           <div class="sub-header">
-            <span class="sub-plan-title">Formule Basic 🦾</span>
+            <span class="sub-plan-title" id="sidebar-plan-name">Essai Gratuit 7j 🦾</span>
             <span class="badge badge-green">-50% À VIE</span>
           </div>
           <div class="sub-progress-info">
@@ -231,6 +256,10 @@
             <span id="sub-tokens-used">0 jeton</span>
             <span>Max 100k</span>
           </div>
+          <button type="button" class="btn-sidebar-upgrade" id="btn-sidebar-upgrade">
+            <i class="fa-solid fa-bolt"></i>
+            <span>Choisir un Forfait</span>
+          </button>
         </div>
 
         <!-- Profil Utilisateur -->
@@ -292,6 +321,13 @@
             <span id="header-connected-num">En attente</span>
             <span class="status-badge-mini">Prêt</span>
           </div>
+
+          <!-- Upgrade Plan Button (Desktop & Mobile) -->
+          <button class="header-plan-badge" id="btn-header-upgrade" type="button" title="Gérer mon abonnement">
+            <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
+            <span>Prendre un Forfait</span>
+            <span class="plan-badge-mini">Essai 7j</span>
+          </button>
 
           <!-- Currency Switcher Toggle (Desktop) -->
           <div class="currency-switcher" id="currency-switcher" title="Changer la devise">
@@ -1312,6 +1348,363 @@
           </div>
         </section>
 
+        <!-- ==================================================================
+             VIEW: FORFAITS & ABONNEMENT (#billing)
+             ================================================================== -->
+        <section class="view-section" id="view-billing">
+          
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Forfaits &amp; Abonnement VANDIA AI</h2>
+              <p class="section-desc">Gérez votre formule, activez un abonnement ou débloquez les fonctionnalités Pro sans engagement.</p>
+            </div>
+            <div class="section-actions-wrap">
+              <button class="btn-primary-glow btn-trigger-plan-modal" data-plan="pro">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Passer à la Formule Pro 🚀</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Current Subscription Status Card -->
+          <div class="glass-panel billing-current-card">
+            <div class="billing-current-left">
+              <div class="current-plan-badge-row">
+                <span class="status-dot-pulse"></span>
+                <span class="current-plan-badge" id="billing-status-badge">Essai Gratuit Actif (7 Jours)</span>
+                <span class="badge badge-green">-50% Réduction à Vie</span>
+              </div>
+              <h3 class="billing-current-title" id="billing-title-display">Votre période d'essai de 7 jours est en cours</h3>
+              <p class="billing-current-subtitle" id="billing-subtitle-display">
+                Vous avez accès aux fonctionnalités essentielles pour tester votre commercial IA WhatsApp. Choisissez un forfait permanent ci-dessous pour maintenir vos automatisations actives sans interruption.
+              </p>
+              <div class="billing-stats-pills">
+                <div class="billing-pill">
+                  <i class="fa-solid fa-calendar-check"></i>
+                  <span>Validité : <strong id="billing-days-left">7 jours restants</strong></span>
+                </div>
+                <div class="billing-pill">
+                  <i class="fa-solid fa-coins"></i>
+                  <span>Jetons IA : <strong>100 000 jetons inclus</strong></span>
+                </div>
+                <div class="billing-pill">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <span>Sans engagement • Annulation en 1 clic</span>
+                </div>
+              </div>
+            </div>
+            <div class="billing-current-right">
+              <button class="btn-primary-glow btn-trigger-plan-modal" data-plan="pro" style="padding: 14px 24px; font-size: 14px;">
+                <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
+                <span>Activer mon Forfait Permanent</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Billing Frequency Toggle Switch -->
+          <div class="pricing-toggle-wrap-dashboard">
+            <span class="toggle-freq-lbl active" id="dash-freq-monthly">Facturation Mensuelle</span>
+            <label class="pricing-switch" aria-label="Bascule facturation">
+              <input type="checkbox" id="dash-pricing-toggle">
+              <span class="pricing-slider"></span>
+            </label>
+            <span class="toggle-freq-lbl" id="dash-freq-annual">Facturation Annuelle <span class="badge badge-green">-20% SUPPLÉMENTAIRE</span></span>
+          </div>
+
+          <!-- 3 Plans Cards Grid -->
+          <div class="billing-plans-grid">
+            
+            <!-- Plan 1: Basic -->
+            <div class="glass-panel plan-tier-card">
+              <div class="plan-tier-header">
+                <div class="plan-tier-name-row">
+                  <h4 class="plan-tier-name">Formule Basic</h4>
+                  <span class="plan-tier-emoji">🦾</span>
+                </div>
+                <p class="plan-tier-summary">Idéal pour démarrer avec votre premier commercial IA WhatsApp 24/7.</p>
+                <div class="plan-tier-price-box">
+                  <div class="plan-tier-price-val">
+                    <span class="dash-plan-price" id="dash-price-basic">7 900</span>
+                    <span class="dash-plan-curr">FCFA</span>
+                    <span class="dash-plan-freq">/mois</span>
+                  </div>
+                  <span class="plan-tier-price-sub">≈ 12 $/mois • 50% à vie garanti</span>
+                </div>
+              </div>
+
+              <ul class="plan-tier-features">
+                <li><i class="fa-solid fa-check"></i> 1 Numéro WhatsApp en coexistence active</li>
+                <li><i class="fa-solid fa-check"></i> 1 500 Crédits IA / mois</li>
+                <li><i class="fa-solid fa-check"></i> Réponses instantanées &lt; 1s 24h/24</li>
+                <li><i class="fa-solid fa-check"></i> Paiements Wave &amp; Mobile Money intégrés</li>
+                <li><i class="fa-solid fa-check"></i> Relance automatique des paniers abandonnés</li>
+                <li><i class="fa-solid fa-check"></i> Diffusions sécurisées SafeSend™</li>
+              </ul>
+
+              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="basic">
+                <span>Choisir la Formule Basic</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+
+            <!-- Plan 2: Pro (Featured / Popular) -->
+            <div class="glass-panel plan-tier-card plan-tier-featured">
+              <div class="featured-ribbon">⭐ LE PLUS CHOISI</div>
+              <div class="plan-tier-header">
+                <div class="plan-tier-name-row">
+                  <h4 class="plan-tier-name">Formule Pro</h4>
+                  <span class="plan-tier-emoji">🚀</span>
+                </div>
+                <p class="plan-tier-summary">La solution complète pour faire exploser vos ventes et gérer toute votre équipe.</p>
+                <div class="plan-tier-price-box">
+                  <div class="plan-tier-price-val">
+                    <span class="dash-plan-price" id="dash-price-pro">14 900</span>
+                    <span class="dash-plan-curr">FCFA</span>
+                    <span class="dash-plan-freq">/mois</span>
+                  </div>
+                  <span class="plan-tier-price-sub">≈ 24 $/mois • 50% à vie garanti</span>
+                </div>
+              </div>
+
+              <ul class="plan-tier-features">
+                <li><i class="fa-solid fa-check"></i> <strong>Tout ce qui est dans Basic, plus :</strong></li>
+                <li><i class="fa-solid fa-check"></i> <strong>Boîte Omnicanale : WhatsApp + Instagram + Messenger</strong></li>
+                <li><i class="fa-solid fa-check"></i> 6 000 Crédits IA / mois</li>
+                <li><i class="fa-solid fa-check"></i> Jusqu'à 10 Membres d'Équipe</li>
+                <li><i class="fa-solid fa-check"></i> Flow Builder &amp; Tunnels de vente illimités</li>
+                <li><i class="fa-solid fa-check"></i> Routage intelligent vers commerciaux humains</li>
+                <li><i class="fa-solid fa-check"></i> Support prioritaire dédié WhatsApp 24/7</li>
+              </ul>
+
+              <button class="btn-tier-select btn-primary-glow btn-trigger-plan-modal" data-plan="pro">
+                <span>Passer à la Formule Pro 🚀</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+
+            <!-- Plan 3: Enterprise -->
+            <div class="glass-panel plan-tier-card">
+              <div class="plan-tier-header">
+                <div class="plan-tier-name-row">
+                  <h4 class="plan-tier-name">Enterprise</h4>
+                  <span class="plan-tier-emoji">💎</span>
+                </div>
+                <p class="plan-tier-summary">Pour les grandes marques et réseaux de franchises à fort volume.</p>
+                <div class="plan-tier-price-box">
+                  <div class="plan-tier-price-val">
+                    <span class="dash-plan-price" style="font-size: 26px;">Sur Mesure</span>
+                  </div>
+                  <span class="plan-tier-price-sub">Volume illimité &amp; SLA dédié</span>
+                </div>
+              </div>
+
+              <ul class="plan-tier-features">
+                <li><i class="fa-solid fa-check"></i> Multi-numéros WhatsApp illimités</li>
+                <li><i class="fa-solid fa-check"></i> 15 000+ Crédits IA personnalisables</li>
+                <li><i class="fa-solid fa-check"></i> Membres d'équipe illimités</li>
+                <li><i class="fa-solid fa-check"></i> Intégration sur mesure ERP / CRM interne</li>
+                <li><i class="fa-solid fa-check"></i> Account Manager dédié</li>
+                <li><i class="fa-solid fa-check"></i> Garantie de disponibilité 99.9%</li>
+              </ul>
+
+              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="enterprise">
+                <span>Contacter un Conseiller</span>
+                <i class="fa-solid fa-headset"></i>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Invoices & Billing History -->
+          <div class="glass-panel billing-history-card" style="margin-top: 24px;">
+            <div class="card-top-header">
+              <div>
+                <h3 class="card-heading">Historique des Factures &amp; Reçus</h3>
+                <p class="card-subheading">Téléchargez vos justificatifs officiels et attestations de paiement</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Forfait</th>
+                    <th>Moyen de Paiement</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Reçu</th>
+                  </tr>
+                </thead>
+                <tbody id="billing-history-tbody">
+                  <tr>
+                    <td>Aujourd'hui</td>
+                    <td><strong>Période d'Essai 7 Jours</strong></td>
+                    <td>Offert (Activation Gratuite)</td>
+                    <td>0 FCFA</td>
+                    <td><span class="badge badge-green">Actif</span></td>
+                    <td><button class="btn-secondary-glass btn-receipt-view" style="padding: 4px 10px; font-size: 11.5px;">Voir Reçu</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================================================================
+             VIEW: PROGRAMME PARTENAIRES & AFFILIATION (#affiliate)
+             ================================================================== -->
+        <section class="view-section" id="view-affiliate">
+          
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>Programme Partenaires (Affiliation 20%)</h2>
+              <p class="section-desc">Recommandez VANDIA et touchez 20% de commission récurrente chaque mois sur tous les abonnements de vos filleuls à vie.</p>
+            </div>
+            <div class="section-actions-wrap">
+              <button class="btn-primary-glow" id="btn-request-payout">
+                <i class="fa-solid fa-money-bill-wave"></i>
+                <span>Demander un Retrait</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Partner Hero Banner (Fidèle à la maquette Image 1) -->
+          <div class="partner-banner-card" style="margin-bottom: 24px;">
+            <div class="partner-banner-left">
+              <div class="partner-tag-pill">
+                <span class="partner-tag-text">NOUVEAU - PROGRAMME PARTENAIRES</span>
+              </div>
+              <h2 class="partner-title">Recommandez VANDIA et Gagnez 20% par mois !</h2>
+              <p class="partner-desc">
+                Vous connaissez des commerçants ou des entreprises qui ont besoin d'automatiser leur WhatsApp ? Devenez partenaire VANDIA ! Partagez votre lien unique et gagnez une <strong>commission récurrente de 20%</strong> chaque mois tant que votre filleul reste abonné.
+              </p>
+              <ul class="partner-checklist">
+                <li><i class="fa-solid fa-circle-check"></i> Créez votre compte gratuitement</li>
+                <li><i class="fa-solid fa-circle-check"></i> Obtenez votre lien de parrainage unique</li>
+                <li><i class="fa-solid fa-circle-check"></i> Encaissez vos commissions via Wave ou Mobile Money</li>
+              </ul>
+            </div>
+
+            <div class="partner-banner-right">
+              <div class="passive-income-box">
+                <div class="passive-income-coins">
+                  <i class="fa-solid fa-coins gold-coins-glow"></i>
+                </div>
+                <h3 class="passive-income-title">Créez un Revenu Passif</h3>
+                <p class="passive-income-text">
+                  Si vous parrainez 10 clients au plan Pro, vous gagnez environ <strong>36 000 FCFA</strong> tous les mois, sans rien faire !
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unique Referral Link Card -->
+          <div class="glass-panel affiliate-link-card" style="margin-bottom: 24px;">
+            <div class="card-top-header">
+              <div>
+                <h3 class="card-heading">Votre Lien de Parrainage Unique</h3>
+                <p class="card-subheading">Chaque personne qui s'inscrit via ce lien devient automatiquement votre filleul à vie</p>
+              </div>
+              <span class="badge badge-green">Lien Actif • Commission 20%</span>
+            </div>
+
+            <div class="referral-link-input-row">
+              <div class="referral-link-box">
+                <i class="fa-solid fa-link" style="color: var(--whatsapp-green);"></i>
+                <input type="text" id="affiliate-link-input" readonly value="https://vandia.ai/?ref=VD-7842" class="referral-input">
+              </div>
+              <button class="btn-primary-glow btn-copy-affiliate" id="btn-copy-affiliate-link">
+                <i class="fa-regular fa-copy"></i>
+                <span>Copier mon lien</span>
+              </button>
+              <a href="https://wa.me/?text=Bonjour%20!%20Je%20te%20recommande%20VANDIA%20AI%20pour%20automatiser%20tes%20ventes%20sur%20WhatsApp%2024%2F7%20avec%20paiements%20Wave%20%3A%20https%3A%2F%2Fvandia.ai%2F%3Fref%3DVD-7842" target="_blank" class="btn-secondary-glass btn-share-whatsapp" title="Partager directement sur WhatsApp">
+                <i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green);"></i>
+                <span>Partager sur WhatsApp</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- 4 Stats Cards for Affiliation -->
+          <div class="kpi-grid" style="margin-bottom: 24px;">
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-icon-box kpi-icon-cyan"><i class="fa-solid fa-mouse-pointer"></i></div>
+                <span class="kpi-title">Clics Enregistrés</span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="aff-stat-clicks">0</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 0%</span>
+              </div>
+            </div>
+
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-icon-box kpi-icon-purple"><i class="fa-solid fa-user-plus"></i></div>
+                <span class="kpi-title">Filleuls Inscrits</span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="aff-stat-signups">0</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 0%</span>
+              </div>
+            </div>
+
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-icon-box kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
+                <span class="kpi-title">Abonnements Actifs</span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="aff-stat-active">0</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 0%</span>
+              </div>
+            </div>
+
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-icon-box kpi-icon-amber"><i class="fa-solid fa-sack-dollar"></i></div>
+                <span class="kpi-title">Commissions Disponibles</span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="aff-stat-balance">0 FCFA</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 20%/mois</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payout & Referrals Table -->
+          <div class="glass-panel" style="padding: 24px;">
+            <div class="card-top-header">
+              <div>
+                <h3 class="card-heading">Mes Filleuls &amp; Historique des Versements</h3>
+                <p class="card-subheading">Suivi en temps réel de vos commissions et retraits via Wave / Mobile Money</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date d'inscription</th>
+                    <th>Filleul</th>
+                    <th>Plan Souscrit</th>
+                    <th>Commission Mensuelle</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="affiliate-referrals-tbody">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                      <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
+                      Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien de parrainage ci-dessus pour toucher vos premières commissions !
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
       </main>
     </div>
   </div>
@@ -1661,6 +2054,300 @@
           <button type="submit" class="btn-profile-save" id="btn-profile-save">
             <i class="fa-solid fa-floppy-disk"></i>
             <span>Enregistrer les modifications</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 5: SOUSCRIPTION / CHOIX DU FORFAIT (#plan-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="plan-modal" role="dialog" aria-modal="true" aria-labelledby="modal-plan-title">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="brand-icon-box" style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-crown" style="color: #f59e0b; font-size: 18px;"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="modal-plan-title">Choisir / Activer un Forfait VANDIA</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Maintenez votre commercial WhatsApp IA actif 24h/24 sans coupure</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" data-close-modal="plan-modal" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-subscribe-plan">
+        <div class="modal-body" style="padding: 20px 24px; max-height: calc(85vh - 140px); overflow-y: auto;">
+          
+          <!-- Plan Selection Options -->
+          <div style="margin-bottom: 20px;">
+            <label class="form-label" style="margin-bottom: 10px;">Sélectionnez votre formule :</label>
+            <div class="plan-modal-grid">
+              
+              <label class="plan-select-card" for="modal-plan-basic">
+                <input type="radio" name="modal_plan_tier" id="modal-plan-basic" value="basic">
+                <div class="plan-select-content">
+                  <div class="plan-select-top">
+                    <span class="plan-select-name">🦾 Basic</span>
+                    <span class="badge badge-gray">Essentiel</span>
+                  </div>
+                  <div class="plan-select-price">
+                    <strong class="plan-price-amount" data-plan="basic">7 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
+                  </div>
+                  <ul class="plan-select-features">
+                    <li>1 Numéro WhatsApp</li>
+                    <li>1 500 crédits IA/mois</li>
+                    <li>Paiements Wave &amp; MoMo</li>
+                  </ul>
+                </div>
+              </label>
+
+              <label class="plan-select-card selected" for="modal-plan-pro">
+                <div class="plan-badge-popular">POPULAIRE</div>
+                <input type="radio" name="modal_plan_tier" id="modal-plan-pro" value="pro" checked>
+                <div class="plan-select-content">
+                  <div class="plan-select-top">
+                    <span class="plan-select-name">🚀 Pro</span>
+                    <span class="badge badge-green">-50% à vie</span>
+                  </div>
+                  <div class="plan-select-price">
+                    <strong class="plan-price-amount" data-plan="pro">14 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
+                  </div>
+                  <ul class="plan-select-features">
+                    <li>Omnicanal (WhatsApp + IG)</li>
+                    <li>6 000 crédits IA/mois</li>
+                    <li>Jusqu'à 10 collaborateurs</li>
+                  </ul>
+                </div>
+              </label>
+
+              <label class="plan-select-card" for="modal-plan-enterprise">
+                <input type="radio" name="modal_plan_tier" id="modal-plan-enterprise" value="enterprise">
+                <div class="plan-select-content">
+                  <div class="plan-select-top">
+                    <span class="plan-select-name">💎 Entreprise</span>
+                    <span class="badge badge-purple">Sur-Mesure</span>
+                  </div>
+                  <div class="plan-select-price">
+                    <strong style="font-size: 16px;">Sur Devis</strong>
+                  </div>
+                  <ul class="plan-select-features">
+                    <li>Multi-numéros illimités</li>
+                    <li>15k+ crédits IA</li>
+                    <li>Account Manager dédié</li>
+                  </ul>
+                </div>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- Billing Period Selector -->
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Fréquence de facturation :</label>
+            <div class="cycle-selector-row">
+              <label class="cycle-pill active">
+                <input type="radio" name="modal_cycle" value="monthly" checked>
+                <span>Facturation Mensuelle (Sans engagement)</span>
+              </label>
+              <label class="cycle-pill">
+                <input type="radio" name="modal_cycle" value="annual">
+                <span>Facturation Annuelle <strong style="color: var(--whatsapp-green);">(-20% d'économie)</strong></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Payment Method Selector -->
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label">Moyen de paiement préféré :</label>
+            <div class="payment-methods-grid">
+              
+              <label class="pay-method-card active">
+                <input type="radio" name="modal_pay_method" value="wave" checked>
+                <div class="pay-method-inner">
+                  <div class="pay-method-icon-box" style="background: rgba(30, 169, 232, 0.15); color: #1ea9e8;">
+                    <i class="fa-solid fa-water"></i>
+                  </div>
+                  <div class="pay-method-text">
+                    <strong>Wave</strong>
+                    <small>Sénégal, Côte d'Ivoire</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="pay-method-card">
+                <input type="radio" name="modal_pay_method" value="orange">
+                <div class="pay-method-inner">
+                  <div class="pay-method-icon-box" style="background: rgba(255, 121, 0, 0.15); color: #ff7900;">
+                    <i class="fa-solid fa-mobile-screen"></i>
+                  </div>
+                  <div class="pay-method-text">
+                    <strong>Orange Money</strong>
+                    <small>Tous pays UEMOA</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="pay-method-card">
+                <input type="radio" name="modal_pay_method" value="mtn">
+                <div class="pay-method-inner">
+                  <div class="pay-method-icon-box" style="background: rgba(255, 204, 0, 0.15); color: #ffcc00;">
+                    <i class="fa-solid fa-bolt"></i>
+                  </div>
+                  <div class="pay-method-text">
+                    <strong>MTN MoMo</strong>
+                    <small>Bénin, CI, Cameroun</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="pay-method-card">
+                <input type="radio" name="modal_pay_method" value="card">
+                <div class="pay-method-inner">
+                  <div class="pay-method-icon-box" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+                    <i class="fa-solid fa-credit-card"></i>
+                  </div>
+                  <div class="pay-method-text">
+                    <strong>Carte Bancaire</strong>
+                    <small>Visa, Mastercard</small>
+                  </div>
+                </div>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- Phone Number / Account Input for Payment -->
+          <div class="form-group" id="pay-phone-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="modal-pay-phone">Numéro de débit Mobile Money / Wave :</label>
+            <div class="phone-input-group">
+              <select class="country-code-select" id="modal-pay-country" aria-label="Indicatif pays de paiement">
+                <option value="+225">🇨🇮 +225</option>
+                <option value="+221">🇸🇳 +221</option>
+                <option value="+229">🇧🇯 +229</option>
+                <option value="+228">🇹🇬 +228</option>
+                <option value="+237">🇨🇲 +237</option>
+                <option value="+226">🇧🇫 +226</option>
+                <option value="+33">🇫🇷 +33</option>
+              </select>
+              <input type="tel" class="form-control" id="modal-pay-phone" placeholder="07 89 45 12 30" required style="flex: 1;">
+            </div>
+            <small style="color: #64748b; font-size: 11.5px; margin-top: 5px; display: block;">
+              Une notification de validation de paiement instantané s'affichera directement sur votre téléphone.
+            </small>
+          </div>
+
+          <!-- Total Summary Box -->
+          <div class="payment-summary-box">
+            <div class="payment-summary-row">
+              <span style="color: #94a3b8;">Forfait sélectionné :</span>
+              <strong id="summary-plan-title" style="color: #ffffff;">Formule Pro 🚀</strong>
+            </div>
+            <div class="payment-summary-row">
+              <span style="color: #94a3b8;">Cycle de facturation :</span>
+              <span id="summary-plan-cycle" style="color: #ffffff;">Mensuel (renouvelable)</span>
+            </div>
+            <div class="payment-summary-row total-highlight">
+              <span>Total à régler aujourd'hui :</span>
+              <strong id="summary-total-amount" style="color: var(--whatsapp-green); font-size: 18px;">14 900 FCFA</strong>
+            </div>
+          </div>
+
+          <!-- Trust Badges -->
+          <div style="display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 14px; color: #64748b; font-size: 11.5px; text-align: center;">
+            <span><i class="fa-solid fa-lock" style="color: var(--whatsapp-green);"></i> Paiement 100% sécurisé</span>
+            <span>•</span>
+            <span><i class="fa-solid fa-clock-rotate-left"></i> Activation instantanée &lt; 30s</span>
+            <span>•</span>
+            <span><i class="fa-solid fa-ban"></i> Annulable à tout moment</span>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-glass" data-close-modal="plan-modal">Annuler</button>
+          <button type="submit" class="btn-primary-glow" id="btn-submit-plan-order">
+            <i class="fa-solid fa-check"></i>
+            <span id="btn-submit-plan-text">Confirmer &amp; Activer mon Forfait</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 6: DEMANDE DE RETRAIT AFFILIATION (#payout-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="payout-modal" role="dialog" aria-modal="true" aria-labelledby="modal-payout-title">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="brand-icon-box" style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-money-bill-transfer" style="color: var(--whatsapp-green); font-size: 18px;"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="modal-payout-title">Retrait des Commissions (20%)</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Recevez vos gains de parrainage directement sur votre compte</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" data-close-modal="payout-modal" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-request-payout">
+        <div class="modal-body" style="padding: 20px 24px;">
+          
+          <div class="glass-panel" style="padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; border-color: rgba(37, 211, 102, 0.25);">
+            <div>
+              <span style="font-size: 12px; color: #94a3b8; display: block;">Solde disponible :</span>
+              <strong style="font-size: 20px; color: var(--whatsapp-green);" id="payout-available-balance">0 FCFA</strong>
+            </div>
+            <span class="badge badge-green">Retrait dès 10 000 FCFA</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" for="payout-amount">Montant à retirer (FCFA) <span class="required">*</span></label>
+            <input type="number" class="form-control" id="payout-amount" placeholder="Ex: 36000" min="10000" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" for="payout-method">Mode de réception <span class="required">*</span></label>
+            <select class="form-control" id="payout-method" required>
+              <option value="wave">Wave (Sénégal / Côte d'Ivoire)</option>
+              <option value="orange">Orange Money</option>
+              <option value="mtn">MTN Mobile Money</option>
+              <option value="moov">Moov Money</option>
+              <option value="bank">Virement Bancaire UEMOA</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" for="payout-beneficiary">Numéro ou Coordonnées de réception <span class="required">*</span></label>
+            <input type="text" class="form-control" id="payout-beneficiary" placeholder="Ex: +225 07 89 45 12 30" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="payout-name">Nom complet du titulaire <span class="required">*</span></label>
+            <input type="text" class="form-control" id="payout-name" placeholder="Ex: Jean Kouassi" required>
+          </div>
+
+          <div style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25); padding: 12px; border-radius: var(--radius-sm); font-size: 11.5px; color: #94a3b8; display: flex; gap: 10px; align-items: center; margin-top: 16px;">
+            <i class="fa-solid fa-circle-info" style="color: #38bdf8; font-size: 16px;"></i>
+            <span>Délai de traitement des commissions : entre 2h et 24h ouvrées. Zéro frais déduit sur les transferts Wave et MoMo.</span>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-glass" data-close-modal="payout-modal">Annuler</button>
+          <button type="submit" class="btn-primary-glow">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Envoyer la demande de retrait</span>
           </button>
         </div>
       </form>

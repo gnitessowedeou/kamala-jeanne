@@ -330,6 +330,7 @@ function initDashboard() {
   setupSearch();
   setupActionButtons();
   setupProfileSystem();
+  setupBillingAndAffiliate();
 
   // Populate view contents
   renderKpis();
@@ -544,7 +545,9 @@ function updateHeaderTitle(title, viewId) {
       "devices": "fa-mobile-screen-button",
       "integrations": "fa-plug-circle-bolt",
       "analytics": "fa-chart-pie",
-      "settings": "fa-gear"
+      "settings": "fa-gear",
+      "billing": "fa-credit-card",
+      "affiliate": "fa-handshake"
     };
     iconEl.className = `fa-solid ${iconMap[viewId] || "fa-chart-line"} header-brand-icon`;
   }
@@ -1992,5 +1995,374 @@ function setupProfileSystem() {
     const user = window.AuthEngine.getCurrentUser();
     syncSettingsCard(user);
     window.AuthEngine.syncProfileUI(user);
+  }
+}
+
+// ==============================================================================
+// 15. FORFAITS & ABONNEMENT + PROGRAMME PARTENAIRES LOGIC
+// ==============================================================================
+function setupBillingAndAffiliate() {
+  const planModal = document.getElementById("plan-modal");
+  const payoutModal = document.getElementById("payout-modal");
+
+  // Helper to open plan modal with specific pre-selected tier
+  function openPlanModal(preselectedTier = "pro") {
+    if (!planModal) return;
+    
+    // Select the radio and update styling
+    const targetRadio = document.querySelector(`input[name="modal_plan_tier"][value="${preselectedTier}"]`);
+    if (targetRadio) {
+      targetRadio.checked = true;
+      document.querySelectorAll(".plan-select-card").forEach(card => card.classList.remove("selected"));
+      const parentCard = targetRadio.closest(".plan-select-card");
+      if (parentCard) parentCard.classList.add("selected");
+    }
+
+    updatePlanModalSummary();
+    planModal.classList.add("active");
+    document.body.classList.add("modal-open-lock");
+  }
+
+  function closePlanModal() {
+    if (!planModal) return;
+    planModal.classList.remove("active");
+    document.body.classList.remove("modal-open-lock");
+  }
+
+  function openPayoutModal() {
+    if (!payoutModal) return;
+    payoutModal.classList.add("active");
+    document.body.classList.add("modal-open-lock");
+  }
+
+  function closePayoutModal() {
+    if (!payoutModal) return;
+    payoutModal.classList.remove("active");
+    document.body.classList.remove("modal-open-lock");
+  }
+
+  // 1. Upgrade Trigger Buttons
+  const headerUpgradeBtn = document.getElementById("btn-header-upgrade");
+  if (headerUpgradeBtn) {
+    headerUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
+  }
+
+  const sidebarUpgradeBtn = document.getElementById("btn-sidebar-upgrade");
+  if (sidebarUpgradeBtn) {
+    sidebarUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
+  }
+
+  document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const planTier = btn.getAttribute("data-plan") || "pro";
+      openPlanModal(planTier);
+    });
+  });
+
+  // 2. Close Modal Buttons & Backdrop
+  document.querySelectorAll('[data-close-modal="plan-modal"]').forEach(btn => {
+    btn.addEventListener("click", closePlanModal);
+  });
+  if (planModal) {
+    planModal.addEventListener("click", (e) => {
+      if (e.target === planModal) closePlanModal();
+    });
+  }
+
+  document.querySelectorAll('[data-close-modal="payout-modal"]').forEach(btn => {
+    btn.addEventListener("click", closePayoutModal);
+  });
+  if (payoutModal) {
+    payoutModal.addEventListener("click", (e) => {
+      if (e.target === payoutModal) closePayoutModal();
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (planModal && planModal.classList.contains("active")) closePlanModal();
+      if (payoutModal && payoutModal.classList.contains("active")) closePayoutModal();
+    }
+  });
+
+  // 3. Plan Selection & Price Calculation in Modal
+  function updatePlanModalSummary() {
+    const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
+    const selectedCycleRadio = document.querySelector('input[name="modal_cycle"]:checked');
+    const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
+    const selectedCycle = selectedCycleRadio ? selectedCycleRadio.value : "monthly";
+
+    const titleEl = document.getElementById("summary-plan-title");
+    const cycleEl = document.getElementById("summary-plan-cycle");
+    const amountEl = document.getElementById("summary-total-amount");
+
+    const isAnnual = selectedCycle === "annual";
+
+    let planName = "Formule Pro 🚀";
+    let basePriceMonthly = 14900;
+
+    if (selectedTier === "basic") {
+      planName = "Formule Basic 🦾";
+      basePriceMonthly = 7900;
+    } else if (selectedTier === "enterprise") {
+      planName = "Enterprise Sur-Mesure 💎";
+      basePriceMonthly = 0;
+    }
+
+    if (titleEl) titleEl.textContent = planName;
+    if (cycleEl) {
+      cycleEl.textContent = isAnnual ? "Annuel (-20% déduit)" : "Mensuel (Sans engagement)";
+    }
+
+    if (amountEl) {
+      if (selectedTier === "enterprise") {
+        amountEl.textContent = "Sur Devis (Gratuit)";
+      } else {
+        const finalPrice = isAnnual ? Math.round(basePriceMonthly * 12 * 0.8) : basePriceMonthly;
+        const formattedPrice = finalPrice.toLocaleString("fr-FR") + " FCFA" + (isAnnual ? "/an" : "/mois");
+        amountEl.textContent = formattedPrice;
+      }
+    }
+  }
+
+  // Plan radio cards click
+  document.querySelectorAll(".plan-select-card").forEach(card => {
+    card.addEventListener("click", function() {
+      document.querySelectorAll(".plan-select-card").forEach(c => c.classList.remove("selected"));
+      this.classList.add("selected");
+      const radio = this.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+      updatePlanModalSummary();
+    });
+  });
+
+  // Cycle selector pills click
+  document.querySelectorAll(".cycle-pill").forEach(pill => {
+    pill.addEventListener("click", function() {
+      document.querySelectorAll(".cycle-pill").forEach(p => p.classList.remove("active"));
+      this.classList.add("active");
+      const radio = this.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+      updatePlanModalSummary();
+    });
+  });
+
+  // Payment method cards click
+  document.querySelectorAll(".pay-method-card").forEach(card => {
+    card.addEventListener("click", function() {
+      document.querySelectorAll(".pay-method-card").forEach(c => c.classList.remove("active"));
+      this.classList.add("active");
+      const radio = this.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+
+      const phoneGroup = document.getElementById("pay-phone-group");
+      if (phoneGroup) {
+        if (radio && radio.value === "card") {
+          phoneGroup.style.display = "none";
+        } else {
+          phoneGroup.style.display = "block";
+        }
+      }
+    });
+  });
+
+  // 4. In-Dashboard Pricing Frequency Toggle (#dash-pricing-toggle in #view-billing)
+  const dashPricingToggle = document.getElementById("dash-pricing-toggle");
+  const dashFreqMonthly = document.getElementById("dash-freq-monthly");
+  const dashFreqAnnual = document.getElementById("dash-freq-annual");
+  const dashPriceBasic = document.getElementById("dash-price-basic");
+  const dashPricePro = document.getElementById("dash-price-pro");
+
+  function updateDashboardPricingDisplay(isAnnual) {
+    if (dashFreqMonthly) dashFreqMonthly.classList.toggle("active", !isAnnual);
+    if (dashFreqAnnual) dashFreqAnnual.classList.toggle("active", isAnnual);
+
+    if (dashPriceBasic) {
+      dashPriceBasic.textContent = isAnnual ? "6 320" : "7 900";
+    }
+    if (dashPricePro) {
+      dashPricePro.textContent = isAnnual ? "11 920" : "14 900";
+    }
+  }
+
+  if (dashPricingToggle) {
+    dashPricingToggle.addEventListener("change", (e) => {
+      updateDashboardPricingDisplay(e.target.checked);
+    });
+  }
+  if (dashFreqMonthly) {
+    dashFreqMonthly.addEventListener("click", () => {
+      if (dashPricingToggle) {
+        dashPricingToggle.checked = false;
+        updateDashboardPricingDisplay(false);
+      }
+    });
+  }
+  if (dashFreqAnnual) {
+    dashFreqAnnual.addEventListener("click", () => {
+      if (dashPricingToggle) {
+        dashPricingToggle.checked = true;
+        updateDashboardPricingDisplay(true);
+      }
+    });
+  }
+
+  // 5. Subscription Form Submission
+  const subscribeForm = document.getElementById("form-subscribe-plan");
+  if (subscribeForm) {
+    subscribeForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById("btn-submit-plan-order");
+      const submitText = document.getElementById("btn-submit-plan-text");
+      const originalText = submitText ? submitText.textContent : "Confirmer & Activer mon Forfait";
+
+      const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
+      const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
+      const selectedPayMethod = document.querySelector('input[name="modal_pay_method"]:checked')?.value || "wave";
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        if (submitText) submitText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement sécurisé...';
+      }
+
+      setTimeout(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          if (submitText) submitText.textContent = originalText;
+        }
+
+        // Update User Plan Mock
+        let planTitle = "Formule Pro 🚀";
+        let planTokens = 500000;
+        let planPriceStr = "14 900 FCFA";
+
+        if (selectedTier === "basic") {
+          planTitle = "Formule Basic 🦾";
+          planTokens = 100000;
+          planPriceStr = "7 900 FCFA";
+        } else if (selectedTier === "enterprise") {
+          planTitle = "Formule Entreprise 💎";
+          planTokens = 1500000;
+          planPriceStr = "Sur Devis";
+        }
+
+        MOCK_DATA.currentUser.plan.name = planTitle;
+        MOCK_DATA.currentUser.plan.tokensMax = planTokens;
+
+        // Update UI
+        const sidebarPlanName = document.getElementById("sidebar-plan-name");
+        if (sidebarPlanName) sidebarPlanName.textContent = planTitle;
+
+        const navBadgePlan = document.getElementById("nav-badge-plan");
+        if (navBadgePlan) {
+          navBadgePlan.textContent = "Actif";
+          navBadgePlan.className = "badge badge-green";
+        }
+
+        const billingStatusBadge = document.getElementById("billing-status-badge");
+        if (billingStatusBadge) {
+          billingStatusBadge.textContent = "Abonnement Actif (" + planTitle.split(" ")[1] + ")";
+        }
+
+        const billingTitleDisplay = document.getElementById("billing-title-display");
+        if (billingTitleDisplay) {
+          billingTitleDisplay.textContent = "Votre abonnement est actif et opérationnel !";
+        }
+
+        const billingSubtitleDisplay = document.getElementById("billing-subtitle-display");
+        if (billingSubtitleDisplay) {
+          billingSubtitleDisplay.textContent = "Vos réponses IA 24h/24, automatisations WhatsApp et intégrations de paiement sont pleinement actives sans coupure.";
+        }
+
+        const billingDaysLeft = document.getElementById("billing-days-left");
+        if (billingDaysLeft) {
+          billingDaysLeft.textContent = "Renouvellement automatique le 08 Nov 2026";
+        }
+
+        // Add invoice entry
+        const historyTbody = document.getElementById("billing-history-tbody");
+        if (historyTbody) {
+          const payLabel = selectedPayMethod === "wave" ? "Wave CI/SN" : selectedPayMethod === "orange" ? "Orange Money" : selectedPayMethod === "mtn" ? "MTN MoMo" : "Carte Bancaire";
+          const newRow = document.createElement("tr");
+          newRow.innerHTML = `
+            <td>À l'instant</td>
+            <td><strong>${planTitle}</strong></td>
+            <td>${payLabel}</td>
+            <td>${planPriceStr}</td>
+            <td><span class="badge badge-green">Payé</span></td>
+            <td><button class="btn-secondary-glass btn-receipt-view" style="padding: 4px 10px; font-size: 11.5px;">Télécharger</button></td>
+          `;
+          historyTbody.insertBefore(newRow, historyTbody.firstChild);
+        }
+
+        closePlanModal();
+
+        showToast(`🎉 Félicitations ! Votre ${planTitle} a été activée avec succès.`, "success");
+      }, 1200);
+    });
+  }
+
+  // 6. Copy Affiliate Referral Link
+  const copyAffiliateBtn = document.getElementById("btn-copy-affiliate-link");
+  const affiliateInput = document.getElementById("affiliate-link-input");
+
+  if (copyAffiliateBtn && affiliateInput) {
+    copyAffiliateBtn.addEventListener("click", () => {
+      const linkToCopy = affiliateInput.value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(linkToCopy).then(() => {
+          triggerCopySuccess();
+        }).catch(() => {
+          fallbackCopyText();
+        });
+      } else {
+        fallbackCopyText();
+      }
+
+      function fallbackCopyText() {
+        affiliateInput.select();
+        document.execCommand("copy");
+        triggerCopySuccess();
+      }
+
+      function triggerCopySuccess() {
+        const originalContent = copyAffiliateBtn.innerHTML;
+        copyAffiliateBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>✓ Lien copié !</span>';
+        copyAffiliateBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+        
+        setTimeout(() => {
+          copyAffiliateBtn.innerHTML = originalContent;
+          copyAffiliateBtn.style.background = "";
+        }, 2500);
+
+        showToast("Lien de parrainage copié ! Partagez-le pour toucher 20% chaque mois.", "success");
+      }
+    });
+  }
+
+  // 7. Request Payout Modal Triggers
+  const requestPayoutBtn = document.getElementById("btn-request-payout");
+  if (requestPayoutBtn) {
+    requestPayoutBtn.addEventListener("click", openPayoutModal);
+  }
+
+  const payoutForm = document.getElementById("form-request-payout");
+  if (payoutForm) {
+    payoutForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const amountInput = document.getElementById("payout-amount");
+      const amount = parseInt(amountInput?.value || "0", 10);
+
+      if (amount < 10000) {
+        alert("Le montant minimum de retrait de commissions est de 10 000 FCFA.");
+        return;
+      }
+
+      closePayoutModal();
+      showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyée avec succès ! Traitement sous 2h à 24h ouvrées via Wave/MoMo.`, "success");
+      payoutForm.reset();
+    });
   }
 }
