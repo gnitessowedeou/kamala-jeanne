@@ -148,12 +148,26 @@
   text-decoration: none;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
+  gap: 10px;
 }
 
 .nav-item-left {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nav-item-left span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-item-link .badge {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .nav-item-icon {
@@ -162,6 +176,7 @@
   text-align: center;
   color: var(--text-muted);
   transition: color var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .nav-item-link:hover {
@@ -341,23 +356,26 @@
 
 /* Sticky Header */
 .top-header {
-  height: var(--header-height);
-  min-height: var(--header-height);
-  padding: 0 28px;
-  background: rgba(11, 17, 30, 0.85);
+  height: 72px;
+  min-height: 72px;
+  padding: 0 26px;
+  background: rgba(11, 17, 30, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   z-index: 50;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .mobile-menu-btn {
@@ -578,45 +596,58 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .header-brand-icon {
-  font-size: 18px;
+  font-size: 19px;
   color: var(--whatsapp-green);
   filter: drop-shadow(0 0 8px rgba(37, 211, 102, 0.4));
+  flex-shrink: 0;
 }
 
 .header-title {
   font-family: var(--font-heading);
-  font-size: 18px;
+  font-size: 17.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* Search Box */
 .header-search-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(16, 23, 38, 0.6);
+  gap: 9px;
+  height: 38px;
+  background: rgba(16, 23, 38, 0.65);
   border: 1px solid var(--border-subtle);
-  padding: 7px 14px;
+  padding: 0 14px;
   border-radius: var(--radius-full);
   color: var(--text-muted);
   font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .header-search-btn:hover {
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
-  background: rgba(22, 33, 54, 0.8);
+  background: rgba(22, 33, 54, 0.85);
 }
 
 .header-search-shortcut {
@@ -630,16 +661,19 @@
 
 /* Status Pill */
 .status-connected-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  height: 38px;
   background: rgba(16, 23, 38, 0.7);
-  border: 1px solid rgba(37, 211, 102, 0.25);
-  padding: 6px 13px;
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  padding: 0 14px;
   border-radius: var(--radius-full);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-dot-pulse {
@@ -649,6 +683,7 @@
   background: var(--whatsapp-green);
   box-shadow: 0 0 8px var(--whatsapp-green);
   animation: pulse-dot 1.8s infinite;
+  flex-shrink: 0;
 }
 
 @keyframes pulse-dot {
@@ -659,20 +694,30 @@
 
 /* Currency Switcher */
 .currency-switcher {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
   background: rgba(16, 23, 38, 0.8);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  padding: 2px;
+  padding: 3px;
+  flex-shrink: 0;
 }
 
 .currency-btn {
-  padding: 4px 10px;
+  height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11.5px;
   font-weight: 600;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   transition: all var(--transition-fast);
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .currency-btn.active {
@@ -687,32 +732,36 @@
   background: rgba(37, 211, 102, 0.15);
   color: var(--whatsapp-green);
   border: 1px solid rgba(37, 211, 102, 0.3);
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 /* Header Action Buttons */
 .header-icon-btn {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-full);
-  background: rgba(16, 23, 38, 0.6);
+  background: rgba(16, 23, 38, 0.65);
   border: 1px solid var(--border-subtle);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
+  flex-shrink: 0;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .header-icon-btn:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .notification-badge-dot {
@@ -727,21 +776,27 @@
 }
 
 .header-link-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 13px;
+  height: 38px;
+  padding: 0 14px;
   border-radius: var(--radius-full);
-  background: rgba(16, 23, 38, 0.6);
+  background: rgba(16, 23, 38, 0.65);
   border: 1px solid var(--border-subtle);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .header-link-btn:hover {
   background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
 }
 
@@ -3170,13 +3225,16 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(37, 211, 102, 0.12));
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  height: 38px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(37, 211, 102, 0.14));
+  border: 1px solid rgba(245, 158, 11, 0.4);
   color: #ffffff;
-  padding: 7px 14px;
-  border-radius: 999px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
   font-size: 12.5px;
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: all 0.25s ease;
   user-select: none;
@@ -3981,4 +4039,39 @@
     justify-content: center;
   }
 }
+
+/* Responsive adjustments for laptop screens (1024px - 1400px) ensuring header is perfectly aligned and never wraps */
+@media (max-width: 1400px) {
+  .top-header {
+    padding: 0 18px;
+    gap: 12px;
+  }
+  .header-search-btn span {
+    display: none;
+  }
+  .header-search-btn {
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 1250px) {
+  .header-link-btn span {
+    display: none;
+  }
+  .header-link-btn {
+    padding: 0 11px;
+  }
+  .status-connected-pill #header-connected-num {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 1120px) {
+  .status-connected-pill .status-badge-mini {
+    display: none;
+  }
+}
+
 

@@ -536,12 +536,15 @@
       // 3. Header & Sidebar WhatsApp connected number badge
       const headerNum = document.getElementById("header-connected-num");
       const sidebarNum = document.getElementById("sidebar-connected-num");
+      const headerBadge = document.getElementById("header-status-badge");
       if (user.fullPhone && user.fullPhone.trim()) {
-        if (headerNum) headerNum.textContent = `${user.fullPhone} (Connecté)`;
+        if (headerNum) headerNum.textContent = user.fullPhone;
         if (sidebarNum) sidebarNum.textContent = user.fullPhone;
+        if (headerBadge) headerBadge.textContent = "Connecté";
       } else {
-        if (headerNum) headerNum.textContent = "En attente";
+        if (headerNum) headerNum.textContent = "WhatsApp";
         if (sidebarNum) sidebarNum.textContent = "Non lié";
+        if (headerBadge) headerBadge.textContent = "Prêt";
       }
 
       // 4. Settings view display fields
