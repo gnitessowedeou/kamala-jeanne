@@ -80,6 +80,8 @@ function initPricingToggle() {
 
   const pricePro = document.getElementById("price-pro");
   const xofPro = document.getElementById("xof-pro");
+  const priceBusiness = document.getElementById("price-business");
+  const xofBusiness = document.getElementById("xof-business");
 
   if (!checkbox) return;
 
@@ -110,6 +112,19 @@ function initPricingToggle() {
         xofPro.textContent = `≈ ${xofVal} XOF`;
         pricePro.style.opacity = "1";
         xofPro.style.opacity = "1";
+      }, 150);
+    }
+
+    // Update Business
+    if (priceBusiness && xofBusiness) {
+      priceBusiness.style.opacity = "0";
+      xofBusiness.style.opacity = "0";
+      setTimeout(() => {
+        priceBusiness.textContent = isAnnual ? priceBusiness.getAttribute("data-annual") : priceBusiness.getAttribute("data-monthly");
+        const xofVal = isAnnual ? xofBusiness.getAttribute("data-xof-annual") : xofBusiness.getAttribute("data-xof-monthly");
+        xofBusiness.textContent = `≈ ${xofVal} XOF`;
+        priceBusiness.style.opacity = "1";
+        xofBusiness.style.opacity = "1";
       }, 150);
     }
   };
@@ -413,16 +428,17 @@ function initAuthModal() {
   });
 
   // Attach Open Triggers across Landing Page
-  // 1. Login buttons
-  document.querySelectorAll(".btn-nav-login, a[href='dashboard.html']").forEach(btn => {
+  // 1. Login buttons (boutons de connexion explicites)
+  document.querySelectorAll(".btn-nav-login, #btn-nav-login, .login-trigger").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       openAuthModal("login");
     });
   });
 
-  // 2. Signup / CTA buttons
-  document.querySelectorAll(".btn-nav-cta, .btn-primary-pill, .btn-card-action").forEach(btn => {
+  // 2. Signup / CTA buttons (tous les boutons d'inscription & accès à l'essai gratuit 7 jours / 300 crédits)
+  document.querySelectorAll(".btn-nav-cta, .btn-primary-pill, .btn-card-action, .btn-free-trial, a[href='dashboard.html']").forEach(btn => {
+    if (btn.classList.contains("btn-nav-login") || btn.id === "btn-nav-login") return;
     btn.addEventListener("click", (e) => {
       if (btn.classList.contains("demo-trigger-nav") || btn.id === "btn-hero-demo") return;
       e.preventDefault();

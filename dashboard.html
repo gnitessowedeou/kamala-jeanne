@@ -79,7 +79,7 @@
           <kbd class="sidebar-search-shortcut">⌘K</kbd>
         </button>
 
-        <!-- Ligne Devise & Site Public Mobile -->
+        <!-- Ligne Devise Mobile -->
         <div class="sidebar-meta-row">
           <div class="sidebar-currency-wrapper">
             <span class="sidebar-currency-label">Devise :</span>
@@ -88,10 +88,6 @@
               <button class="currency-btn active" data-currency="XOF" type="button">FCFA</button>
             </div>
           </div>
-          <a href="index.html" class="sidebar-public-btn" title="Voir le site public">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-            <span>Site Public</span>
-          </a>
         </div>
       </div>
 
@@ -180,17 +176,17 @@
           </ul>
         </div>
 
-        <!-- Section: PARTENARIAT & AFFILIATION -->
+        <!-- Section: AFFILIATION -->
         <div class="nav-section-group">
-          <div class="nav-section-title">PARTENARIAT &amp; AFFILIATION</div>
+          <div class="nav-section-title">AFFILIATION</div>
           <ul class="nav-list">
             <li>
-              <a href="#affiliate" class="nav-item-link" data-view="affiliate" data-title="Programme Partenaires">
+              <a href="#affiliate" class="nav-item-link" data-view="affiliate" data-title="Affiliation">
                 <div class="nav-item-left">
                   <i class="fa-solid fa-handshake nav-item-icon" style="color: var(--whatsapp-green);"></i>
-                  <span>Programme Partenaires</span>
+                  <span>Affiliation</span>
                 </div>
-                <span class="badge badge-green">20%/mois</span>
+                <span class="badge badge-green">20%</span>
               </a>
             </li>
           </ul>
@@ -246,15 +242,15 @@
             <span class="badge badge-green">-50% À VIE</span>
           </div>
           <div class="sub-progress-info">
-            <span>Jetons IA utilisés</span>
+            <span>Crédits IA utilisés</span>
             <span id="sub-token-pct">0.0%</span>
           </div>
           <div class="sub-progress-bar">
             <div class="sub-progress-fill" id="sub-token-fill" style="width: 0%;"></div>
           </div>
           <div class="sub-limits">
-            <span id="sub-tokens-used">0 jeton</span>
-            <span>Max 100k</span>
+            <span id="sub-tokens-used">0 crédit</span>
+            <span id="sub-tokens-max">Max 300 crédits</span>
           </div>
           <button type="button" class="btn-sidebar-upgrade" id="btn-sidebar-upgrade">
             <i class="fa-solid fa-bolt"></i>
@@ -294,7 +290,6 @@
             <div class="header-mobile-greeting-meta">
               <div class="greeting-user-line">
                 <span>Bonjour, <strong class="welcome-name">Mon Profil</strong></span>
-                <i class="fa-solid fa-circle-check greeting-verified-check"></i>
               </div>
               <span class="greeting-user-subtitle">Votre business, notre priorité</span>
             </div>
@@ -345,12 +340,6 @@
           <button class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Ouvrir le menu" title="Menu">
             <i class="fa-solid fa-bars"></i>
           </button>
-
-          <!-- Site Public / Aide Button (Desktop) -->
-          <a href="index.html" class="header-link-btn" id="btn-help-doc" title="Site Public VANDIA AI">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-            <span>Site Public</span>
-          </a>
         </div>
       </header>
 
@@ -1384,8 +1373,8 @@
                   <span>Validité : <strong id="billing-days-left">7 jours restants</strong></span>
                 </div>
                 <div class="billing-pill">
-                  <i class="fa-solid fa-coins"></i>
-                  <span>Jetons IA : <strong>100 000 jetons inclus</strong></span>
+                  <i class="fa-solid fa-bolt"></i>
+                  <span>Crédits IA : <strong>300 crédits offerts</strong></span>
                 </div>
                 <div class="billing-pill">
                   <i class="fa-solid fa-shield-halved"></i>
@@ -1434,7 +1423,7 @@
 
               <ul class="plan-tier-features">
                 <li><i class="fa-solid fa-check"></i> 1 Numéro WhatsApp en coexistence active</li>
-                <li><i class="fa-solid fa-check"></i> 1 500 Crédits IA / mois</li>
+                <li><i class="fa-solid fa-check"></i> 2 500 Crédits IA / mois</li>
                 <li><i class="fa-solid fa-check"></i> Réponses instantanées &lt; 1s 24h/24</li>
                 <li><i class="fa-solid fa-check"></i> Paiements Wave &amp; Mobile Money intégrés</li>
                 <li><i class="fa-solid fa-check"></i> Relance automatique des paniers abandonnés</li>
@@ -1482,34 +1471,36 @@
               </button>
             </div>
 
-            <!-- Plan 3: Enterprise -->
+            <!-- Plan 3: Business -->
             <div class="glass-panel plan-tier-card">
               <div class="plan-tier-header">
                 <div class="plan-tier-name-row">
-                  <h4 class="plan-tier-name">Enterprise</h4>
+                  <h4 class="plan-tier-name">Formule Business</h4>
                   <span class="plan-tier-emoji">💎</span>
                 </div>
-                <p class="plan-tier-summary">Pour les grandes marques et réseaux de franchises à fort volume.</p>
+                <p class="plan-tier-summary">Pour les marques en forte croissance et réseaux à grand volume.</p>
                 <div class="plan-tier-price-box">
                   <div class="plan-tier-price-val">
-                    <span class="dash-plan-price" style="font-size: 26px;">Sur Mesure</span>
+                    <span class="dash-plan-price" id="dash-price-business">30 000</span>
+                    <span class="dash-plan-curr">FCFA</span>
+                    <span class="dash-plan-freq">/mois</span>
                   </div>
-                  <span class="plan-tier-price-sub">Volume illimité &amp; SLA dédié</span>
+                  <span class="plan-tier-price-sub">≈ 50 $/mois • Annuel : 24 000 FCFA/mois (40 $)</span>
                 </div>
               </div>
 
               <ul class="plan-tier-features">
-                <li><i class="fa-solid fa-check"></i> Multi-numéros WhatsApp illimités</li>
-                <li><i class="fa-solid fa-check"></i> 15 000+ Crédits IA personnalisables</li>
+                <li><i class="fa-solid fa-check"></i> Multi-numéros WhatsApp &amp; Omnicanal illimités</li>
+                <li><i class="fa-solid fa-check"></i> 15 000 Crédits IA / mois</li>
                 <li><i class="fa-solid fa-check"></i> Membres d'équipe illimités</li>
-                <li><i class="fa-solid fa-check"></i> Intégration sur mesure ERP / CRM interne</li>
-                <li><i class="fa-solid fa-check"></i> Account Manager dédié</li>
-                <li><i class="fa-solid fa-check"></i> Garantie de disponibilité 99.9%</li>
+                <li><i class="fa-solid fa-check"></i> Intégration sur mesure ERP / CRM &amp; Webhooks</li>
+                <li><i class="fa-solid fa-check"></i> Account Manager VIP dédié</li>
+                <li><i class="fa-solid fa-check"></i> SLA &amp; Garantie de disponibilité 99.9%</li>
               </ul>
 
-              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="enterprise">
-                <span>Contacter un Conseiller</span>
-                <i class="fa-solid fa-headset"></i>
+              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="business">
+                <span>Passer à la Formule Business 💎</span>
+                <i class="fa-solid fa-arrow-right"></i>
               </button>
             </div>
 
@@ -1558,7 +1549,7 @@
           
           <div class="section-header-bar">
             <div class="section-title-wrap">
-              <h2>Programme Partenaires (Affiliation 20%)</h2>
+              <h2>Affiliation &amp; Commissions (20%)</h2>
               <p class="section-desc">Recommandez VANDIA et touchez 20% de commission récurrente chaque mois sur tous les abonnements de vos filleuls à vie.</p>
             </div>
             <div class="section-actions-wrap">
@@ -1573,7 +1564,7 @@
           <div class="partner-banner-card" style="margin-bottom: 24px;">
             <div class="partner-banner-left">
               <div class="partner-tag-pill">
-                <span class="partner-tag-text">NOUVEAU - PROGRAMME PARTENAIRES</span>
+                <span class="partner-tag-text">PROGRAMME D'AFFILIATION (20%)</span>
               </div>
               <h2 class="partner-title">Recommandez VANDIA et Gagnez 20% par mois !</h2>
               <p class="partner-desc">
@@ -2100,7 +2091,7 @@
                   </div>
                   <ul class="plan-select-features">
                     <li>1 Numéro WhatsApp</li>
-                    <li>1 500 crédits IA/mois</li>
+                    <li>2 500 crédits IA/mois</li>
                     <li>Paiements Wave &amp; MoMo</li>
                   </ul>
                 </div>
@@ -2125,20 +2116,20 @@
                 </div>
               </label>
 
-              <label class="plan-select-card" for="modal-plan-enterprise">
-                <input type="radio" name="modal_plan_tier" id="modal-plan-enterprise" value="enterprise">
+              <label class="plan-select-card" for="modal-plan-business">
+                <input type="radio" name="modal_plan_tier" id="modal-plan-business" value="business">
                 <div class="plan-select-content">
                   <div class="plan-select-top">
-                    <span class="plan-select-name">💎 Entreprise</span>
-                    <span class="badge badge-purple">Sur-Mesure</span>
+                    <span class="plan-select-name">💎 Business</span>
+                    <span class="badge badge-purple">15 000 crédits</span>
                   </div>
                   <div class="plan-select-price">
-                    <strong style="font-size: 16px;">Sur Devis</strong>
+                    <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois (50 $)</small>
                   </div>
                   <ul class="plan-select-features">
                     <li>Multi-numéros illimités</li>
-                    <li>15k+ crédits IA</li>
-                    <li>Account Manager dédié</li>
+                    <li>15 000 crédits IA/mois</li>
+                    <li>Account Manager VIP dédié</li>
                   </ul>
                 </div>
               </label>

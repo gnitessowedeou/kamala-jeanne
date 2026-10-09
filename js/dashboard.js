@@ -18,10 +18,10 @@ const MOCK_DATA = {
     connectedPhone: "Non lié",
     phoneStatus: "En attente",
     plan: {
-      name: "Formule Basic 🦾",
-      badge: "-50% À VIE",
+      name: "Essai Gratuit 7j 🦾",
+      badge: "300 CRÉDITS",
       tokensUsed: 0,
-      tokensMax: 100000,
+      tokensMax: 300,
       percentage: 0
     }
   },
@@ -2105,9 +2105,9 @@ function setupBillingAndAffiliate() {
     if (selectedTier === "basic") {
       planName = "Formule Basic 🦾";
       basePriceMonthly = 7900;
-    } else if (selectedTier === "enterprise") {
-      planName = "Enterprise Sur-Mesure 💎";
-      basePriceMonthly = 0;
+    } else if (selectedTier === "business" || selectedTier === "enterprise") {
+      planName = "Formule Business 💎";
+      basePriceMonthly = 30000;
     }
 
     if (titleEl) titleEl.textContent = planName;
@@ -2116,13 +2116,9 @@ function setupBillingAndAffiliate() {
     }
 
     if (amountEl) {
-      if (selectedTier === "enterprise") {
-        amountEl.textContent = "Sur Devis (Gratuit)";
-      } else {
-        const finalPrice = isAnnual ? Math.round(basePriceMonthly * 12 * 0.8) : basePriceMonthly;
-        const formattedPrice = finalPrice.toLocaleString("fr-FR") + " FCFA" + (isAnnual ? "/an" : "/mois");
-        amountEl.textContent = formattedPrice;
-      }
+      const finalPrice = isAnnual ? Math.round(basePriceMonthly * 12 * 0.8) : basePriceMonthly;
+      const formattedPrice = finalPrice.toLocaleString("fr-FR") + " FCFA" + (isAnnual ? "/an" : "/mois");
+      amountEl.textContent = formattedPrice;
     }
   }
 
@@ -2173,6 +2169,7 @@ function setupBillingAndAffiliate() {
   const dashFreqAnnual = document.getElementById("dash-freq-annual");
   const dashPriceBasic = document.getElementById("dash-price-basic");
   const dashPricePro = document.getElementById("dash-price-pro");
+  const dashPriceBusiness = document.getElementById("dash-price-business");
 
   function updateDashboardPricingDisplay(isAnnual) {
     if (dashFreqMonthly) dashFreqMonthly.classList.toggle("active", !isAnnual);
@@ -2183,6 +2180,9 @@ function setupBillingAndAffiliate() {
     }
     if (dashPricePro) {
       dashPricePro.textContent = isAnnual ? "11 920" : "14 900";
+    }
+    if (dashPriceBusiness) {
+      dashPriceBusiness.textContent = isAnnual ? "24 000" : "30 000";
     }
   }
 
@@ -2235,17 +2235,17 @@ function setupBillingAndAffiliate() {
 
         // Update User Plan Mock
         let planTitle = "Formule Pro 🚀";
-        let planTokens = 500000;
+        let planTokens = 6000;
         let planPriceStr = "14 900 FCFA";
 
         if (selectedTier === "basic") {
           planTitle = "Formule Basic 🦾";
-          planTokens = 100000;
+          planTokens = 2500;
           planPriceStr = "7 900 FCFA";
-        } else if (selectedTier === "enterprise") {
-          planTitle = "Formule Entreprise 💎";
-          planTokens = 1500000;
-          planPriceStr = "Sur Devis";
+        } else if (selectedTier === "business" || selectedTier === "enterprise") {
+          planTitle = "Formule Business 💎";
+          planTokens = 15000;
+          planPriceStr = "30 000 FCFA";
         }
 
         MOCK_DATA.currentUser.plan.name = planTitle;
@@ -2254,6 +2254,12 @@ function setupBillingAndAffiliate() {
         // Update UI
         const sidebarPlanName = document.getElementById("sidebar-plan-name");
         if (sidebarPlanName) sidebarPlanName.textContent = planTitle;
+
+        const subTokensMax = document.getElementById("sub-tokens-max");
+        if (subTokensMax) subTokensMax.textContent = `Max ${planTokens.toLocaleString("fr-FR")} crédits`;
+
+        const subTokensUsed = document.getElementById("sub-tokens-used");
+        if (subTokensUsed) subTokensUsed.textContent = "0 crédit";
 
         const navBadgePlan = document.getElementById("nav-badge-plan");
         if (navBadgePlan) {

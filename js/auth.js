@@ -42,6 +42,13 @@
     role: "Administrateur",
     avatarUrl: "",
     provider: "email",
+    plan: {
+      name: "Essai Gratuit 7j 🦾",
+      badge: "300 CRÉDITS",
+      tokensUsed: 0,
+      tokensMax: 300,
+      daysLeft: 7
+    },
     createdAt: new Date().toISOString()
   };
 
@@ -217,6 +224,13 @@
             role: "Administrateur",
             avatarUrl: "",
             provider: "supabase",
+            plan: {
+              name: "Essai Gratuit 7j 🦾",
+              badge: "300 CRÉDITS",
+              tokensUsed: 0,
+              tokensMax: 300,
+              daysLeft: 7
+            },
             createdAt: new Date().toISOString()
           };
 
@@ -241,6 +255,13 @@
         role: "Administrateur",
         avatarUrl: "",
         provider: "email",
+        plan: {
+          name: "Essai Gratuit 7j 🦾",
+          badge: "300 CRÉDITS",
+          tokensUsed: 0,
+          tokensMax: 300,
+          daysLeft: 7
+        },
         createdAt: new Date().toISOString()
       };
 
@@ -584,6 +605,16 @@
         } else {
           avatarPreview.innerHTML = `<span class="avatar-preview-initials">${initials}</span>`;
         }
+      }
+
+      // 7. Plan & Crédits IA dans la barre latérale
+      const planNameEl = document.getElementById("sidebar-plan-name");
+      const planTokensMaxEl = document.getElementById("sub-tokens-max");
+      const planTokensUsedEl = document.getElementById("sub-tokens-used");
+      if (user.plan) {
+        if (planNameEl) planNameEl.textContent = user.plan.name || "Essai Gratuit 7j 🦾";
+        if (planTokensMaxEl) planTokensMaxEl.textContent = `Max ${(user.plan.tokensMax || 300).toLocaleString("fr-FR")} crédits`;
+        if (planTokensUsedEl) planTokensUsedEl.textContent = `${user.plan.tokensUsed || 0} crédit`;
       }
     },
 
