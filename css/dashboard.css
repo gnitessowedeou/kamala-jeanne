@@ -1114,6 +1114,7 @@
   border-collapse: separate;
   border-spacing: 0 6px;
   font-size: 13px;
+  min-width: 620px;
 }
 
 .custom-table th {
@@ -1320,6 +1321,10 @@
 }
 
 /* Right Chat Area */
+.btn-chat-back {
+  display: none;
+}
+
 .inbox-chat-pane {
   flex: 1;
   display: flex;
@@ -1594,7 +1599,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.section-title-wrap {
+  flex: 1;
 }
 
 .section-title-wrap h2 {
@@ -1606,6 +1616,30 @@
 .section-desc {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.section-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.contacts-filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.contacts-search-wrap {
+  flex: 1;
+  min-width: 260px;
+}
+
+.filter-pills-scroll {
+  display: flex;
+  gap: 6px;
 }
 
 /* Automation Card Grid */
@@ -1901,16 +1935,6 @@
   .agent-config-grid {
     grid-template-columns: 1fr;
   }
-
-  .inbox-layout {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .inbox-sidebar {
-    width: 100%;
-    height: 320px;
-  }
 }
 
 /* Mobile & Tablet Portrait Breakpoint */
@@ -2158,6 +2182,250 @@
     transform: scale(0.96);
   }
 
+  /* Section Header Bar Mobile: Pleine largeur et boutons organises */
+  .section-header-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .section-title-wrap {
+    width: 100%;
+  }
+
+  .section-title-wrap h2 {
+    font-size: 19px;
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+
+  .section-desc {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .section-header-bar .btn-primary-glow,
+  .section-header-bar .btn-secondary-glass {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .section-actions-wrap {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  /* Boîte de Réception WhatsApp Mobile (Expérience fluide de type WhatsApp Mobile) */
+  .inbox-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 145px);
+    min-height: 520px;
+    max-height: calc(100vh - 145px);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-card);
+  }
+
+  .inbox-sidebar {
+    width: 100%;
+    min-width: unset;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .inbox-chat-pane {
+    display: none;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    flex-direction: column;
+    background: #090e1a;
+  }
+
+  .inbox-layout.chat-open .inbox-sidebar {
+    display: none;
+  }
+
+  .inbox-layout.chat-open .inbox-chat-pane {
+    display: flex;
+  }
+
+  .btn-chat-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-right: 4px;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-chat-back:active {
+    background: rgba(37, 211, 102, 0.2);
+    color: var(--whatsapp-green);
+  }
+
+  .chat-header {
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+    background: rgba(11, 17, 30, 0.95);
+  }
+
+  .chat-contact-info {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .chat-contact-meta {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .chat-contact-title {
+    font-size: 13.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-contact-phone {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-mode-toggle {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .chat-mode-badge {
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .chat-messages-container {
+    padding: 12px;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .message-bubble {
+    max-width: 86%;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .chat-quick-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    scrollbar-width: none;
+  }
+
+  .chat-quick-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quick-chip {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    padding: 5px 10px;
+  }
+
+  .chat-input-bar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .chat-input-bar input {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  /* Ton de communication Agent IA sur mobile */
+  .tag-selector-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .tag-select-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  /* Filtres CRM et Contacts sur mobile */
+  .contacts-filter-bar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .contacts-search-wrap {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .filter-pills-scroll {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .filter-pills-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-pills-scroll .tag-select-btn {
+    flex-shrink: 0;
+  }
+
+  /* Cartes et Tables Mobile */
+  .glass-panel {
+    padding: 16px !important;
+  }
+
+  .table-card {
+    padding: 14px !important;
+  }
+
+  .table-responsive {
+    margin-top: 10px;
+    border-radius: var(--radius-sm);
+  }
+
   /* Main body padding */
   .main-body-content {
     padding: 16px 14px 70px;
@@ -2199,8 +2467,8 @@
   .whatsapp-float-btn {
     bottom: 16px;
     right: 16px;
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     font-size: 24px;
   }
 }

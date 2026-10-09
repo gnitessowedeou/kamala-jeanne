@@ -1008,6 +1008,15 @@ function setupInboxInteraction() {
     });
   });
 
+  // Mobile Back Button to return to conversations list
+  const backBtn = document.getElementById("btn-chat-back");
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      const inboxLayout = document.querySelector(".inbox-layout");
+      if (inboxLayout) inboxLayout.classList.remove("chat-open");
+    });
+  }
+
   // Toggle Human Agent button
   const toggleHumanBtn = document.getElementById("btn-toggle-human");
   const aiBadge = document.getElementById("chat-ai-status-badge");
@@ -1015,12 +1024,12 @@ function setupInboxInteraction() {
     toggleHumanBtn.addEventListener("click", () => {
       activeConversation.aiActive = !activeConversation.aiActive;
       if (activeConversation.aiActive) {
-        aiBadge.innerHTML = `<i class="fa-solid fa-robot"></i><span>IA Active (Vente Automatisée)</span>`;
+        aiBadge.innerHTML = `<i class="fa-solid fa-robot"></i><span class="chat-ai-status-text">IA Active</span>`;
         aiBadge.style.color = "var(--whatsapp-green)";
         aiBadge.style.borderColor = "rgba(37, 211, 102, 0.3)";
         showToast("Agent IA réactivé sur cette conversation", "info");
       } else {
-        aiBadge.innerHTML = `<i class="fa-solid fa-user-check"></i><span>Relais Humain Actif (Manuel)</span>`;
+        aiBadge.innerHTML = `<i class="fa-solid fa-user-check"></i><span class="chat-ai-status-text">Relais Humain</span>`;
         aiBadge.style.color = "var(--cyan)";
         aiBadge.style.borderColor = "rgba(6, 182, 212, 0.3)";
         showToast("Prise en main manuelle activée", "info");
@@ -1079,6 +1088,10 @@ function renderConversationList() {
         item.classList.add("active");
         found.unread = false;
         loadConversation(found);
+
+        // Sur mobile, bascule vers la fenêtre de discussion active
+        const inboxLayout = document.querySelector(".inbox-layout");
+        if (inboxLayout) inboxLayout.classList.add("chat-open");
       }
     });
   });

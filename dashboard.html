@@ -691,8 +691,11 @@
               <!-- Chat Header -->
               <div class="chat-header">
                 <div class="chat-contact-info">
+                  <button class="btn-chat-back" id="btn-chat-back" type="button" aria-label="Retour aux discussions" title="Retour aux discussions">
+                    <i class="fa-solid fa-arrow-left"></i>
+                  </button>
                   <div class="conv-avatar" id="active-chat-avatar">AT</div>
-                  <div>
+                  <div class="chat-contact-meta">
                     <h3 class="chat-contact-title" id="active-chat-name">Amina Traoré</h3>
                     <div class="chat-contact-phone" id="active-chat-phone">+225 07 48 99 12 • Abidjan, CI</div>
                   </div>
@@ -701,9 +704,9 @@
                 <div class="chat-mode-toggle">
                   <div class="chat-mode-badge" id="chat-ai-status-badge">
                     <i class="fa-solid fa-robot"></i>
-                    <span>IA Active (Vente Automatisée)</span>
+                    <span class="chat-ai-status-text">IA Active</span>
                   </div>
-                  <button class="header-icon-btn" id="btn-toggle-human" title="Prendre la main / Manuel">
+                  <button class="header-icon-btn" id="btn-toggle-human" title="Prendre la main / Manuel" type="button">
                     <i class="fa-solid fa-headset"></i>
                   </button>
                 </div>
@@ -933,7 +936,7 @@
               <h2>Contacts &amp; CRM WhatsApp</h2>
               <p class="section-desc">Liste de l'ensemble des prospects et clients capturés via vos flux WhatsApp et widgets.</p>
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div class="section-actions-wrap">
               <button class="btn-secondary-glass" id="btn-export-crm">
                 <i class="fa-solid fa-download"></i>
                 <span>Exporter CSV</span>
@@ -946,12 +949,12 @@
           </div>
 
           <div class="glass-panel table-card">
-            <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-              <div class="search-input-wrap" style="flex: 1; min-width: 260px;">
+            <div class="contacts-filter-bar">
+              <div class="search-input-wrap contacts-search-wrap">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="contacts-search-input" placeholder="Filtrer par nom, numéro ou tag...">
               </div>
-              <div style="display: flex; gap: 6px;">
+              <div class="filter-pills-scroll">
                 <button class="tag-select-btn active" data-filter="all">Tous</button>
                 <button class="tag-select-btn" data-filter="VIP">Clients VIP</button>
                 <button class="tag-select-btn" data-filter="Chaud">Prospects Chauds</button>
