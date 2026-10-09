@@ -11,18 +11,18 @@
 // ==============================================================================
 const MOCK_DATA = {
   currentUser: {
-    id: "usr_01h8923a",
-    name: "gnitou",
-    role: "Admin Entreprise",
-    avatar: "G",
-    connectedPhone: "+226 05158494",
-    phoneStatus: "Coexistence Active",
+    id: "usr_guest",
+    name: "Utilisateur",
+    role: "Administrateur",
+    avatar: "V",
+    connectedPhone: "Non lié",
+    phoneStatus: "En attente",
     plan: {
       name: "Formule Basic 🦾",
       badge: "-50% À VIE",
-      tokensUsed: 14200,
+      tokensUsed: 0,
       tokensMax: 100000,
-      percentage: 14.2
+      percentage: 0
     }
   },
 
@@ -30,37 +30,37 @@ const MOCK_DATA = {
   exchangeRate: 615, // 1 USD ~ 615 XOF
 
   kpis: {
-    salesUsd: 8420,
-    salesXof: 5180000,
-    salesTrend: "+34.5%",
-    conversations: 1248,
-    conversationsTrend: "+18.2%",
-    conversionRate: "28.4%",
-    conversionTrend: "+340%",
-    abandonedRecovered: 142,
-    abandonedRecoveredRate: "74% relancés",
-    abandonedSavedUsd: 2180,
-    abandonedSavedXof: 1340000
+    salesUsd: 0,
+    salesXof: 0,
+    salesTrend: "0%",
+    conversations: 0,
+    conversationsTrend: "0%",
+    conversionRate: "0.0%",
+    conversionTrend: "0%",
+    abandonedRecovered: 0,
+    abandonedRecoveredRate: "0 relancé",
+    abandonedSavedUsd: 0,
+    abandonedSavedXof: 0
   },
 
   chartData: {
     "14": {
       labels: ["01 Oct", "02 Oct", "03 Oct", "04 Oct", "05 Oct", "06 Oct", "07 Oct", "08 Oct", "09 Oct", "10 Oct", "11 Oct", "12 Oct", "13 Oct", "Aujourd'hui"],
-      salesUsd: [350, 480, 520, 420, 710, 640, 890, 780, 1100, 1350, 1500, 1320, 1680, 1920],
-      salesXof: [215000, 295000, 320000, 258000, 436000, 393000, 547000, 479000, 676000, 830000, 922000, 811000, 1033000, 1180000],
-      conversations: [45, 62, 58, 40, 85, 98, 120, 105, 142, 160, 175, 152, 190, 215]
+      salesUsd: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      salesXof: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      conversations: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     },
     "30": {
       labels: ["Sem 1", "Sem 2", "Sem 3", "Sem 4"],
-      salesUsd: [1650, 2100, 2450, 2220],
-      salesXof: [1014000, 1291000, 1506000, 1365000],
-      conversations: [280, 340, 390, 238]
+      salesUsd: [0, 0, 0, 0],
+      salesXof: [0, 0, 0, 0],
+      conversations: [0, 0, 0, 0]
     },
     "90": {
-      labels: ["Août", "Septembre", "Octobre (en cours)"],
-      salesUsd: [6200, 7850, 8420],
-      salesXof: [3813000, 4827000, 5180000],
-      conversations: [890, 1120, 1248]
+      labels: ["Mois 1", "Mois 2", "Mois en cours"],
+      salesUsd: [0, 0, 0],
+      salesXof: [0, 0, 0],
+      conversations: [0, 0, 0]
     }
   },
 
@@ -210,8 +210,8 @@ const MOCK_DATA = {
       title: "Tunnel Vente Flash WhatsApp",
       trigger: "Mot-clé 'PROMO' ou Scan QR Code",
       steps: 5,
-      contacts: "482 contacts",
-      conversion: "34.2%",
+      contacts: "0 contact",
+      conversion: "0.0%",
       active: true,
       icon: "fa-bolt"
     },
@@ -219,8 +219,8 @@ const MOCK_DATA = {
       title: "Relance Panier Abandonné",
       trigger: "Abandon Shopify/WooCommerce > 30 min",
       steps: 3,
-      contacts: "142 relancés",
-      conversion: "74.0%",
+      contacts: "0 relancé",
+      conversion: "0.0%",
       active: true,
       icon: "fa-cart-arrow-down"
     },
@@ -228,8 +228,8 @@ const MOCK_DATA = {
       title: "Qualification & Prise de Devis",
       trigger: "Widget WhatsApp Site Web",
       steps: 4,
-      contacts: "980 prospects",
-      conversion: "42.8%",
+      contacts: "0 prospect",
+      conversion: "0.0%",
       active: true,
       icon: "fa-clipboard-question"
     },
@@ -237,8 +237,8 @@ const MOCK_DATA = {
       title: "Réactivation Clients Inactifs (30 jours)",
       trigger: "Aucune commande depuis 30 jours",
       steps: 2,
-      contacts: "620 cibles",
-      conversion: "19.5%",
+      contacts: "0 cible",
+      conversion: "0.0%",
       active: false,
       icon: "fa-clock-rotate-left"
     }
@@ -754,14 +754,14 @@ function initHourlyChart() {
       datasets: [
         {
           label: "Commandes Clôturées",
-          data: [12, 28, 45, 62, 85, 110, 95, 60, 25],
+          data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
           backgroundColor: "rgba(37, 211, 102, 0.75)",
           borderRadius: 6,
           hoverBackgroundColor: "rgba(37, 211, 102, 1)"
         },
         {
           label: "Messages Reçus",
-          data: [40, 75, 120, 160, 210, 280, 240, 150, 60],
+          data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
           backgroundColor: "rgba(6, 182, 212, 0.4)",
           borderRadius: 6,
           hoverBackgroundColor: "rgba(6, 182, 212, 0.8)"
@@ -804,53 +804,36 @@ function setupChartFilters() {
 }
 
 function isCurrentUserDemo() {
-  if (typeof window !== "undefined" && window.AuthEngine) {
-    const user = window.AuthEngine.getCurrentUser();
-    if (user && user.id && user.id !== "usr_default_01" && user.email !== "gnitou@vandia.ai") {
-      return false; // Real registered user
-    }
-  }
-  return true; // Demo user
+  return false; // Tous les comptes en production démarrent à 0
 }
 
 function getUserKpis() {
-  if (!isCurrentUserDemo()) {
-    return {
-      salesUsd: 0,
-      salesXof: 0,
-      salesTrend: "0%",
-      salesNote: "En attente de vos premières commandes WhatsApp",
-      conversations: 0,
-      conversationsTrend: "0%",
-      conversationsNote: "Votre commercial IA est prêt et en attente",
-      conversionRate: "0.0%",
-      conversionTrend: "0%",
-      conversionNote: "Taux calculé dès vos premières commandes",
-      abandonedRecovered: 0,
-      abandonedRecoveredRate: "0 relancé",
-      abandonedSavedUsd: 0,
-      abandonedSavedXof: 0
-    };
-  }
   return {
-    ...MOCK_DATA.kpis,
-    salesNote: "dont 68% collectés via Wave & Orange Money",
-    conversationsNote: "98.4% prises en charge à 100% par l'IA",
-    conversionNote: "vs moyenne marché e-commerce (2.5%)"
+    salesUsd: 0,
+    salesXof: 0,
+    salesTrend: "0%",
+    salesNote: "En attente de vos premières commandes WhatsApp",
+    conversations: 0,
+    conversationsTrend: "0%",
+    conversationsNote: "Votre commercial IA est prêt et en attente",
+    conversionRate: "0.0%",
+    conversionTrend: "0%",
+    conversionNote: "Taux calculé dès vos premières commandes",
+    abandonedRecovered: 0,
+    abandonedRecoveredRate: "0 relancé",
+    abandonedSavedUsd: 0,
+    abandonedSavedXof: 0
   };
 }
 
 function getSalesChartData(periodKey) {
   const base = MOCK_DATA.chartData[periodKey] || MOCK_DATA.chartData["14"];
-  if (!isCurrentUserDemo()) {
-    return {
-      labels: base.labels,
-      salesUsd: base.salesUsd.map(() => 0),
-      salesXof: base.salesXof.map(() => 0),
-      conversations: base.conversations.map(() => 0)
-    };
-  }
-  return base;
+  return {
+    labels: base.labels,
+    salesUsd: base.salesUsd.map(() => 0),
+    salesXof: base.salesXof.map(() => 0),
+    conversations: base.conversations.map(() => 0)
+  };
 }
 
 function updateChartPeriod(periodKey) {

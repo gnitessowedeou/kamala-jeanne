@@ -63,12 +63,12 @@
         <div class="sidebar-status-card">
           <div class="sidebar-status-card-top">
             <span class="status-dot-pulse"></span>
-            <span class="sidebar-status-title">WhatsApp Connecté</span>
-            <span class="status-badge-mini">Actif</span>
+            <span class="sidebar-status-title">Statut WhatsApp</span>
+            <span class="status-badge-mini" id="sidebar-status-badge">Prêt</span>
           </div>
           <div class="sidebar-status-phone">
             <i class="fa-brands fa-whatsapp"></i>
-            <span id="sidebar-connected-num">+225 07 89 45 12 30</span>
+            <span id="sidebar-connected-num">En attente</span>
           </div>
         </div>
 
@@ -157,7 +157,7 @@
                   <i class="fa-solid fa-users nav-item-icon"></i>
                   <span>Contacts & CRM</span>
                 </div>
-                <span class="badge badge-subtle">5 280</span>
+                <span class="badge badge-subtle" id="nav-badge-contacts">0</span>
               </a>
             </li>
             <li>
@@ -181,7 +181,7 @@
                   <i class="fa-solid fa-mobile-screen-button nav-item-icon"></i>
                   <span>Numéros & Coexist...</span>
                 </div>
-                <span class="badge badge-green">1 lié</span>
+                <span class="badge badge-green" id="nav-badge-devices">Prêt</span>
               </a>
             </li>
             <li>
@@ -222,13 +222,13 @@
           </div>
           <div class="sub-progress-info">
             <span>Jetons IA utilisés</span>
-            <span id="sub-token-pct">14.2%</span>
+            <span id="sub-token-pct">0.0%</span>
           </div>
           <div class="sub-progress-bar">
-            <div class="sub-progress-fill" id="sub-token-fill" style="width: 14.2%;"></div>
+            <div class="sub-progress-fill" id="sub-token-fill" style="width: 0%;"></div>
           </div>
           <div class="sub-limits">
-            <span id="sub-tokens-used">14 200 jetons</span>
+            <span id="sub-tokens-used">0 jeton</span>
             <span>Max 100k</span>
           </div>
         </div>
@@ -236,10 +236,10 @@
         <!-- Profil Utilisateur -->
         <div class="user-profile-row">
           <div class="user-meta" id="user-profile-card" style="cursor: pointer;" title="Cliquer pour modifier votre profil">
-            <div class="user-avatar" id="user-avatar-badge">G</div>
+            <div class="user-avatar" id="user-avatar-badge">V</div>
             <div class="user-details">
-              <span class="user-name" id="user-display-name">gnitou</span>
-              <span class="user-role" id="user-display-role">Admin Entreprise</span>
+              <span class="user-name" id="user-display-name">Mon Profil</span>
+              <span class="user-role" id="user-display-role">Administrateur</span>
             </div>
           </div>
           <button class="btn-logout" id="btn-logout" aria-label="Se déconnecter" title="Déconnexion">
@@ -277,8 +277,8 @@
           <!-- Connected Status Pill -->
           <div class="status-connected-pill" id="header-status-pill" title="WhatsApp Connecté">
             <span class="status-dot-pulse"></span>
-            <span id="header-connected-num">+225 07 89 45 12 30</span>
-            <span class="status-badge-mini">Actif</span>
+            <span id="header-connected-num">En attente</span>
+            <span class="status-badge-mini">Prêt</span>
           </div>
 
           <!-- Currency Switcher Toggle -->
@@ -318,7 +318,7 @@
           <div class="overview-banner">
             <div class="banner-left">
               <h2 class="banner-title">
-                <span>Bienvenue sur votre espace VANDIA IA, <span class="welcome-name">gnitou</span></span>
+                <span>Bienvenue sur votre espace VANDIA IA, <span class="welcome-name"></span></span>
                 <span>👋</span>
               </h2>
               <p class="banner-subtitle">
@@ -364,10 +364,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value kpi-val-currency" id="kpi-sales-val" data-usd="8420" data-xof="5180000">5 180 000 XOF</span>
-                  <span class="kpi-badge-trend" id="kpi-sales-trend"><i class="fa-solid fa-arrow-up"></i> +34.5%</span>
+                  <span class="kpi-value kpi-val-currency" id="kpi-sales-val" data-usd="0" data-xof="0">0 XOF</span>
+                  <span class="kpi-badge-trend" id="kpi-sales-trend"><i class="fa-solid fa-minus"></i> 0%</span>
                 </div>
-                <p class="kpi-note" id="kpi-sales-note">dont 68% collectés via Wave &amp; Orange Money</p>
+                <p class="kpi-note" id="kpi-sales-note">En attente de vos premières commandes WhatsApp</p>
               </div>
             </div>
 
@@ -381,10 +381,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value" id="kpi-convs-val">1,248</span>
-                  <span class="kpi-badge-trend" id="kpi-convs-trend"><i class="fa-solid fa-arrow-up"></i> +18.2%</span>
+                  <span class="kpi-value" id="kpi-convs-val">0</span>
+                  <span class="kpi-badge-trend" id="kpi-convs-trend"><i class="fa-solid fa-minus"></i> 0%</span>
                 </div>
-                <p class="kpi-note" id="kpi-convs-note">98.4% prises en charge à 100% par l'IA</p>
+                <p class="kpi-note" id="kpi-convs-note">Votre commercial IA est prêt et en attente</p>
               </div>
             </div>
 
@@ -398,10 +398,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value" id="kpi-rate-val">28.4%</span>
-                  <span class="kpi-badge-trend" id="kpi-rate-trend"><i class="fa-solid fa-arrow-up"></i> +340%</span>
+                  <span class="kpi-value" id="kpi-rate-val">0.0%</span>
+                  <span class="kpi-badge-trend" id="kpi-rate-trend"><i class="fa-solid fa-minus"></i> 0%</span>
                 </div>
-                <p class="kpi-note" id="kpi-rate-note">vs moyenne marché e-commerce (2.5%)</p>
+                <p class="kpi-note" id="kpi-rate-note">Taux calculé dès vos premières commandes</p>
               </div>
             </div>
 
@@ -415,10 +415,10 @@
               </div>
               <div>
                 <div class="kpi-value-row">
-                  <span class="kpi-value" id="kpi-carts-val">142</span>
-                  <span class="kpi-badge-trend" id="kpi-carts-trend"><i class="fa-solid fa-check"></i> 74% relancés</span>
+                  <span class="kpi-value" id="kpi-carts-val">0</span>
+                  <span class="kpi-badge-trend" id="kpi-carts-trend"><i class="fa-solid fa-minus"></i> 0 relancé</span>
                 </div>
-                <p class="kpi-note" id="kpi-carts-note">Revenus sauvés : <strong class="kpi-val-currency" id="kpi-saved-val" data-usd="2180" data-xof="1340000">1 340 000 XOF</strong></p>
+                <p class="kpi-note" id="kpi-carts-note">Revenus sauvés : <strong class="kpi-val-currency" id="kpi-saved-val" data-usd="0" data-xof="0">0 XOF</strong></p>
               </div>
             </div>
           </div>
@@ -474,10 +474,10 @@
                       <i class="fa-solid fa-water" style="color: var(--cyan);"></i>
                       <span>Wave Mobile Money</span>
                     </div>
-                    <span class="payment-item-stats"><strong>48%</strong> (4 041 600 XOF)</span>
+                    <span class="payment-item-stats"><strong>0%</strong> (0 XOF)</span>
                   </div>
                   <div class="payment-progress-track">
-                    <div class="payment-progress-bar bar-cyan" style="width: 48%;"></div>
+                    <div class="payment-progress-bar bar-cyan" style="width: 0%;"></div>
                   </div>
                 </div>
 
@@ -488,10 +488,10 @@
                       <i class="fa-solid fa-circle" style="color: #f97316;"></i>
                       <span>Orange Money</span>
                     </div>
-                    <span class="payment-item-stats"><strong>26%</strong> (2 189 200 XOF)</span>
+                    <span class="payment-item-stats"><strong>0%</strong> (0 XOF)</span>
                   </div>
                   <div class="payment-progress-track">
-                    <div class="payment-progress-bar bar-orange" style="width: 26%;"></div>
+                    <div class="payment-progress-bar bar-orange" style="width: 0%;"></div>
                   </div>
                 </div>
 
@@ -502,10 +502,10 @@
                       <i class="fa-regular fa-credit-card" style="color: var(--purple);"></i>
                       <span>Carte Bancaire (Stripe)</span>
                     </div>
-                    <span class="payment-item-stats"><strong>16%</strong> (1 347 000 XOF)</span>
+                    <span class="payment-item-stats"><strong>0%</strong> (0 XOF)</span>
                   </div>
                   <div class="payment-progress-track">
-                    <div class="payment-progress-bar bar-purple" style="width: 16%;"></div>
+                    <div class="payment-progress-bar bar-purple" style="width: 0%;"></div>
                   </div>
                 </div>
 
@@ -516,10 +516,10 @@
                       <i class="fa-solid fa-bolt" style="color: var(--amber);"></i>
                       <span>MTN MoMo</span>
                     </div>
-                    <span class="payment-item-stats"><strong>10%</strong> (842 000 XOF)</span>
+                    <span class="payment-item-stats"><strong>0%</strong> (0 XOF)</span>
                   </div>
                   <div class="payment-progress-track">
-                    <div class="payment-progress-bar bar-yellow" style="width: 10%;"></div>
+                    <div class="payment-progress-bar bar-yellow" style="width: 0%;"></div>
                   </div>
                 </div>
               </div>
@@ -539,55 +539,15 @@
               </div>
 
               <div class="activity-list" id="activity-live-list">
-                <!-- Event 1 -->
                 <div class="activity-item">
                   <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
                     <i class="fa-solid fa-check"></i>
                   </div>
                   <div class="activity-info">
                     <div class="activity-text">
-                      Paiement reçu de <strong>Amina Traoré</strong> via Wave (<strong>25 000 XOF</strong>) après recommandation de l'Agent IA.
+                      <strong>Votre instance VANDIA IA est active et prête !</strong> Les commandes WhatsApp et paiements Wave/OM apparaîtront ici en direct.
                     </div>
-                    <div class="activity-meta">Il y a 3 minutes • Tunnel Vente Flash WhatsApp</div>
-                  </div>
-                </div>
-
-                <!-- Event 2 -->
-                <div class="activity-item">
-                  <div class="activity-icon-wrapper" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">
-                    <i class="fa-solid fa-bullhorn"></i>
-                  </div>
-                  <div class="activity-info">
-                    <div class="activity-text">
-                      Diffusion "<strong>Promo Flash VIP</strong>" achevée avec succès pour <strong>1 500 contacts</strong> (94.2% de taux d'ouverture).
-                    </div>
-                    <div class="activity-meta">Il y a 42 minutes • Protection SafeSend™ active</div>
-                  </div>
-                </div>
-
-                <!-- Event 3 -->
-                <div class="activity-item">
-                  <div class="activity-icon-wrapper" style="background: rgba(139, 92, 246, 0.15); color: var(--purple);">
-                    <i class="fa-solid fa-rotate"></i>
-                  </div>
-                  <div class="activity-info">
-                    <div class="activity-text">
-                      Relance automatique de panier abandonné envoyée à <strong>Marc Koffi</strong> (+225 05 99 22 11).
-                    </div>
-                    <div class="activity-meta">Il y a 1 heure • Synchronisation Shopify</div>
-                  </div>
-                </div>
-
-                <!-- Event 4 -->
-                <div class="activity-item">
-                  <div class="activity-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">
-                    <i class="fa-solid fa-user-plus"></i>
-                  </div>
-                  <div class="activity-info">
-                    <div class="activity-text">
-                      <strong>48 nouveaux prospects</strong> qualifiés ajoutés à votre CRM depuis le widget WhatsApp de votre site.
-                    </div>
-                    <div class="activity-meta">Il y a 2 heures • Entonnoir Webhook</div>
+                    <div class="activity-meta">À l'instant • Mode Réel Actif</div>
                   </div>
                 </div>
               </div>
@@ -1099,22 +1059,22 @@
           <div class="kpi-grid">
             <div class="glass-panel kpi-card">
               <span class="kpi-title">Retour sur Investissement (ROI)</span>
-              <div class="kpi-value-row"><span class="kpi-value" style="color: var(--whatsapp-green);">x14.8</span></div>
-              <span class="kpi-note">Généré vs coût d'abonnement</span>
+              <div class="kpi-value-row"><span class="kpi-value" style="color: var(--whatsapp-green);">x0.0</span></div>
+              <span class="kpi-note">Calculé dès vos premières ventes</span>
             </div>
             <div class="glass-panel kpi-card">
               <span class="kpi-title">Panier Moyen WhatsApp</span>
-              <div class="kpi-value-row"><span class="kpi-value kpi-val-currency" data-usd="42" data-xof="26000">26 000 XOF</span></div>
-              <span class="kpi-note">+18% par rapport au site web</span>
+              <div class="kpi-value-row"><span class="kpi-value kpi-val-currency" data-usd="0" data-xof="0">0 XOF</span></div>
+              <span class="kpi-note">En attente de commandes</span>
             </div>
             <div class="glass-panel kpi-card">
               <span class="kpi-title">Temps Moyen de Conversion</span>
-              <div class="kpi-value-row"><span class="kpi-value">4 min 12s</span></div>
+              <div class="kpi-value-row"><span class="kpi-value">0 min</span></div>
               <span class="kpi-note">Du premier message au paiement</span>
             </div>
             <div class="glass-panel kpi-card">
               <span class="kpi-title">Coût Moyen par Message</span>
-              <div class="kpi-value-row"><span class="kpi-value">$0.008</span></div>
+              <div class="kpi-value-row"><span class="kpi-value">$0.00</span></div>
               <span class="kpi-note">Tarification officielle Meta</span>
             </div>
           </div>
@@ -1144,30 +1104,30 @@
                 <div class="payment-item">
                   <div class="payment-item-top">
                     <span>Widget WhatsApp Site Web</span>
-                    <strong>45%</strong>
+                    <strong>0%</strong>
                   </div>
-                  <div class="payment-progress-track"><div class="payment-progress-bar bar-cyan" style="width: 45%;"></div></div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-cyan" style="width: 0%;"></div></div>
                 </div>
                 <div class="payment-item">
                   <div class="payment-item-top">
                     <span>Publicités Click-to-WhatsApp Meta</span>
-                    <strong>32%</strong>
+                    <strong>0%</strong>
                   </div>
-                  <div class="payment-progress-track"><div class="payment-progress-bar bar-purple" style="width: 32%;"></div></div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-purple" style="width: 0%;"></div></div>
                 </div>
                 <div class="payment-item">
                   <div class="payment-item-top">
                     <span>Relances Paniers Abandonnés</span>
-                    <strong>15%</strong>
+                    <strong>0%</strong>
                   </div>
-                  <div class="payment-progress-track"><div class="payment-progress-bar bar-orange" style="width: 15%;"></div></div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-orange" style="width: 0%;"></div></div>
                 </div>
                 <div class="payment-item">
                   <div class="payment-item-top">
                     <span>Bouche-à-oreille &amp; Liens Directs</span>
-                    <strong>8%</strong>
+                    <strong>0%</strong>
                   </div>
-                  <div class="payment-progress-track"><div class="payment-progress-bar bar-yellow" style="width: 8%;"></div></div>
+                  <div class="payment-progress-track"><div class="payment-progress-bar bar-yellow" style="width: 0%;"></div></div>
                 </div>
               </div>
             </div>
@@ -1199,24 +1159,24 @@
 
             <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
               <div class="avatar-preview-box" id="settings-avatar-display" style="width: 72px; height: 72px; flex-shrink: 0;">
-                <span class="avatar-preview-initials" style="font-size: 24px;">G</span>
+                <span class="avatar-preview-initials" style="font-size: 24px;">V</span>
               </div>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; flex: 1;">
                 <div>
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Nom &amp; Prénom</div>
-                  <div style="font-size: 15px; font-weight: 700; color: #ffffff;" id="settings-display-fullname">Gnitou Kamala</div>
+                  <div style="font-size: 15px; font-weight: 700; color: #ffffff;" id="settings-display-fullname">Mon Profil</div>
                 </div>
                 <div>
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">E-mail</div>
-                  <div style="font-size: 15px; font-weight: 600; color: var(--cyan);" id="settings-display-email">gnitou@vandia.ai</div>
+                  <div style="font-size: 15px; font-weight: 600; color: var(--cyan);" id="settings-display-email">En attente</div>
                 </div>
                 <div>
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Numéro WhatsApp</div>
-                  <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green);" id="settings-display-phone">+225 07 89 45 12 30</div>
+                  <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green);" id="settings-display-phone">Non configuré</div>
                 </div>
                 <div>
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Rôle &amp; Statut</div>
-                  <div style="font-size: 14px;"><span class="badge badge-purple" id="settings-display-role">Propriétaire</span> <span class="badge badge-green">Vérifié</span></div>
+                  <div style="font-size: 14px;"><span class="badge badge-purple" id="settings-display-role">Propriétaire</span> <span class="badge badge-green">Actif</span></div>
                 </div>
               </div>
             </div>
@@ -1241,27 +1201,13 @@
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="team-members-table-body">
                   <tr>
-                    <td><strong>gnitou</strong></td>
-                    <td>gnitou@vandia.ai</td>
+                    <td><strong id="team-lead-name">Administrateur</strong></td>
+                    <td id="team-lead-email">admin@vandia.ai</td>
                     <td><span class="badge badge-purple">Propriétaire</span></td>
                     <td><span class="badge badge-green">Actif</span></td>
-                    <td><button class="btn-secondary-glass" style="padding: 4px 10px;">Gérer</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Amina Traoré</strong></td>
-                    <td>amina.t@entreprise.com</td>
-                    <td><span class="badge badge-cyan">Admin Commercial</span></td>
-                    <td><span class="badge badge-green">Actif</span></td>
-                    <td><button class="btn-secondary-glass" style="padding: 4px 10px;">Gérer</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Marc Koffi</strong></td>
-                    <td>marc.k@support.com</td>
-                    <td><span class="badge badge-subtle">Agent Support</span></td>
-                    <td><span class="badge badge-green">Actif</span></td>
-                    <td><button class="btn-secondary-glass" style="padding: 4px 10px;">Gérer</button></td>
+                    <td><button class="btn-secondary-glass btn-open-profile-modal" style="padding: 4px 10px;">Gérer</button></td>
                   </tr>
                 </tbody>
               </table>

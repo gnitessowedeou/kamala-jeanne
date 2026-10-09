@@ -29,17 +29,17 @@
     return supabaseClient;
   }
 
-  // Default demo user if none exists
+  // Default clean user profile (aucun faux chiffre ou fausse donnée)
   const DEFAULT_USER = {
-    id: "usr_default_01",
-    firstName: "Gnitou",
-    lastName: "Kamala",
-    email: "gnitou@vandia.ai",
+    id: "usr_guest",
+    firstName: "Utilisateur",
+    lastName: "",
+    email: "",
     phoneCountry: "+225",
-    phoneNumber: "07 89 45 12 30",
-    fullPhone: "+225 07 89 45 12 30",
-    company: "VANDIA Enterprise",
-    role: "Admin Propriétaire",
+    phoneNumber: "",
+    fullPhone: "",
+    company: "Mon Entreprise",
+    role: "Administrateur",
     avatarUrl: "",
     provider: "email",
     createdAt: new Date().toISOString()
@@ -53,13 +53,14 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEY_USER);
         if (raw) {
-          return JSON.parse(raw);
+          const parsed = JSON.parse(raw);
+          if (parsed && (parsed.id || parsed.email)) {
+            return parsed;
+          }
         }
       } catch (e) {
         console.error("Error reading current user from storage:", e);
       }
-      // Initialize with default demo user
-      this.saveCurrentUser(DEFAULT_USER);
       return DEFAULT_USER;
     },
 
@@ -290,7 +291,7 @@
               email: profile?.email || data.user.email || cleanEmail,
               phoneCountry: "+225",
               phoneNumber: (profile?.whatsapp_number || meta.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
-              fullPhone: profile?.whatsapp_number || meta.whatsapp_number || "+225 07 89 45 12 30",
+              fullPhone: profile?.whatsapp_number || meta.whatsapp_number || "",
               company: "Mon Entreprise",
               role: "Administrateur",
               avatarUrl: profile?.avatar_url || meta.avatar_url || "",
@@ -328,12 +329,12 @@
       const demoUser = {
         id: "usr_" + Date.now(),
         firstName: cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1),
-        lastName: "VANDIA",
+        lastName: "",
         email: cleanEmail,
         phoneCountry: "+225",
-        phoneNumber: "07 12 34 56 78",
-        fullPhone: "+225 07 12 34 56 78",
-        company: "Nouvelle Entreprise",
+        phoneNumber: "",
+        fullPhone: "",
+        company: "Mon Entreprise",
         role: "Administrateur",
         avatarUrl: "",
         provider: "email",
@@ -535,21 +536,26 @@
       // 3. Header & Sidebar WhatsApp connected number badge
       const headerNum = document.getElementById("header-connected-num");
       const sidebarNum = document.getElementById("sidebar-connected-num");
-      const formattedPhone = user.fullPhone || "+225 07 89 45 12 30";
-      if (headerNum) {
-        headerNum.textContent = `${formattedPhone} (Coexistence Active)`;
-      }
-      if (sidebarNum) {
-        sidebarNum.textContent = formattedPhone;
+      if (user.fullPhone && user.fullPhone.trim()) {
+        if (headerNum) headerNum.textContent = `${user.fullPhone} (Connecté)`;
+        if (sidebarNum) sidebarNum.textContent = user.fullPhone;
+      } else {
+        if (headerNum) headerNum.textContent = "En attente";
+        if (sidebarNum) sidebarNum.textContent = "Non lié";
       }
 
-      // 4. Settings view team table (row 1)
-      if (typeof document.querySelector === "function") {
-        const settingsOwnerName = document.querySelector("#view-settings tbody tr:first-child td:first-child strong");
-        if (settingsOwnerName) settingsOwnerName.textContent = fullName;
-        const settingsOwnerEmail = document.querySelector("#view-settings tbody tr:first-child td:nth-child(2)");
-        if (settingsOwnerEmail) settingsOwnerEmail.textContent = user.email;
-      }
+      // 4. Settings view display fields
+      const setFullName = document.getElementById("settings-display-fullname");
+      if (setFullName) setFullName.textContent = fullName;
+      const setEmail = document.getElementById("settings-display-email");
+      if (setEmail) setEmail.textContent = user.email || "En attente";
+      const setPhone = document.getElementById("settings-display-phone");
+      if (setPhone) setPhone.textContent = user.fullPhone || "Non configuré";
+
+      const teamLeadName = document.getElementById("team-lead-name");
+      if (teamLeadName) teamLeadName.textContent = fullName;
+      const teamLeadEmail = document.getElementById("team-lead-email");
+      if (teamLeadEmail) teamLeadEmail.textContent = user.email || "admin@vandia.ai";
 
       // 5. Profile Edit form fields (if modal/panel exists)
       const inputFirst = document.getElementById("profile-firstname");
@@ -616,27 +622,38 @@
       try {
         const { data: { session } } = await sb.auth.getSession();
         if (session && session.user) {
-          const { data: profile } = await sb
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .maybeSingle();
+          let profile = null;
+          try {
+            const { data: profData } = await sb
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .maybeSingle();
+            profile = profData;
+          } catch (e) {
+            console.warn("Erreur profil Supabase:", e);
+          }
 
           const current = this.getCurrentUser();
           const meta = session.user.user_metadata || {};
-          const cleanEmail = session.user.email || current.email;
+          const cleanEmail = session.user.email || current.email || "";
+          const emailFallbackFirst = cleanEmail ? (cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1)) : "Utilisateur";
+
+          const userFirst = profile?.first_name || meta.first_name || (current.id !== "usr_guest" && current.firstName ? current.firstName : emailFallbackFirst);
+          const userLast = profile?.last_name || meta.last_name || (current.id !== "usr_guest" && current.lastName ? current.lastName : "");
+          const userPhone = profile?.whatsapp_number || meta.whatsapp_number || (current.id !== "usr_guest" && current.fullPhone ? current.fullPhone : "");
 
           const syncedUser = {
             id: session.user.id,
-            firstName: profile?.first_name || meta.first_name || current.firstName,
-            lastName: profile?.last_name || meta.last_name || current.lastName,
+            firstName: userFirst,
+            lastName: userLast,
             email: profile?.email || cleanEmail,
             phoneCountry: current.phoneCountry || "+225",
-            phoneNumber: (profile?.whatsapp_number || meta.whatsapp_number || current.phoneNumber || "").replace(/^\+\d+\s*/, ""),
-            fullPhone: profile?.whatsapp_number || meta.whatsapp_number || current.fullPhone,
+            phoneNumber: (userPhone || "").replace(/^\+\d+\s*/, ""),
+            fullPhone: userPhone || "",
             company: current.company || "Mon Entreprise",
             role: current.role || "Administrateur",
-            avatarUrl: profile?.avatar_url || current.avatarUrl || "",
+            avatarUrl: profile?.avatar_url || meta.avatar_url || (current.id !== "usr_guest" ? current.avatarUrl : "") || "",
             provider: session.user.app_metadata?.provider || "supabase",
             createdAt: session.user.created_at || current.createdAt
           };
@@ -657,6 +674,14 @@
   document.addEventListener("DOMContentLoaded", () => {
     AuthEngine.syncProfileUI();
     AuthEngine.checkSession();
+
+    // Ecoute les changements d'état d'authentification Supabase (connexion/rechargement)
+    const sb = getSupabase();
+    if (sb && sb.auth && typeof sb.auth.onAuthStateChange === "function") {
+      sb.auth.onAuthStateChange(() => {
+        AuthEngine.checkSession();
+      });
+    }
   });
 
 })(window);
