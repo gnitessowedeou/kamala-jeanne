@@ -44,6 +44,12 @@ const MOCK_DATA = {
   },
 
   chartData: {
+    "7": {
+      labels: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+      salesUsd: [0, 0, 0, 0, 0, 0, 0],
+      salesXof: [0, 0, 0, 0, 0, 0, 0],
+      conversations: [0, 0, 0, 0, 0, 0, 0]
+    },
     "14": {
       labels: ["01 Oct", "02 Oct", "03 Oct", "04 Oct", "05 Oct", "06 Oct", "07 Oct", "08 Oct", "09 Oct", "10 Oct", "11 Oct", "12 Oct", "13 Oct", "Aujourd'hui"],
       salesUsd: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -372,6 +378,85 @@ function setupNavigation() {
     });
   });
 
+  // Mobile Bottom Navigation Buttons
+  const mobileNavBtns = document.querySelectorAll(".mobile-bottom-nav .mobile-nav-btn");
+  mobileNavBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const viewId = btn.getAttribute("data-view");
+      if (viewId) {
+        showView(viewId);
+      }
+    });
+  });
+
+  // Mobile Bottom Center FAB (+)
+  const mobileFab = document.getElementById("mobile-nav-fab");
+  if (mobileFab) {
+    mobileFab.addEventListener("click", (e) => {
+      e.preventDefault();
+      openBroadcastModal();
+    });
+  }
+
+  // Header Mobile Profile Avatar Button
+  const mobileProfileBtn = document.getElementById("header-mobile-profile-btn");
+  if (mobileProfileBtn) {
+    mobileProfileBtn.addEventListener("click", () => {
+      const profileModal = document.getElementById("profile-modal");
+      if (profileModal) profileModal.classList.add("active");
+    });
+  }
+
+  // Banner "Voir mes automatisations" Button
+  const bannerAutomationsBtn = document.getElementById("btn-banner-automations");
+  if (bannerAutomationsBtn) {
+    bannerAutomationsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      showView("automations");
+    });
+  }
+
+  // "Voir tout >" Conversations Récentes link
+  const seeAllChats = document.querySelector(".see-all-chats-link");
+  if (seeAllChats) {
+    seeAllChats.addEventListener("click", (e) => {
+      e.preventDefault();
+      showView("inbox");
+    });
+  }
+
+  // Recent WhatsApp Conversation Rows (Fatou Diallo, Ibrahim Koné, Mariam Traoré)
+  document.querySelectorAll(".mobile-chat-row").forEach(row => {
+    row.addEventListener("click", () => {
+      showView("inbox");
+      const contactName = row.getAttribute("data-chat-contact") || "";
+      const contactPhone = row.getAttribute("data-chat-phone") || "";
+      const preview = row.querySelector(".mobile-chat-preview")?.textContent || "";
+      
+      let targetConv = MOCK_DATA.conversations.find(c => c.name.toLowerCase().includes(contactName.split(" ")[0].toLowerCase()));
+      if (!targetConv && contactName) {
+        targetConv = {
+          id: "conv_sim_" + Date.now(),
+          name: contactName,
+          phone: contactPhone + " • Abidjan, CI",
+          avatar: contactName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+          lastMessage: preview,
+          time: "À l'instant",
+          unread: false,
+          aiActive: true,
+          tag: "Prospect Chaud",
+          messages: [
+            { sender: "client", text: preview, time: "À l'instant" }
+          ]
+        };
+      }
+      if (targetConv && typeof openConversation === "function") {
+        openConversation(targetConv);
+      }
+    });
+  });
+
   // Handle brand logo click
   const brandLogo = document.getElementById("brand-logo-btn");
   if (brandLogo) {
@@ -411,6 +496,15 @@ function showView(viewId, customTitle = null) {
       }
     } else {
       link.classList.remove("active");
+    }
+  });
+
+  // 2b. Update mobile bottom nav active buttons
+  document.querySelectorAll(".mobile-bottom-nav .mobile-nav-btn").forEach(btn => {
+    if (btn.getAttribute("data-view") === viewId) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
     }
   });
 
@@ -615,7 +709,7 @@ function initSalesActivityChart() {
   const ctx = document.getElementById("salesActivityChart");
   if (!ctx) return;
 
-  const dataset = getSalesChartData("14");
+  const dataset = getSalesChartData("7");
   const salesData = currentCurrency === "XOF" ? dataset.salesXof : dataset.salesUsd;
 
   salesChartInstance = new Chart(ctx, {
