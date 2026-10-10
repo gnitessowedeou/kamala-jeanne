@@ -1856,7 +1856,7 @@ function setupProfileSystem() {
 
       const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
       if (!allowedMimes.includes(file.type.toLowerCase())) {
-        showToast("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP, "info"). Les formats vectoriels SVG ne sont pas autorisés pour des raisons de sécurité.");
+        showToast("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP). Les formats vectoriels SVG ne sont pas autorisés pour des raisons de sécurité.", "info");
         return;
       }
 
