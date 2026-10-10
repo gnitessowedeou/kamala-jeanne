@@ -1,3 +1,4 @@
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://kamala-jeanne.onrender.com';
 ﻿/**
  * ==============================================================================
  * VANDIA AI — DASHBOARD JAVASCRIPT ENGINE
@@ -1320,7 +1321,7 @@ async function renderContacts() {
     if (!userId) return;
 
     try {
-        const res = await fetch('http://localhost:8080/api/contacts/' + userId);
+        const res = await fetch(API_URL + '/api/contacts/' + userId);
         const data = await res.json();
         
         if (data.success && data.contacts && data.contacts.length > 0) {
@@ -1540,7 +1541,7 @@ function setupActionButtons() {
       } catch(e) {}
     
     if (agentPromptInput) {
-        fetch('http://localhost:8080/api/ai/config/' + userId)
+        fetch(API_URL + '/api/ai/config/' + userId)
             .then(res => res.json())
             .then(data => {
                 if (data.prompt) {
@@ -1557,7 +1558,7 @@ function setupActionButtons() {
         saveAgentBtn.disabled = true;
         saveAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde...';
         
-        fetch('http://localhost:8080/api/ai/config', {
+        fetch(API_URL + '/api/ai/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: userId, prompt: agentPromptInput.value })
@@ -2203,7 +2204,7 @@ function setupBillingAndAffiliate() {
             const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
             if (u && u.id) userId = u.id;
             
-            const res = await fetch('http://localhost:8080/api/payments/create-session', {
+            const res = await fetch(API_URL + '/api/payments/create-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2303,7 +2304,7 @@ function setupBillingAndAffiliate() {
         if (!userId) return;
 
         try {
-            const res = await fetch('http://localhost:8080/api/payouts/request', {
+            const res = await fetch(API_URL + '/api/payouts/request', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: userId, amount: amount, payout_method: method, payout_number: phone })
@@ -2354,7 +2355,7 @@ function setupBillingAndAffiliate() {
             qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">⏳ Démarrage du moteur WhatsApp...</p></div>';
 
             try {
-                await fetch('http://localhost:8080/api/whatsapp/start', {
+                await fetch(API_URL + '/api/whatsapp/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: userId })
@@ -2367,7 +2368,7 @@ function setupBillingAndAffiliate() {
 
         async function checkStatus() {
             try {
-                const res = await fetch('http://localhost:8080/api/whatsapp/status/' + userId);
+                const res = await fetch(API_URL + '/api/whatsapp/status/' + userId);
                 const data = await res.json();
 
                 if (data.status === 'QR_READY' && data.qr) {
