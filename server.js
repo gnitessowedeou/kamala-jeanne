@@ -77,7 +77,18 @@ app.post('/api/whatsapp/start', async (req, res) => {
     const now = Math.floor(Date.now() / 1000);
     if (msg.timestamp < now - 60) return;
 
-    if (msg.isStatus || msg.from.includes('@g.us')) return; // Ignorer statuts et groupes
+          if (msg.isStatus || msg.from.includes('@g.us')) return; // Ignorer statuts et groupes
+
+      // Ignorer les réactions, les images/audios sans texte, et les appels
+      if (msg.type !== 'chat' && msg.type !== 'location' && !msg.body) return;
+      if (!msg.body || msg.body.trim() === '') return;
+
+      // Optionnel mais recommand : ne rpondre qu'aux numros INCONNUS (pas dans les contacts)
+      const contact = await msg.getContact();
+      if (contact.isMyContact) {
+        console.log(`[WA] Ignor : ${contact.number} est un contact enregistr.`);
+        return;
+      }
     console.log(`[WA] Message reçu sur le numéro du client ${userId} : ${msg.body}`);
 
     try {
