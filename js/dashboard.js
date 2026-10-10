@@ -1663,7 +1663,11 @@ function setupActionButtons() {
 
       // Load AI Agent settings
     const agentPromptInput = document.getElementById("agent-prompt-input");
-    const userId = localStorage.getItem('vendia_user_id') || 'demo-user-123';
+    let userId = 'demo-user-123';
+    try {
+        const u = JSON.parse(localStorage.getItem('vendia_current_user'));
+        if (u && u.id) userId = u.id;
+    } catch(e) {}
     
     if (agentPromptInput) {
         fetch('http://localhost:8080/api/ai/config/' + userId)
@@ -2452,7 +2456,11 @@ function setupBillingAndAffiliate() {
         if(!qrBox) return;
         
         const originalQrContent = qrBox.innerHTML;
-        const userId = localStorage.getItem('vendia_user_id') || 'demo-user-123';
+        let userId = 'demo-user-123';
+    try {
+        const u = JSON.parse(localStorage.getItem('vendia_current_user'));
+        if (u && u.id) userId = u.id;
+    } catch(e) {}
         let statusInterval;
 
         document.body.addEventListener('click', (e) => {
