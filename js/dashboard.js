@@ -57,7 +57,7 @@ const MOCK_DATA = {
     connectedPhone: "Non lié",
     phoneStatus: "En attente",
     plan: {
-      name: "Essai Gratuit 7j 🦾",
+      name: "Essai Gratuit 7j 🚀",
       badge: "300 CRÉDITS",
       tokensUsed: 0,
       tokensMax: 300,
@@ -65,8 +65,8 @@ const MOCK_DATA = {
     }
   },
 
-  currency: "XOF", // 'XOF' or 'USD'
-  exchangeRate: 615, // 1 USD ~ 615 XOF
+  currency: "XOF",
+  exchangeRate: 615,
 
   kpis: {
     salesUsd: 0,
@@ -90,7 +90,7 @@ const MOCK_DATA = {
       conversations: [0, 0, 0, 0, 0, 0, 0]
     },
     "14": {
-      labels: ["01 Oct", "02 Oct", "03 Oct", "04 Oct", "05 Oct", "06 Oct", "07 Oct", "08 Oct", "09 Oct", "10 Oct", "11 Oct", "12 Oct", "13 Oct", "Aujourd'hui"],
+      labels: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14"],
       salesUsd: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       salesXof: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       conversations: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -100,247 +100,13 @@ const MOCK_DATA = {
       salesUsd: [0, 0, 0, 0],
       salesXof: [0, 0, 0, 0],
       conversations: [0, 0, 0, 0]
-    },
-    "90": {
-      labels: ["Mois 1", "Mois 2", "Mois en cours"],
-      salesUsd: [0, 0, 0],
-      salesXof: [0, 0, 0],
-      conversations: [0, 0, 0]
     }
   },
 
-  recentInteractions: [
-    {
-      client: "Amina Traoré",
-      phone: "+225 07 48 99 12",
-      date: "Aujourd'hui, 15:42",
-      action: "Paiement Wave (25 000 XOF) reçu",
-      status: "Clôturé (Payé)",
-      statusType: "green"
-    },
-    {
-      client: "Marc Koffi",
-      phone: "+225 05 99 22 11",
-      date: "Aujourd'hui, 14:30",
-      action: "Relance Panier Abandonné envoyée",
-      status: "En attente",
-      statusType: "amber"
-    },
-    {
-      client: "Fatou Diallo",
-      phone: "+221 77 123 45 67",
-      date: "Aujourd'hui, 12:15",
-      action: "Conseil catalogue & Taille recommandé",
-      status: "En cours (IA)",
-      statusType: "cyan"
-    },
-    {
-      client: "Moussa Koné",
-      phone: "+223 66 78 90 12",
-      date: "Hier, 19:10",
-      action: "Paiement Orange Money (40 000 XOF)",
-      status: "Clôturé (Payé)",
-      statusType: "green"
-    },
-    {
-      client: "Sophie Badolo",
-      phone: "+226 70 88 11 22",
-      date: "Hier, 16:05",
-      action: "Devis Pack Grossiste généré",
-      status: "En attente",
-      statusType: "amber"
-    }
-  ],
-
-  conversations: [
-    {
-      id: "conv_1",
-      name: "Amina Traoré",
-      phone: "+225 07 48 99 12 • Abidjan, CI",
-      avatar: "AT",
-      lastMessage: "J'ai validé le paiement Wave ! Merci pour le code promo.",
-      time: "15:42",
-      unread: false,
-      aiActive: true,
-      tag: "VIP",
-      messages: [
-        { sender: "client", text: "Bonjour ! Est-ce que le Pack Vente Pro est encore disponible avec la promo ?", time: "15:38" },
-        { sender: "agent", text: "Bonjour Amina ! Absolument, il reste 3 licences au tarif promotionnel aujourd'hui. Souhaitez-vous que je vous réserve une clé avec le lien direct Wave ?", time: "15:39" },
-        { sender: "client", text: "Oui super, envoyez-moi le lien svp !", time: "15:40" },
-        { sender: "agent", text: "Voici votre lien sécurisé : https://pay.wave.com/m/vendia-pack (Montant : 25 000 XOF). Dès validation, votre accès est activé automatiquement.", time: "15:41" },
-        { sender: "client", text: "J'ai validé le paiement Wave ! Merci pour le code promo.", time: "15:42" }
-      ]
-    },
-    {
-      id: "conv_2",
-      name: "Marc Koffi",
-      phone: "+225 05 99 22 11 • Abidjan, CI",
-      avatar: "MK",
-      lastMessage: "Est-ce qu'on peut payer par tranche de 2 fois ?",
-      time: "14:30",
-      unread: true,
-      aiActive: true,
-      tag: "Panier Abandonné",
-      messages: [
-        { sender: "system", text: "Panier abandonné détecté (Montant : 45 000 XOF)", time: "14:15" },
-        { sender: "agent", text: "Bonjour Marc 👋 Nous avons remarqué que votre commande est en attente. Une hésitation particulière ?", time: "14:28" },
-        { sender: "client", text: "Est-ce qu'on peut payer par tranche de 2 fois ?", time: "14:30" }
-      ]
-    },
-    {
-      id: "conv_3",
-      name: "Fatou Diallo",
-      phone: "+221 77 123 45 67 • Dakar, SN",
-      avatar: "FD",
-      lastMessage: "Parfait, je finalise la commande ce soir.",
-      time: "12:15",
-      unread: false,
-      aiActive: true,
-      tag: "Prospect Chaud",
-      messages: [
-        { sender: "client", text: "Bonjour, vos livraisons sur Dakar se font en combien de temps ?", time: "12:10" },
-        { sender: "agent", text: "Bonjour Fatou ! Livraison express en 24h ouvrées partout à Dakar par nos livreurs partenaires.", time: "12:12" },
-        { sender: "client", text: "Parfait, je finalise la commande ce soir.", time: "12:15" }
-      ]
-    },
-    {
-      id: "conv_4",
-      name: "Moussa Koné",
-      phone: "+223 66 78 90 12 • Bamako, ML",
-      avatar: "MK",
-      lastMessage: "Colis bien reçu par mon frère, merci !",
-      time: "Hier",
-      unread: false,
-      aiActive: false,
-      tag: "Client Fidèle",
-      messages: [
-        { sender: "client", text: "Colis bien reçu par mon frère, merci !", time: "Hier 19:10" },
-        { sender: "agent", text: "Un plaisir de vous servir Moussa ! N'hésitez pas si vous avez besoin d'aide pour l'installation.", time: "Hier 19:12" }
-      ]
-    }
-  ],
-
-  campaigns: [
-    {
-      name: "Promo Flash VIP Weekend",
-      audience: "Clients VIP & Récents",
-      recipients: "1 500",
-      openRate: "94.2%",
-      date: "08 Oct 2026",
-      status: "Terminé",
-      statusType: "green"
-    },
-    {
-      name: "Relance Paniers Abandonnés 48h",
-      audience: "Paniers non payés",
-      recipients: "142",
-      openRate: "88.5%",
-      date: "07 Oct 2026",
-      status: "Actif (Automatique)",
-      statusType: "cyan"
-    },
-    {
-      name: "Lancement Nouvelle Collection Automne",
-      audience: "Tous les contacts (5k)",
-      recipients: "5 280",
-      openRate: "97.1%",
-      date: "01 Oct 2026",
-      status: "Terminé",
-      statusType: "green"
-    }
-  ],
-
-  automations: [
-    {
-      title: "Tunnel Vente Flash WhatsApp",
-      trigger: "Mot-clé 'PROMO' ou Scan QR Code",
-      steps: 5,
-      contacts: "0 contact",
-      conversion: "0.0%",
-      active: true,
-      icon: "fa-bolt"
-    },
-    {
-      title: "Relance Panier Abandonné",
-      trigger: "Abandon Shopify/WooCommerce > 30 min",
-      steps: 3,
-      contacts: "0 relancé",
-      conversion: "0.0%",
-      active: true,
-      icon: "fa-cart-arrow-down"
-    },
-    {
-      title: "Qualification & Prise de Devis",
-      trigger: "Widget WhatsApp Site Web",
-      steps: 4,
-      contacts: "0 prospect",
-      conversion: "0.0%",
-      active: true,
-      icon: "fa-clipboard-question"
-    },
-    {
-      title: "Réactivation Clients Inactifs (30 jours)",
-      trigger: "Aucune commande depuis 30 jours",
-      steps: 2,
-      contacts: "0 cible",
-      conversion: "0.0%",
-      active: false,
-      icon: "fa-clock-rotate-left"
-    }
-  ],
-
-  contacts: [
-    { name: "Amina Traoré", phone: "+225 07 48 99 12", date: "Il y a 3 min", tag: "VIP", tagClass: "badge-purple", total: "145 000 XOF", avatar: "AT" },
-    { name: "Marc Koffi", phone: "+225 05 99 22 11", date: "Il y a 1h", tag: "Panier", tagClass: "badge-amber", total: "45 000 XOF", avatar: "MK" },
-    { name: "Fatou Diallo", phone: "+221 77 123 45 67", date: "Il y a 3h", tag: "Chaud", tagClass: "badge-cyan", total: "25 000 XOF", avatar: "FD" },
-    { name: "Moussa Koné", phone: "+223 66 78 90 12", date: "Hier", tag: "VIP", tagClass: "badge-purple", total: "220 000 XOF", avatar: "MK" },
-    { name: "Sophie Badolo", phone: "+226 70 88 11 22", date: "Hier", tag: "Chaud", tagClass: "badge-cyan", total: "85 000 XOF", avatar: "SB" },
-    { name: "Jean-Eudes Kouassi", phone: "+225 01 22 33 44", date: "Il y a 2j", tag: "Tous", tagClass: "badge-subtle", total: "15 000 XOF", avatar: "JK" }
-  ],
-
-  templates: [
-    {
-      name: "Confirmation Commande & Wave",
-      category: "Utilitaire",
-      status: "Approuvé Meta",
-      statusType: "green",
-      content: "Bonjour {{1}}, votre commande #{{2}} a bien été enregistrée. Cliquez ci-dessous pour régler directement via Wave en un clic.",
-      cta: "Payer via Wave"
-    },
-    {
-      name: "Promo Flash VIP Exclusive",
-      category: "Marketing",
-      status: "Approuvé Meta",
-      statusType: "green",
-      content: "Salut {{1}} ! 🔥 Accès exclusif à notre vente flash 48h. Profitez de -20% sur l'ensemble de vos articles favoris dès maintenant.",
-      cta: "Voir les Offres"
-    },
-    {
-      name: "Relance Douce Panier 30min",
-      category: "Marketing",
-      status: "Approuvé Meta",
-      statusType: "green",
-      content: "Bonjour {{1}} 👋 Votre panier vous attend ! Avez-vous besoin d'un conseil ou d'une précision sur un produit avant de valider ?",
-      cta: "Finaliser la commande"
-    },
-    {
-      name: "Notification Expédition Colis",
-      category: "Utilitaire",
-      status: "En attente Meta",
-      statusType: "amber",
-      content: "Excellente nouvelle {{1}} ! Votre colis vient d'être remis au transporteur. Suivez l'acheminement en direct avec le code {{2}}.",
-      cta: "Suivre mon colis"
-    }
-  ],
-
-  integrations: [
-    { name: "Wave Mobile Money", desc: "Paiements instantanés sans frais cachés en Côte d'Ivoire & Sénégal.", icon: "fa-water", color: "var(--cyan)", status: "Connecté", active: true },
-    { name: "Orange Money", desc: "Passerelle Web Payment & QR Code pour toute la zone UEMOA.", icon: "fa-circle", color: "#f97316", status: "Connecté", active: true },
-    { name: "MTN MoMo", desc: "Paiements mobiles MTN pour Côte d'Ivoire, Bénin, Ghana.", icon: "fa-bolt", color: "var(--amber)", status: "Connecté", active: true },
-    { name: "Stripe", desc: "Encaissement international par Carte Bancaire Visa & Mastercard.", icon: "fa-credit-card", color: "var(--purple)", status: "Connecté", active: true },
-    { name: "Shopify", desc: "Synchronisation des commandes, stocks et paniers abandonnés.", icon: "fa-bag-shopping", color: "#95bf47", status: "Connecté", active: true },
-    { name: "Webhooks Meta API", desc: "Flux direct d'événements et double routage vers vos serveurs.", icon: "fa-network-wired", color: "var(--whatsapp-green)", status: "Actif (200 OK)", active: true }
-  ]
+  recentInteractions: [],
+  conversations: [],
+  contacts: [],
+  mockSearchResults: []
 };
 
 // ==============================================================================
