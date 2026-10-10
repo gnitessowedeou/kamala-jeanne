@@ -308,7 +308,37 @@ app.get('/api/contacts/:userId', async (req, res) => {
     }
 });
 
+
+// === 7. DEMANDE DE RETRAIT (AFFILIATION) ===
+app.post('/api/payouts/request', async (req, res) => {
+    const { userId, amount, payout_method, payout_number } = req.body;
+    try {
+        const { data: profile } = await supabase.from('profiles').select('affiliate_balance').eq('id', userId).single();
+        if (!profile || profile.affiliate_balance < amount) {
+            return res.status(400).json({ error: 'Solde insuffisant pour ce retrait' });
+        }
+        
+        // Dduire le solde
+        await supabase.from('profiles').update({ affiliate_balance: profile.affiliate_balance - amount }).eq('id', userId);
+        
+        // Enregistrer la demande
+        await supabase.from('payouts').insert({
+            user_id: userId,
+            amount: amount,
+            payout_method: payout_method,
+            payout_number: payout_number,
+            status: 'PENDING'
+        });
+        
+        res.json({ success: true, message: 'Demande de retrait enregistree avec succes' });
+    } catch (err) {
+        console.error('Erreur Payout:', err);
+        res.status(500).json({ error: 'Erreur lors de la demande de retrait' });
+    }
+});
+
 // Route par dfaut (Frontend)
+
 
 app.use((req, res) => {
   if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));

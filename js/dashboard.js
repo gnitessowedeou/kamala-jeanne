@@ -2425,22 +2425,49 @@ function setupBillingAndAffiliate() {
   }
 
   const payoutForm = document.getElementById("form-request-payout");
-  if (payoutForm) {
-    payoutForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const amountInput = document.getElementById("payout-amount");
-      const amount = parseInt(amountInput?.value || "0", 10);
+    if (payoutForm) {
+      payoutForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const amountInput = document.getElementById("payout-amount");
+        const methodInput = document.getElementById("payout-method");
+        const phoneInput = document.getElementById("payout-phone");
+        
+        const amount = parseInt(amountInput?.value || "0", 10);
+        const method = methodInput?.value || "wave";
+        const phone = phoneInput?.value || "";
 
-      if (amount < 10000) {
-        alert("Le montant minimum de retrait de commissions est de 10 000 FCFA.");
-        return;
-      }
+        if (amount < 10000) {
+          alert("Le montant minimum de retrait de commissions est de 10 000 FCFA.");
+          return;
+        }
 
-      closePayoutModal();
-      showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyée avec succès ! Traitement sous 2h à 24h ouvrées via Wave/MoMo.`, "success");
-      payoutForm.reset();
-    });
-  }
+        let userId = null;
+        try {
+            const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+            if (u && u.id) userId = u.id;
+        } catch(err) {}
+
+        if (!userId) return;
+
+        try {
+            const res = await fetch('http://localhost:8080/api/payouts/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userId, amount: amount, payout_method: method, payout_number: phone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closePayoutModal();
+                showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyee avec succes ! Traitement sous 2h a 24h ouvrées.`, "success");
+                payoutForm.reset();
+            } else {
+                alert(data.error || "Erreur lors de la demande");
+            }
+        } catch (err) {
+            alert("Erreur de connexion serveur");
+        }
+      });
+    }
 }
 
 
