@@ -86,7 +86,7 @@ app.post('/api/whatsapp/start', async (req, res) => {
       const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt').eq('id', userId).single();
       
       // Bypass temporaire pour le test local
-      if (userId !== 'demo-user-123' && (!profile || profile.credits <= 0)) {
+      if (!profile || profile.credits <= 0) {
         console.log(`❌ [WA] Le client ${userId} n'a plus de crédits. L'IA s'arrête.`);
         return;
       }
@@ -163,9 +163,16 @@ app.get('/api/ai/config/:userId', async (req, res) => {
 
 app.post('/api/ai/config', async (req, res) => {
     const { userId, prompt } = req.body;
+    console.log('--- REQUETE API CONFIG ---');
+    console.log('userId reçu:', userId);
+    console.log('prompt reçu:', prompt);
     if (!userId || !prompt) return res.status(400).json({ error: "Données manquantes" });
     const { error } = await supabase.from('profiles').update({ ai_prompt: prompt }).eq('id', userId);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+        console.error('Erreur Supabase:', error.message);
+        return res.status(500).json({ error: error.message });
+    }
+    console.log('Succès Supabase');
     res.json({ success: true });
 });
 

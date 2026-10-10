@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initPricingToggle();
   initFaqAccordion();
   initPhoneSimulator();
-  initDemoModal();
+  
   initSmoothScroll();
   initAuthModal();
 });
@@ -440,7 +440,7 @@ function initAuthModal() {
   document.querySelectorAll(".btn-nav-cta, .btn-primary-pill, .btn-card-action, .btn-free-trial, a[href='dashboard.html']").forEach(btn => {
     if (btn.classList.contains("btn-nav-login") || btn.id === "btn-nav-login") return;
     btn.addEventListener("click", (e) => {
-      if (btn.classList.contains("demo-trigger-nav") || btn.id === "btn-hero-demo") return;
+      
       e.preventDefault();
       openAuthModal("signup");
     });

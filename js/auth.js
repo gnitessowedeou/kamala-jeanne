@@ -122,27 +122,7 @@
    * 2. MODÈLE UTILISATEUR PAR DÉFAUT & VALIDATIONS
    * ==============================================================================
    */
-  const DEFAULT_USER = {
-    id: "usr_guest",
-    firstName: "Utilisateur",
-    lastName: "",
-    email: "",
-    phoneCountry: "+225",
-    phoneNumber: "",
-    fullPhone: "",
-    company: "Mon Entreprise",
-    role: "Administrateur",
-    avatarUrl: "",
-    provider: "email",
-    plan: {
-      name: "Essai Gratuit 7j 🦾",
-      badge: "300 CRÉDITS",
-      tokensUsed: 0,
-      tokensMax: 300,
-      daysLeft: 7
-    },
-    createdAt: new Date().toISOString()
-  };
+  const DEFAULT_USER = null;
 
   const AuthEngine = {
     escapeHtml(str) {
@@ -459,7 +439,7 @@
       };
 
       // Synchronisation directe avec la table 'profiles' de Supabase
-      if (current.id && !current.id.startsWith("usr_guest")) {
+      if (current.id) {
         try {
           await SupabaseRest.updateProfile(current.id, {
             first_name: updated.firstName || "",
@@ -590,7 +570,7 @@
      */
     async checkSession() {
       const user = this.getCurrentUser();
-      if (!user || !user.id || user.id.startsWith("usr_guest")) return;
+      if (!user || !user.id) return;
 
       try {
         const profile = await SupabaseRest.getProfile(user.id);

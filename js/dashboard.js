@@ -7,6 +7,20 @@
  */
 
 // ==============================================================================
+// AUTHENTICATION GUARD
+// ==============================================================================
+(function() {
+    let u = null;
+    try {
+        u = JSON.parse(localStorage.getItem('vendia_current_user'));
+    } catch(e) {}
+    if (!u || !u.id || u.id.startsWith('usr_guest')) {
+        window.location.href = 'index.html';
+    }
+})();
+
+
+// ==============================================================================
 // 0. SECURITY & SANITIZATION UTILITIES (Protection Anti-XSS & Injections)
 // ==============================================================================
 function escapeHtml(str) {
@@ -925,9 +939,7 @@ function setupChartFilters() {
   });
 }
 
-function isCurrentUserDemo() {
-  return false; // Tous les comptes en production démarrent à 0
-}
+function isCurrentUserDemo() { return false; }
 
 function getUserKpis() {
   return {
@@ -1663,11 +1675,11 @@ function setupActionButtons() {
 
       // Load AI Agent settings
     const agentPromptInput = document.getElementById("agent-prompt-input");
-    let userId = 'demo-user-123';
-    try {
-        const u = JSON.parse(localStorage.getItem('vendia_current_user'));
-        if (u && u.id) userId = u.id;
-    } catch(e) {}
+    let userId = '';
+      try {
+          const u = JSON.parse(localStorage.getItem('vendia_current_user'));
+          if (u && u.id) userId = u.id;
+      } catch(e) {}
     
     if (agentPromptInput) {
         fetch('http://localhost:8080/api/ai/config/' + userId)
@@ -2456,11 +2468,11 @@ function setupBillingAndAffiliate() {
         if(!qrBox) return;
         
         const originalQrContent = qrBox.innerHTML;
-        let userId = 'demo-user-123';
-    try {
-        const u = JSON.parse(localStorage.getItem('vendia_current_user'));
-        if (u && u.id) userId = u.id;
-    } catch(e) {}
+        let userId = '';
+      try {
+          const u = JSON.parse(localStorage.getItem('vendia_current_user'));
+          if (u && u.id) userId = u.id;
+      } catch(e) {}
         let statusInterval;
 
         document.body.addEventListener('click', (e) => {
