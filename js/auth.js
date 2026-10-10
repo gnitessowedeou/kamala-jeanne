@@ -273,7 +273,7 @@
             email: cleanEmail,
             whatsapp_number: fullPhone,
             avatar_url: "",
-            credits: 300
+            credits: 100
           }, accessToken);
         } catch (profileErr) {
           console.warn("Avertissement upsert table profiles:", profileErr);
@@ -296,7 +296,7 @@
             name: "Essai Gratuit 7j 🦾",
             badge: "300 CRÉDITS",
             tokensUsed: 0,
-            tokensMax: 300,
+            tokensMax: 100,
             daysLeft: 7
           },
           createdAt: new Date().toISOString()
@@ -363,7 +363,7 @@
             name: "Essai Gratuit 7j 🦾",
             badge: "300 CRÉDITS",
             tokensUsed: 0,
-            tokensMax: profile?.credits || 300,
+            tokensMax: profile?.credits > 100 ? 300 : 100,
             daysLeft: 7
           },
           createdAt: userObj?.created_at || new Date().toISOString()
@@ -555,12 +555,23 @@
       // 7. Plan & Crédits IA dans la barre latérale
       const planNameEl = document.getElementById("sidebar-plan-name");
       const planTokensMaxEl = document.getElementById("sub-tokens-max");
-      const planTokensUsedEl = document.getElementById("sub-tokens-used");
-      if (user.plan) {
-        if (planNameEl) planNameEl.textContent = user.plan.name || "Essai Gratuit 7j 🦾";
-        if (planTokensMaxEl) planTokensMaxEl.textContent = `Max ${(user.plan.tokensMax || 300).toLocaleString("fr-FR")} crédits`;
-        if (planTokensUsedEl) planTokensUsedEl.textContent = `${user.plan.tokensUsed || 0} crédit`;
-      }
+      
+        const planTokensUsedEl = document.getElementById("sub-tokens-used");
+        const planPctEl = document.getElementById("sub-token-pct");
+        const planFillEl = document.getElementById("sub-token-fill");
+        
+        if (user.plan) {
+          if (planNameEl) planNameEl.textContent = user.plan.name || "Essai Gratuit 7j 🚀";
+          if (planTokensMaxEl) planTokensMaxEl.textContent = `Max ${(user.plan.tokensMax || 100).toLocaleString("fr-FR")} crédits`;
+          if (planTokensUsedEl) planTokensUsedEl.textContent = `${user.plan.tokensUsed || 0} crédit`;
+          
+          const max = user.plan.tokensMax || 100;
+          const used = user.plan.tokensUsed || 0;
+          const pct = max > 0 ? Math.min(100, Math.max(0, (used / max) * 100)).toFixed(1) : 0;
+          if (planPctEl) planPctEl.textContent = `${pct}%`;
+          if (planFillEl) planFillEl.style.width = `${pct}%`;
+        }
+
     },
 
     /**
@@ -583,7 +594,15 @@
             avatarUrl: profile.avatar_url || user.avatarUrl,
             plan: {
               ...(user.plan || {}),
-              tokensMax: profile.credits || user.plan?.tokensMax || 300
+              tokensMax: user.plan?.tokensMax || (profile.credits > 100 ? 300 : 100),
+              tokensUsed: Math.max(0, (user.plan?.tokensMax || (profile.credits > 100 ? 300 : 100)) - (profile.credits || 0)),
+              daysLeft: (() => {
+                  if (profile.created_at) {
+                      const diff = Math.floor((new Date() - new Date(profile.created_at)) / (1000 * 60 * 60 * 24));
+                      return Math.max(0, 7 - diff);
+                  }
+                  return user.plan?.daysLeft || 7;
+              })()
             }
           };
           this.saveCurrentUser(syncedUser);

@@ -91,16 +91,28 @@ app.post('/api/whatsapp/start', async (req, res) => {
       }
     console.log(`[WA] Message reçu sur le numéro du client ${userId} : ${msg.body}`);
 
-    try {
-      // Vrifier si le client a pay (Crdits > 0)
-      // Récupérer le profil du client (crédits ET prompt personnalisé)
-      const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt').eq('id', userId).single();
-      
-      // Bypass temporaire pour le test local
-      if (!profile || profile.credits <= 0) {
-        console.log(`❌ [WA] Le client ${userId} n'a plus de crédits. L'IA s'arrête.`);
-        return;
-      }
+    
+      try {
+        // Vrifier si le client a pay (Crdits > 0)
+        // Rcuprer le profil du client (crdits ET prompt personnalis) et date de creation
+        const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
+        
+        let isExpired = false;
+        if (profile && profile.created_at) {
+           const created = new Date(profile.created_at);
+           const now = new Date();
+           const daysPassed = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+           if (daysPassed >= 7) {
+              isExpired = true;
+           }
+        }
+
+        // Bypass temporaire pour le test local ou coupure
+        if (!profile || profile.credits <= 0 || isExpired) {
+          console.log(`? [WA] Le client ${userId} n'a plus de crdits ou essai expir (${isExpired ? 'EXPIRE' : '0 CREDIT'}). L'IA s'arrte.`);
+          return;
+        }
+
 
       // Récupérer le prompt personnalisé ou utiliser un prompt par défaut
       const systemPrompt = (profile && profile.ai_prompt) ? profile.ai_prompt : "Tu es un assistant IA poli. Réponds brièvement.";
