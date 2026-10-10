@@ -504,7 +504,13 @@
       }
 
       // 2. Bannière de bienvenue
-      const welcomeNames = document.querySelectorAll(".welcome-name");
+      
+        const affiliateLinkEl = document.getElementById("affiliate-link-input");
+        if (affiliateLinkEl && user.affiliateCode) {
+            affiliateLinkEl.value = window.location.origin + "/?ref=" + user.affiliateCode;
+        }
+
+        const welcomeNames = document.querySelectorAll(".welcome-name");
       welcomeNames.forEach(el => {
         el.textContent = user.firstName || "Cher Partenaire";
       });
@@ -604,6 +610,7 @@
             lastName: profile.last_name || user.lastName,
             fullPhone: profile.whatsapp_number || user.fullPhone,
             avatarUrl: profile.avatar_url || user.avatarUrl,
+              affiliateCode: profile.affiliate_code || user.affiliateCode,
             plan: {
               ...(user.plan || {}),
               tokensMax: (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100),
