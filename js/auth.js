@@ -505,9 +505,11 @@
 
       // 2. Bannière de bienvenue
       
+        
         const affiliateLinkEl = document.getElementById("affiliate-link-input");
-        if (affiliateLinkEl && user.affiliateCode) {
-            affiliateLinkEl.value = window.location.origin + "/?ref=" + user.affiliateCode;
+        if (affiliateLinkEl) {
+            const codeToUse = user.affiliateCode || ("REF-" + (user.firstName || "").substring(0,3) + Math.floor(Math.random()*1000)).toUpperCase();
+            affiliateLinkEl.value = window.location.origin + "/?ref=" + codeToUse;
         }
 
         const welcomeNames = document.querySelectorAll(".welcome-name");
