@@ -1457,6 +1457,32 @@ function renderAutomations() {
   `).join("");
 }
 
+
+function updateDynamicKpis(contactsCount) {
+    let user = window.AuthEngine.getCurrentUser();
+    if (!user) return;
+    
+    const maxCred = user.plan?.tokensMax || 100;
+    const usedCred = user.plan?.tokensUsed || 0;
+    
+    let rate = 0;
+    if (usedCred > 0) {
+        rate = ((contactsCount / usedCred) * 100).toFixed(1);
+    }
+    
+    const kpiConvsVal = document.getElementById("kpi-convs-val");
+    if (kpiConvsVal) kpiConvsVal.textContent = contactsCount.toString();
+    
+    const kpiRateVal = document.getElementById("kpi-rate-val");
+    if (kpiRateVal) kpiRateVal.textContent = rate + "%";
+    
+    const kpiSalesVal = document.getElementById("kpi-sales-val");
+    if (kpiSalesVal) kpiSalesVal.textContent = usedCred.toString() + " Msgs";
+    const kpiSalesNote = document.getElementById("kpi-sales-note");
+    if (kpiSalesNote) kpiSalesNote.textContent = "Messages IA traites au total";
+}
+
+
 async function renderContacts() {
     const tbody = document.getElementById("contacts-table-body");
     if (!tbody) return;
@@ -1474,6 +1500,7 @@ async function renderContacts() {
         const data = await res.json();
         
         if (data.success && data.contacts && data.contacts.length > 0) {
+            updateDynamicKpis(data.contacts.length);
             tbody.innerHTML = data.contacts.map(c => `
               <tr>
                 <td>

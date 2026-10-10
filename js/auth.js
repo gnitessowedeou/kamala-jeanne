@@ -594,7 +594,8 @@
             avatarUrl: profile.avatar_url || user.avatarUrl,
             plan: {
               ...(user.plan || {}),
-              tokensMax: user.plan?.tokensMax || (profile.credits > 100 ? 300 : 100),
+              tokensMax: (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100),
+              tokensUsed: Math.max(0, (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100) - (profile.credits || 0)),
               tokensUsed: Math.max(0, (user.plan?.tokensMax || (profile.credits > 100 ? 300 : 100)) - (profile.credits || 0)),
               daysLeft: (() => {
                   if (profile.created_at) {
