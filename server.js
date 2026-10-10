@@ -153,7 +153,23 @@ app.post('/api/payments/webhook', async (req, res) => {
   } catch (error) { res.status(500).json({ error: 'Erreur facturation' }); }
 });
 
-// Route par défaut (Frontend)
+// === 5. CONFIGURATION IA ===
+app.get('/api/ai/config/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const { data, error } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ prompt: data.ai_prompt || "Tu es un assistant IA poli. Réponds brièvement." });
+});
+
+app.post('/api/ai/config', async (req, res) => {
+    const { userId, prompt } = req.body;
+    if (!userId || !prompt) return res.status(400).json({ error: "Données manquantes" });
+    const { error } = await supabase.from('profiles').update({ ai_prompt: prompt }).eq('id', userId);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+// Route par dfaut (Frontend)
 app.use((req, res) => {
   if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));
   else res.status(404).json({ error: "Route API non trouvée" });

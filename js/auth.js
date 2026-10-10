@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ==============================================================================
  * VENDIA AI — CORE AUTHENTICATION & SUPABASE REST PROFILE ENGINE
  * Handles: Inscription, Connexion, Synchronisation Profil Réel (table 'profiles'),
