@@ -130,7 +130,7 @@ app.post('/api/whatsapp/start', async (req, res) => {
         }
 
         // Recuperer le prompt personnalise
- ou utiliser un prompt par défaut
+ 
       const systemPrompt = (profile && profile.ai_prompt) ? profile.ai_prompt : "Tu es un assistant IA poli. Réponds brièvement.";
 
       // Demander à l'IA de répondre avec le prompt du client
