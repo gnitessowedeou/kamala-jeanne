@@ -198,6 +198,85 @@ app.post('/api/ai/config', async (req, res) => {
     res.json({ success: true });
 });
 
+
+// ============================================================================
+// ROUTES DE PAIEMENT (SASPAY)
+// ============================================================================
+app.post('/api/payments/create-session', async (req, res) => {
+    try {
+        const { userId, planTier, amount } = req.body;
+        
+        // Recuperer infos utilisateur
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        if (!profile) return res.status(404).json({ error: 'User not found' });
+
+        const saspayPayload = {
+            amount: amount.toString(),
+            currency: "XOF",
+            customer_email: profile.email || "client@kamalajeanne.com",
+            customer_name: (profile.first_name || "Client") + " " + (profile.last_name || ""),
+            return_url: "https://kamala-jeanne.vercel.app/dashboard.html",
+            metadata: {
+                userId: userId,
+                planTier: planTier
+            }
+        };
+
+        const fetch = (await import('node-fetch')).default;
+        const saspayRes = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.SASPAY_SECRET_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(saspayPayload)
+        });
+
+        const data = await saspayRes.json();
+        
+        if (data.data && data.data.checkout_url) {
+            res.json({ checkout_url: data.data.checkout_url });
+        } else {
+            console.error('Saspay Error:', data);
+            res.status(500).json({ error: 'Erreur lors de la creation du paiement' });
+        }
+    } catch (err) {
+        console.error('Payment Session Error:', err);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/payments/webhook', async (req, res) => {
+    try {
+        const payload = req.body;
+        console.log('[SASPAY WEBHOOK]', payload);
+
+        if (payload.event === 'transaction.success') {
+            const userId = payload.data?.metadata?.userId;
+            const planTier = payload.data?.metadata?.planTier;
+
+            if (userId) {
+                const credits = planTier === 'basic' ? 1000 : planTier === 'pro' ? 3000 : planTier === 'business' ? 10000 : 0;
+                
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        credits: credits,
+                        plan: planTier,
+                        created_at: new Date().toISOString()
+                    })
+                    .eq('id', userId);
+                    
+                console.log(`[PAIEMENT] Compte ${userId} recharge avec ${credits} credits.`);
+            }
+        }
+        res.status(200).send('Webhook OK');
+    } catch (error) {
+        console.error('Webhook Error:', error);
+        res.status(500).send('Webhook Error');
+    }
+});
+
 // Route par dfaut (Frontend)
 app.use((req, res) => {
   if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));
