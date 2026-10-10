@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const quickChips = document.querySelectorAll('.chat-quick-actions .quick-chip');
   quickChips.forEach(chip => {
     chip.addEventListener('click', () => {
-      alert("Cette fonctionnalité nécessitera la connexion d'un numéro WhatsApp au préalable.");
+      showToast("Veuillez connecter votre numéro WhatsApp pour activer cette fonctionnalité.", "info");
     });
   });
 
@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const attachIconBtn = document.querySelector('.chat-input-bar .header-icon-btn');
   if (attachIconBtn) {
     attachIconBtn.addEventListener('click', () => {
-      alert("La galerie et l'envoi de fichiers seront disponibles une fois votre numéro WhatsApp lié.");
+      showToast("La galerie et l'envoi de fichiers seront disponibles une fois votre numéro WhatsApp lié.", "info");
     });
   }
 
@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const chips = document.querySelectorAll('.chat-quick-replies .chip-btn');
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
-      alert("Cette fonctionnalité nécessitera la connexion d'un numéro WhatsApp au préalable.");
+      showToast("Veuillez connecter votre numéro WhatsApp pour activer cette fonctionnalité.", "info");
     });
   });
 
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const attachBtn = document.querySelector('.chat-input-toolbar .icon-btn');
   if (attachBtn) {
     attachBtn.addEventListener('click', () => {
-      alert("La galerie sera disponible une fois votre numéro WhatsApp lié.");
+      showToast("La galerie sera disponible une fois votre numéro WhatsApp lié.", "info");
     });
   }
 
@@ -1856,12 +1856,12 @@ function setupProfileSystem() {
 
       const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
       if (!allowedMimes.includes(file.type.toLowerCase())) {
-        alert("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP). Les formats vectoriels SVG ne sont pas autorisés pour des raisons de sécurité.");
+        showToast("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP, "info"). Les formats vectoriels SVG ne sont pas autorisés pour des raisons de sécurité.");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("La taille de l'image ne doit pas dépasser 5 Mo.");
+        showToast("La taille de l'image ne doit pas dépasser 5 Mo.", "info");
         return;
       }
 
@@ -1909,15 +1909,15 @@ function setupProfileSystem() {
       const role = document.getElementById("profile-role")?.value.trim() || "";
 
       if (!firstName) {
-        alert("Veuillez renseigner votre prénom.");
+        showToast("Veuillez renseigner votre prénom.", "info");
         return;
       }
       if (!lastName) {
-        alert("Veuillez renseigner votre nom.");
+        showToast("Veuillez renseigner votre nom.", "info");
         return;
       }
       if (window.AuthEngine && !window.AuthEngine.isValidPhone(phoneNumber)) {
-        alert("Veuillez renseigner un numéro WhatsApp valide.");
+        showToast("Veuillez renseigner un numéro WhatsApp valide.", "info");
         return;
       }
 
@@ -1953,7 +1953,7 @@ function setupProfileSystem() {
         window.AuthEngine.syncProfileUI(res.user);
         window.AuthEngine.showToast("Profil mis à jour avec succès.", "success");
       } else {
-        alert(res.error || "Une erreur est survenue lors de la mise à jour.");
+        showToast(res.error || "Une erreur est survenue lors de la mise à jour.", "info");
       }
     });
   }
@@ -2215,13 +2215,13 @@ function setupBillingAndAffiliate() {
                 if (submitText) submitText.textContent = "Redirection...";
                 window.location.href = data.checkout_url;
             } else {
-                alert("Erreur: " + (data.error || "Impossible de gnrer le lien"));
+                showToast("Erreur: " + (data.error || "Impossible de gnrer le lien", "info"));
                 if (submitBtn) submitBtn.disabled = false;
                 if (submitText) submitText.textContent = originalText;
             }
         } catch (err) {
             console.error(err);
-            alert("Erreur rseau");
+            showToast("Erreur rseau", "info");
             if (submitBtn) submitBtn.disabled = false;
             if (submitText) submitText.textContent = originalText;
         }
@@ -2286,7 +2286,7 @@ function setupBillingAndAffiliate() {
         const phone = phoneInput?.value || "";
 
         if (amount < 10000) {
-          alert("Le montant minimum de retrait de commissions est de 10 000 FCFA.");
+          showToast("Le montant minimum de retrait de commissions est de 10 000 FCFA.", "info");
           return;
         }
 
@@ -2310,10 +2310,10 @@ function setupBillingAndAffiliate() {
                 showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyee avec succes ! Traitement sous 2h a 24h ouvrées.`, "success");
                 payoutForm.reset();
             } else {
-                alert(data.error || "Erreur lors de la demande");
+                showToast(data.error || "Erreur lors de la demande", "info");
             }
         } catch (err) {
-            alert("Erreur de connexion serveur");
+            showToast("Erreur de connexion serveur", "info");
         }
       });
     }
@@ -2394,7 +2394,7 @@ function setupBillingAndAffiliate() {
                     if(num) num.textContent = "IA Active";
                     
                     if (wasActive) {
-                        alert("🎉 Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : ''));
+                        showToast("🎉 Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : '', "info"));
                     }
                 }
             } catch (error) {}
