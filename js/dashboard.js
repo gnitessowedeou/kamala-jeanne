@@ -2025,11 +2025,54 @@ function setupBillingAndAffiliate() {
     sidebarUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
   }
 
-  document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+    document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
       e.preventDefault();
       const planTier = btn.getAttribute("data-plan") || "pro";
-      openPlanModal(planTier);
+      
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Création du paiement...';
+      btn.disabled = true;
+
+      try {
+          // Check if annual is selected
+          const dashPricingToggle = document.getElementById("dash-pricing-toggle");
+          const isAnnual = dashPricingToggle && dashPricingToggle.checked;
+          
+          let amount = planTier === 'basic' ? 7900 : planTier === 'pro' ? 14900 : planTier === 'business' ? 30000 : 14900;
+          if (isAnnual) {
+              amount = (amount * 0.8) * 12; // -20% and * 12 months
+          }
+          
+          let userId = null;
+          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          if (u && u.id) userId = u.id;
+          
+          const res = await fetch(API_URL + '/api/payments/create-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  userId: userId,
+                  planTier: planTier,
+                  amount: amount,
+                  cycle: isAnnual ? 'annual' : 'monthly',
+                  paymentMethod: 'wave'
+              })
+          });
+          const data = await res.json();
+          if (data.paymentUrl) {
+              window.location.href = data.paymentUrl;
+          } else {
+              if (window.showToast) window.showToast("Erreur lors de la création du paiement.", "error");
+              btn.innerHTML = originalHtml;
+              btn.disabled = false;
+          }
+      } catch (err) {
+          console.error("Erreur:", err);
+          if (window.showToast) window.showToast("Erreur de connexion au serveur.", "error");
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+      }
     });
   });
 
