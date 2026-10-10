@@ -1824,13 +1824,11 @@ function setupActionButtons() {
   const exportCrmBtn = document.getElementById("btn-export-crm");
   if (exportCrmBtn) {
       exportCrmBtn.addEventListener("click", () => {
-          let csv = "Nom,Telephone,Derniere Interaction
-";
+          let csv = "Nom,Telephone,Derniere Interaction\n";
           document.querySelectorAll('#contacts-table-body tr').forEach(row => {
               const cols = row.querySelectorAll('td');
               if (cols.length >= 3) {
-                  csv += cols[0].innerText.trim() + "," + cols[1].innerText.trim() + "," + cols[2].innerText.trim() + "
-";
+                  csv += cols[0].innerText.trim() + "," + cols[1].innerText.trim() + "," + cols[2].innerText.trim() + "\n";
               }
           });
           const blob = new Blob([csv], { type: 'text/csv' });
