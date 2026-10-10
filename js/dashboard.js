@@ -1661,13 +1661,51 @@ function setupActionButtons() {
     });
   }
 
-  // Save AI Agent settings
-  const saveAgentBtn = document.getElementById("btn-save-agent");
-  if (saveAgentBtn) {
-    saveAgentBtn.addEventListener("click", () => {
-      showToast("Configuration de l'Agent IA synchronisée avec succès !", "success");
-    });
-  }
+      // Load AI Agent settings
+    const agentPromptInput = document.getElementById("agent-prompt-input");
+    const userId = localStorage.getItem('vendia_user_id') || 'demo-user-123';
+    
+    if (agentPromptInput) {
+        fetch('http://localhost:8080/api/ai/config/' + userId)
+            .then(res => res.json())
+            .then(data => {
+                if (data.prompt) {
+                    agentPromptInput.value = data.prompt;
+                }
+            })
+            .catch(err => console.error("Erreur chargement prompt", err));
+    }
+
+    // Save AI Agent settings
+    const saveAgentBtn = document.getElementById("btn-save-agent");
+    if (saveAgentBtn && agentPromptInput) {
+      saveAgentBtn.addEventListener("click", () => {
+        saveAgentBtn.disabled = true;
+        saveAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde...';
+        
+        fetch('http://localhost:8080/api/ai/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userId, prompt: agentPromptInput.value })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast("Configuration de l'Agent IA synchronisée avec succès !", "success");
+            } else {
+                showToast("Erreur lors de la sauvegarde.", "error");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("Erreur de connexion au serveur.", "error");
+        })
+        .finally(() => {
+            saveAgentBtn.disabled = false;
+            saveAgentBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+        });
+      });
+    }
 
   // Tone selector buttons
   const toneBtns = document.querySelectorAll("#tone-selector .tag-select-btn");

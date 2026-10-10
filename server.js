@@ -82,7 +82,8 @@ app.post('/api/whatsapp/start', async (req, res) => {
 
     try {
       // Vrifier si le client a pay (Crdits > 0)
-      const { data: profile } = await supabase.from('profiles').select('credits').eq('id', userId).single();
+      // Récupérer le profil du client (crédits ET prompt personnalisé)
+      const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt').eq('id', userId).single();
       
       // Bypass temporaire pour le test local
       if (userId !== 'demo-user-123' && (!profile || profile.credits <= 0)) {
@@ -90,11 +91,14 @@ app.post('/api/whatsapp/start', async (req, res) => {
         return;
       }
 
-      // Demander  l'IA de rpondre
+      // Récupérer le prompt personnalisé ou utiliser un prompt par défaut
+      const systemPrompt = (profile && profile.ai_prompt) ? profile.ai_prompt : "Tu es un assistant IA poli. Réponds brièvement.";
+
+      // Demander à l'IA de répondre avec le prompt du client
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-            { role: "system", content: "Tu es un assistant IA poli. Rponds brivement." },
+            { role: "system", content: systemPrompt },
             { role: "user", content: msg.body }
         ],
         max_tokens: 150
