@@ -294,7 +294,7 @@
           provider: "supabase",
           plan: {
             name: "Essai Gratuit 7j 🦾",
-            badge: "300 CRÉDITS",
+            badge: "ESSAI",
             tokensUsed: 0,
             tokensMax: 100,
             daysLeft: 7
@@ -361,9 +361,9 @@
           provider: "supabase",
           plan: {
             name: "Essai Gratuit 7j 🦾",
-            badge: "300 CRÉDITS",
+            badge: "ESSAI",
             tokensUsed: 0,
-            tokensMax: profile?.credits > 100 ? 300 : 100,
+            tokensMax: 100,
             daysLeft: 7
           },
           createdAt: userObj?.created_at || new Date().toISOString()
@@ -596,7 +596,7 @@
               ...(user.plan || {}),
               tokensMax: (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100),
               tokensUsed: Math.max(0, (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100) - (profile.credits || 0)),
-              tokensUsed: Math.max(0, (user.plan?.tokensMax || (profile.credits > 100 ? 300 : 100)) - (profile.credits || 0)),
+              
               daysLeft: (() => {
                   if (profile.created_at) {
                       const diff = Math.floor((new Date() - new Date(profile.created_at)) / (1000 * 60 * 60 * 24));
