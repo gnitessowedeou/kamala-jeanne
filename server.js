@@ -75,7 +75,11 @@ app.post('/api/whatsapp/start', async (req, res) => {
   client.on('message', async (msg) => {
     // Ignorer les anciens messages (plus de 60 secondes) pour viter de spammer lors de la connexion
     const now = Math.floor(Date.now() / 1000);
-    if (msg.timestamp < now - 60) return;
+      console.log(`[DEBUG] Message reçu de ${msg.from}. Type: ${msg.type}. Body: "${msg.body}". TS: ${msg.timestamp}. Now: ${now}. Diff: ${now - msg.timestamp}`);
+      if (msg.timestamp < now - 60) {
+          console.log('[DEBUG] Message ignoré car trop vieux.');
+          return;
+      }
 
           if (msg.isStatus || msg.from.includes('@g.us')) return; // Ignorer statuts et groupes
 
@@ -198,6 +202,86 @@ app.post('/api/ai/config', async (req, res) => {
 app.use((req, res) => {
   if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));
   else res.status(404).json({ error: "Route API non trouvée" });
+});
+
+
+// ============================================================================
+// ROUTES DE PAIEMENT (SASPAY)
+// ============================================================================
+app.post('/api/payments/create-session', async (req, res) => {
+    try {
+        const { userId, planTier, amount } = req.body;
+        
+        // Rcuprer infos utilisateur
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        if (!profile) return res.status(404).json({ error: 'User not found' });
+
+        const saspayPayload = {
+            amount: amount.toString(),
+            currency: "XOF",
+            customer_email: profile.email || "client@kamalajeanne.com",
+            customer_name: (profile.first_name || "Client") + " " + (profile.last_name || ""),
+            return_url: "https://kamala-jeanne.vercel.app/dashboard.html",
+            metadata: {
+                userId: userId,
+                planTier: planTier
+            }
+        };
+
+        const fetch = (await import('node-fetch')).default;
+        const saspayRes = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.SASPAY_SECRET_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(saspayPayload)
+        });
+
+        const data = await saspayRes.json();
+        
+        if (data.checkout_url) {
+            res.json({ checkout_url: data.checkout_url });
+        } else {
+            console.error('Saspay Error:', data);
+            res.status(500).json({ error: 'Erreur lors de la cration du paiement' });
+        }
+    } catch (err) {
+        console.error('Payment Session Error:', err);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/payments/webhook', async (req, res) => {
+    try {
+        const payload = req.body;
+        console.log('[SASPAY WEBHOOK]', payload);
+
+        if (payload.event === 'transaction.success') {
+            const userId = payload.data?.metadata?.userId;
+            const planTier = payload.data?.metadata?.planTier;
+
+            if (userId) {
+                const credits = planTier === 'basic' ? 1000 : planTier === 'pro' ? 3000 : planTier === 'business' ? 10000 : 0;
+                
+                // Mettre  jour le compte client dans Supabase
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        credits: credits,
+                        plan: planTier,
+                        created_at: new Date().toISOString() // Rinitialise les 7 jours !
+                    })
+                    .eq('id', userId);
+                    
+                console.log(`[PAIEMENT] Compte ${userId} recharg avec ${credits} crdits.`);
+            }
+        }
+        res.status(200).send('Webhook OK');
+    } catch (error) {
+        console.error('Webhook Error:', error);
+        res.status(500).send('Webhook Error');
+    }
 });
 
 app.listen(PORT, () => {

@@ -2294,108 +2294,59 @@ function setupBillingAndAffiliate() {
   }
 
   // 5. Subscription Form Submission
-  const subscribeForm = document.getElementById("form-subscribe-plan");
-  if (subscribeForm) {
-    subscribeForm.addEventListener("submit", (e) => {
-      e.preventDefault();
+  
+    const subscribeForm = document.getElementById("form-subscribe-plan");
+    if (subscribeForm) {
+      subscribeForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById("btn-submit-plan-order");
+        const submitText = document.getElementById("btn-submit-plan-text");
+        const originalText = submitText ? submitText.textContent : "Confirmer & Activer mon Forfait";
+        
+        if (submitBtn) submitBtn.disabled = true;
+        if (submitText) submitText.textContent = "Cration du lien scuris...";
 
-      const submitBtn = document.getElementById("btn-submit-plan-order");
-      const submitText = document.getElementById("btn-submit-plan-text");
-      const originalText = submitText ? submitText.textContent : "Confirmer & Activer mon Forfait";
-
-      const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
-      const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
-      const selectedPayMethod = document.querySelector('input[name="modal_pay_method"]:checked')?.value || "wave";
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        if (submitText) submitText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement sécurisé...';
-      }
-
-      setTimeout(() => {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          if (submitText) submitText.textContent = originalText;
+        try {
+            const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
+            const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
+            const amount = selectedTier === 'basic' ? 7900 : selectedTier === 'pro' ? 14900 : selectedTier === 'business' ? 30000 : 14900;
+            
+            let userId = null;
+            const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+            if (u && u.id) userId = u.id;
+            
+            const res = await fetch('http://localhost:8080/api/payments/create-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userId,
+                    planTier: selectedTier,
+                    amount: amount
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.checkout_url) {
+                if (submitText) submitText.textContent = "Redirection...";
+                window.location.href = data.checkout_url;
+            } else {
+                alert("Erreur: " + (data.error || "Impossible de gnrer le lien"));
+                if (submitBtn) submitBtn.disabled = false;
+                if (submitText) submitText.textContent = originalText;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Erreur rseau");
+            if (submitBtn) submitBtn.disabled = false;
+            if (submitText) submitText.textContent = originalText;
         }
+      });
+    }
 
-        // Update User Plan Mock
-        let planTitle = "Formule Pro 🚀";
-        let planTokens = 6000;
-        let planPriceStr = "14 900 FCFA";
 
-        if (selectedTier === "basic") {
-          planTitle = "Formule Basic 🦾";
-          planTokens = 2500;
-          planPriceStr = "7 900 FCFA";
-        } else if (selectedTier === "business" || selectedTier === "enterprise") {
-          planTitle = "Formule Business 💎";
-          planTokens = 15000;
-          planPriceStr = "30 000 FCFA";
-        }
-
-        MOCK_DATA.currentUser.plan.name = planTitle;
-        MOCK_DATA.currentUser.plan.tokensMax = planTokens;
-
-        // Update UI
-        const sidebarPlanName = document.getElementById("sidebar-plan-name");
-        if (sidebarPlanName) sidebarPlanName.textContent = planTitle;
-
-        const subTokensMax = document.getElementById("sub-tokens-max");
-        if (subTokensMax) subTokensMax.textContent = `Max ${planTokens.toLocaleString("fr-FR")} crédits`;
-
-        const subTokensUsed = document.getElementById("sub-tokens-used");
-        if (subTokensUsed) subTokensUsed.textContent = "0 crédit";
-
-        const navBadgePlan = document.getElementById("nav-badge-plan");
-        if (navBadgePlan) {
-          navBadgePlan.textContent = "Actif";
-          navBadgePlan.className = "badge badge-green";
-        }
-
-        const billingStatusBadge = document.getElementById("billing-status-badge");
-        if (billingStatusBadge) {
-          billingStatusBadge.textContent = "Abonnement Actif (" + planTitle.split(" ")[1] + ")";
-        }
-
-        const billingTitleDisplay = document.getElementById("billing-title-display");
-        if (billingTitleDisplay) {
-          billingTitleDisplay.textContent = "Votre abonnement est actif et opérationnel !";
-        }
-
-        const billingSubtitleDisplay = document.getElementById("billing-subtitle-display");
-        if (billingSubtitleDisplay) {
-          billingSubtitleDisplay.textContent = "Vos réponses IA 24h/24, automatisations WhatsApp et intégrations de paiement sont pleinement actives sans coupure.";
-        }
-
-        const billingDaysLeft = document.getElementById("billing-days-left");
-        if (billingDaysLeft) {
-          billingDaysLeft.textContent = "Renouvellement automatique le 08 Nov 2026";
-        }
-
-        // Add invoice entry
-        const historyTbody = document.getElementById("billing-history-tbody");
-        if (historyTbody) {
-          const payLabel = selectedPayMethod === "wave" ? "Wave CI/SN" : selectedPayMethod === "orange" ? "Orange Money" : selectedPayMethod === "mtn" ? "MTN MoMo" : "Carte Bancaire";
-          const newRow = document.createElement("tr");
-          newRow.innerHTML = `
-            <td>À l'instant</td>
-            <td><strong>${planTitle}</strong></td>
-            <td>${payLabel}</td>
-            <td>${planPriceStr}</td>
-            <td><span class="badge badge-green">Payé</span></td>
-            <td><button class="btn-secondary-glass btn-receipt-view" style="padding: 4px 10px; font-size: 11.5px;">Télécharger</button></td>
-          `;
-          historyTbody.insertBefore(newRow, historyTbody.firstChild);
-        }
-
-        closePlanModal();
-
-        showToast(`🎉 Félicitations ! Votre ${planTitle} a été activée avec succès.`, "success");
-      }, 1200);
-    });
-  }
-
-  // 6. Copy Affiliate Referral Link
+    // 6. Copy Affiliate Referral Link
   const copyAffiliateBtn = document.getElementById("btn-copy-affiliate-link");
   const affiliateInput = document.getElementById("affiliate-link-input");
 
