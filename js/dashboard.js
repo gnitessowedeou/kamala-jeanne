@@ -106,7 +106,11 @@ const MOCK_DATA = {
   recentInteractions: [],
   conversations: [],
   contacts: [],
-  mockSearchResults: []
+  mockSearchResults: [],
+  campaigns: [],
+  automations: [],
+  templates: [],
+  integrations: []
 };
 
 // ==============================================================================
