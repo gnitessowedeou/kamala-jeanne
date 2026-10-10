@@ -48,7 +48,8 @@ app.post('/api/whatsapp/start', async (req, res) => {
   // Lancement d'un navigateur invisible pour le client
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: userId }),
-    puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
+    puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox'] },
+    webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }
   });
 
   waClients[userId] = client;
@@ -149,3 +150,4 @@ app.listen(PORT, () => {
 
 // Fix pour forcer le maintien du processus Node.js en vie
 setInterval(() => {}, 1000 * 60 * 60);
+
