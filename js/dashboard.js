@@ -1457,47 +1457,54 @@ function renderAutomations() {
   `).join("");
 }
 
-function renderContacts() {
-  const tbody = document.getElementById("contacts-table-body");
-  if (!tbody) return;
+async function renderContacts() {
+    const tbody = document.getElementById("contacts-table-body");
+    if (!tbody) return;
 
-  if (!isCurrentUserDemo()) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          Votre base CRM est prête. Vos prospects WhatsApp seront enregistrés automatiquement dès leur premier message.
-        </td>
-      </tr>
-    `;
-    return;
-  }
+    let userId = null;
+    try {
+        const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+        if (u && u.id) userId = u.id;
+    } catch(e) {}
 
-  tbody.innerHTML = MOCK_DATA.contacts.map(c => `
-    <tr>
-      <td>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">${c.avatar}</div>
-          <span>${c.name}</span>
-        </div>
-      </td>
-      <td>${c.phone}</td>
-      <td>${c.date}</td>
-      <td><span class="badge ${c.tagClass}">${c.tag}</span></td>
-      <td><strong>${c.total}</strong></td>
-      <td>
-        <button class="header-icon-btn btn-open-chat-contact" title="Ouvrir Live Chat" data-phone="${c.phone}">
-          <i class="fa-brands fa-whatsapp"></i>
-        </button>
-      </td>
-    </tr>
-  `).join("");
+    if (!userId) return;
 
-  // Attach direct chat trigger
-  tbody.querySelectorAll(".btn-open-chat-contact").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showView("inbox", "Boîte de Réception WhatsApp");
-    });
-  });
+    try {
+        const res = await fetch('http://localhost:8080/api/contacts/' + userId);
+        const data = await res.json();
+        
+        if (data.success && data.contacts && data.contacts.length > 0) {
+            tbody.innerHTML = data.contacts.map(c => `
+              <tr>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">${(c.name || 'I')[0].toUpperCase()}</div>
+                    <span>${c.name || 'Inconnu'}</span>
+                  </div>
+                </td>
+                <td>${c.phone_number}</td>
+                <td>${new Date(c.updated_at).toLocaleDateString()}</td>
+                <td><span class="badge badge-gray">Prospect</span></td>
+                <td>N/A</td>
+                <td>
+                  <div style="display: flex; gap: 8px;">
+                    <button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px;" title="Discuter"><i class="fa-solid fa-message"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `).join("");
+        } else {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                  Votre base CRM est prete. Vos prospects WhatsApp seront enregistres automatiquement des leur premier message.
+                </td>
+              </tr>
+            `;
+        }
+    } catch (err) {
+        console.error("Erreur fetch contacts:", err);
+    }
 }
 
 function renderTemplates() {

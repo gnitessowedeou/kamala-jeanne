@@ -113,7 +113,24 @@ app.post('/api/whatsapp/start', async (req, res) => {
         }
 
 
-      // Récupérer le prompt personnalisé ou utiliser un prompt par défaut
+      
+        const contactInfo = await msg.getContact();
+        const phone_number = contactInfo.number || msg.from.split('@')[0];
+        const contact_name = contactInfo.pushname || contactInfo.name || "Inconnu";
+
+        // Mettre a jour ou inserer le contact dans Supabase (CRM)
+        if (userId) {
+            await supabase.from('contacts').upsert({
+                user_id: userId,
+                phone_number: phone_number,
+                name: contact_name,
+                last_message: msg.body.substring(0, 255),
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id, phone_number' }).catch(e => console.error("Erreur CRM:", e.message));
+        }
+
+        // Recuperer le prompt personnalise
+ ou utiliser un prompt par défaut
       const systemPrompt = (profile && profile.ai_prompt) ? profile.ai_prompt : "Tu es un assistant IA poli. Réponds brièvement.";
 
       // Demander à l'IA de répondre avec le prompt du client
@@ -277,7 +294,22 @@ app.post('/api/payments/webhook', async (req, res) => {
     }
 });
 
+
+// === 6. GET CONTACTS CRM ===
+app.get('/api/contacts/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const { data, error } = await supabase.from('contacts').select('*').eq('user_id', userId).order('updated_at', { ascending: false });
+        if (error) throw error;
+        res.json({ success: true, contacts: data });
+    } catch (err) {
+        console.error('Erreur fetch contacts:', err);
+        res.status(500).json({ error: 'Erreur lors de la recuperation des contacts' });
+    }
+});
+
 // Route par dfaut (Frontend)
+
 app.use((req, res) => {
   if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));
   else res.status(404).json({ error: "Route API non trouvée" });
