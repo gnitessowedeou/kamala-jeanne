@@ -2452,6 +2452,8 @@ function setupBillingAndAffiliate() {
                 } 
                 else if (data.status === 'CONNECTED') {
                     clearInterval(statusInterval);
+                    
+                    const wasActive = qrModal.classList.contains('active');
                     qrModal.classList.remove('active');
                     
                     const badge = document.getElementById('sidebar-status-badge');
@@ -2459,10 +2461,22 @@ function setupBillingAndAffiliate() {
                         badge.textContent = "Connecté";
                         badge.className = "status-badge-mini badge-green";
                     }
+                    
+                    if (data.phone) {
+                        const formattedPhone = '+' + data.phone;
+                        const headerNum = document.getElementById('header-connected-num');
+                        const cardNum = document.getElementById('main-card-num');
+                        
+                        if (headerNum) headerNum.textContent = formattedPhone;
+                        if (cardNum) cardNum.textContent = formattedPhone;
+                    }
+
                     const num = document.getElementById('sidebar-connected-num');
                     if(num) num.textContent = "IA Active";
                     
-                    alert("🎉 Succès ! WhatsApp est connecté.");
+                    if (wasActive) {
+                        alert("🎉 Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : ''));
+                    }
                 }
             } catch (error) {}
         }

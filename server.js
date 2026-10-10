@@ -32,6 +32,7 @@ if (process.env.OPENAI_API_KEY) {
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes générés
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
+const waNumbers = {};    // Stocke le numéro de téléphone connecté
 
 app.post('/api/whatsapp/start', async (req, res) => {
   const { userId } = req.body;
@@ -65,44 +66,54 @@ app.post('/api/whatsapp/start', async (req, res) => {
   // Quand le client a scanné et est connecté
   client.on('ready', () => {
     waStatuses[userId] = 'CONNECTED';
+    waNumbers[userId] = client.info ? client.info.wid.user : null;
     delete waSessionsQR[userId];
-    console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp !`);
+    console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
   });
 
   // Quand un prospect envoie un message au client
   client.on('message', async (msg) => {
+    // Ignorer les anciens messages (plus de 60 secondes) pour viter de spammer lors de la connexion
+    const now = Math.floor(Date.now() / 1000);
+    if (msg.timestamp < now - 60) return;
+
     if (msg.isStatus || msg.from.includes('@g.us')) return; // Ignorer statuts et groupes
     console.log(`[WA] Message reçu sur le numéro du client ${userId} : ${msg.body}`);
 
     try {
-      // Vérifier si le client a payé (Crédits > 0)
+      // Vrifier si le client a pay (Crdits > 0)
       const { data: profile } = await supabase.from('profiles').select('credits').eq('id', userId).single();
-      if (!profile || profile.credits <= 0) {
+      
+      // Bypass temporaire pour le test local
+      if (userId !== 'demo-user-123' && (!profile || profile.credits <= 0)) {
         console.log(`❌ [WA] Le client ${userId} n'a plus de crédits. L'IA s'arrête.`);
         return;
       }
 
-      // Demander à l'IA de répondre
+      // Demander  l'IA de rpondre
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-            { role: "system", content: "Tu es un vendeur professionnel et courtois." },
+            { role: "system", content: "Tu es un assistant IA poli. Rponds brivement." },
             { role: "user", content: msg.body }
         ],
         max_tokens: 150
       });
 
-      const iaReply = completion.choices[0].message.content;
+      const aiResponse = completion.choices[0].message.content;
+      console.log(`[WA] L'IA rpond : ${aiResponse}`);
 
-      // Envoyer la réponse WhatsApp au prospect
-      await client.sendMessage(msg.from, iaReply);
+      await client.sendMessage(msg.from, aiResponse);
 
-      // Déduire 1 crédit de la base de données
-      const newCredits = profile.credits - 1;
-      await supabase.from('profiles').update({ credits: newCredits }).eq('id', userId);
-      console.log(`💰 -1 crédit pour ${userId}. Reste: ${newCredits}`);
-
-    } catch (err) { console.error("Erreur WA/IA:", err); }
+      // Dduire un crdit
+      if (profile && profile.credits > 0) {
+          const newCredits = profile.credits - 1;
+          await supabase.from('profiles').update({ credits: newCredits }).eq('id', userId);
+          console.log(`[WA] -1 crdit pour ${userId}. Reste: ${newCredits}`);
+      }
+    } catch (error) {
+      console.error('Erreur WA/IA:', error);
+    }
   });
 
   client.initialize().catch(err => {
@@ -116,7 +127,7 @@ app.post('/api/whatsapp/start', async (req, res) => {
 
 app.get('/api/whatsapp/status/:userId', (req, res) => {
   const { userId } = req.params;
-  res.json({ status: waStatuses[userId] || 'DISCONNECTED', qr: waSessionsQR[userId] || null });
+  res.json({ status: waStatuses[userId] || 'DISCONNECTED', qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null });
 });
 
 // === 4. WEBHOOK DE FACTURATION ===
@@ -150,4 +161,6 @@ app.listen(PORT, () => {
 
 // Fix pour forcer le maintien du processus Node.js en vie
 setInterval(() => {}, 1000 * 60 * 60);
+
+
 
