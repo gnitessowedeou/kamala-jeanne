@@ -94,14 +94,15 @@ app.post('/api/whatsapp/start', async (req, res) => {
       try {
         // Vrifier si le client a pay (Crdits > 0)
         // Rcuprer le profil du client (crdits ET prompt personnalis) et date de creation
-        const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
+        const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt, created_at, plan').eq('id', userId).single();
         
         let isExpired = false;
         if (profile && profile.created_at) {
            const created = new Date(profile.created_at);
            const now = new Date();
            const daysPassed = Math.floor((now - created) / (1000 * 60 * 60 * 24));
-           if (daysPassed >= 7) {
+           const maxDays = (profile.plan && profile.plan !== 'gratuit' && profile.plan !== 'trial') ? 30 : 7;
+           if (daysPassed >= maxDays) {
               isExpired = true;
            }
         }
