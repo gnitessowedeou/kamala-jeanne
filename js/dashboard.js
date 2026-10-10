@@ -1801,16 +1801,47 @@ function setupActionButtons() {
     });
   }
 
-  // Export CSV CRM
+  
+  // Filter pills
+  const filterBtns = document.querySelectorAll('.tag-select-btn');
+  filterBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+          filterBtns.forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          const filter = e.currentTarget.getAttribute('data-filter');
+          const rows = document.querySelectorAll('#contacts-table-body tr');
+          rows.forEach(row => {
+              if (filter === 'all' || row.innerText.includes(filter) || row.innerText.includes(filter.toUpperCase())) {
+                  row.style.display = '';
+              } else {
+                  row.style.display = 'none';
+              }
+          });
+      });
+  });
+
+  // Export CSV
   const exportCrmBtn = document.getElementById("btn-export-crm");
   if (exportCrmBtn) {
-    exportCrmBtn.addEventListener("click", () => {
-      showToast("Génération de l'export contacts_crm_vandia.csv...", "info");
-      setTimeout(() => {
-        showToast("Téléchargement du fichier CSV terminé !", "success");
-      }, 1000);
-    });
+      exportCrmBtn.addEventListener("click", () => {
+          let csv = "Nom,Telephone,Derniere Interaction
+";
+          document.querySelectorAll('#contacts-table-body tr').forEach(row => {
+              const cols = row.querySelectorAll('td');
+              if (cols.length >= 3) {
+                  csv += cols[0].innerText.trim() + "," + cols[1].innerText.trim() + "," + cols[2].innerText.trim() + "
+";
+              }
+          });
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.setAttribute('href', url);
+          a.setAttribute('download', 'contacts_crm.csv');
+          a.click();
+      });
   }
+
 
   // Logout button
   const logoutBtn = document.getElementById("btn-logout");
