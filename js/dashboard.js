@@ -1,6 +1,6 @@
-/**
+﻿/**
  * ==============================================================================
- * VANDIA AI — DASHBOARD JAVASCRIPT ENGINE
+ * VANDIA AI â€” DASHBOARD JAVASCRIPT ENGINE
  * Full SPA Frontend Navigation, Chart.js, WhatsApp Live Chat, Modals & MOCK Data
  * Prepared for Supabase / Backend API integration
  * ==============================================================================
@@ -32,7 +32,7 @@ function sanitizeUrl(url) {
 }
 
 // ==============================================================================
-// 1. MOCK DATA STORE (Prêt pour injection Supabase)
+// 1. MOCK DATA STORE (PrÃªt pour injection Supabase)
 // ==============================================================================
 const MOCK_DATA = {
   currentUser: {
@@ -40,11 +40,11 @@ const MOCK_DATA = {
     name: "Utilisateur",
     role: "Administrateur",
     avatar: "V",
-    connectedPhone: "Non lié",
+    connectedPhone: "Non liÃ©",
     phoneStatus: "En attente",
     plan: {
-      name: "Essai Gratuit 7j 🦾",
-      badge: "300 CRÉDITS",
+      name: "Essai Gratuit 7j ðŸ¦¾",
+      badge: "300 CRÃ‰DITS",
       tokensUsed: 0,
       tokensMax: 300,
       percentage: 0
@@ -63,7 +63,7 @@ const MOCK_DATA = {
     conversionRate: "0.0%",
     conversionTrend: "0%",
     abandonedRecovered: 0,
-    abandonedRecoveredRate: "0 relancé",
+    abandonedRecoveredRate: "0 relancÃ©",
     abandonedSavedUsd: 0,
     abandonedSavedXof: 0
   },
@@ -97,18 +97,18 @@ const MOCK_DATA = {
 
   recentInteractions: [
     {
-      client: "Amina Traoré",
+      client: "Amina TraorÃ©",
       phone: "+225 07 48 99 12",
       date: "Aujourd'hui, 15:42",
-      action: "Paiement Wave (25 000 XOF) reçu",
-      status: "Clôturé (Payé)",
+      action: "Paiement Wave (25 000 XOF) reÃ§u",
+      status: "ClÃ´turÃ© (PayÃ©)",
       statusType: "green"
     },
     {
       client: "Marc Koffi",
       phone: "+225 05 99 22 11",
       date: "Aujourd'hui, 14:30",
-      action: "Relance Panier Abandonné envoyée",
+      action: "Relance Panier AbandonnÃ© envoyÃ©e",
       status: "En attente",
       statusType: "amber"
     },
@@ -116,23 +116,23 @@ const MOCK_DATA = {
       client: "Fatou Diallo",
       phone: "+221 77 123 45 67",
       date: "Aujourd'hui, 12:15",
-      action: "Conseil catalogue & Taille recommandé",
+      action: "Conseil catalogue & Taille recommandÃ©",
       status: "En cours (IA)",
       statusType: "cyan"
     },
     {
-      client: "Moussa Koné",
+      client: "Moussa KonÃ©",
       phone: "+223 66 78 90 12",
       date: "Hier, 19:10",
       action: "Paiement Orange Money (40 000 XOF)",
-      status: "Clôturé (Payé)",
+      status: "ClÃ´turÃ© (PayÃ©)",
       statusType: "green"
     },
     {
       client: "Sophie Badolo",
       phone: "+226 70 88 11 22",
       date: "Hier, 16:05",
-      action: "Devis Pack Grossiste généré",
+      action: "Devis Pack Grossiste gÃ©nÃ©rÃ©",
       status: "En attente",
       statusType: "amber"
     }
@@ -141,42 +141,42 @@ const MOCK_DATA = {
   conversations: [
     {
       id: "conv_1",
-      name: "Amina Traoré",
-      phone: "+225 07 48 99 12 • Abidjan, CI",
+      name: "Amina TraorÃ©",
+      phone: "+225 07 48 99 12 â€¢ Abidjan, CI",
       avatar: "AT",
-      lastMessage: "J'ai validé le paiement Wave ! Merci pour le code promo.",
+      lastMessage: "J'ai validÃ© le paiement Wave ! Merci pour le code promo.",
       time: "15:42",
       unread: false,
       aiActive: true,
       tag: "VIP",
       messages: [
         { sender: "client", text: "Bonjour ! Est-ce que le Pack Vente Pro est encore disponible avec la promo ?", time: "15:38" },
-        { sender: "agent", text: "Bonjour Amina ! Absolument, il reste 3 licences au tarif promotionnel aujourd'hui. Souhaitez-vous que je vous réserve une clé avec le lien direct Wave ?", time: "15:39" },
+        { sender: "agent", text: "Bonjour Amina ! Absolument, il reste 3 licences au tarif promotionnel aujourd'hui. Souhaitez-vous que je vous rÃ©serve une clÃ© avec le lien direct Wave ?", time: "15:39" },
         { sender: "client", text: "Oui super, envoyez-moi le lien svp !", time: "15:40" },
-        { sender: "agent", text: "Voici votre lien sécurisé : https://pay.wave.com/m/vendia-pack (Montant : 25 000 XOF). Dès validation, votre accès est activé automatiquement.", time: "15:41" },
-        { sender: "client", text: "J'ai validé le paiement Wave ! Merci pour le code promo.", time: "15:42" }
+        { sender: "agent", text: "Voici votre lien sÃ©curisÃ© : https://pay.wave.com/m/vendia-pack (Montant : 25 000 XOF). DÃ¨s validation, votre accÃ¨s est activÃ© automatiquement.", time: "15:41" },
+        { sender: "client", text: "J'ai validÃ© le paiement Wave ! Merci pour le code promo.", time: "15:42" }
       ]
     },
     {
       id: "conv_2",
       name: "Marc Koffi",
-      phone: "+225 05 99 22 11 • Abidjan, CI",
+      phone: "+225 05 99 22 11 â€¢ Abidjan, CI",
       avatar: "MK",
       lastMessage: "Est-ce qu'on peut payer par tranche de 2 fois ?",
       time: "14:30",
       unread: true,
       aiActive: true,
-      tag: "Panier Abandonné",
+      tag: "Panier AbandonnÃ©",
       messages: [
-        { sender: "system", text: "Panier abandonné détecté (Montant : 45 000 XOF)", time: "14:15" },
-        { sender: "agent", text: "Bonjour Marc 👋 Nous avons remarqué que votre commande est en attente. Une hésitation particulière ?", time: "14:28" },
+        { sender: "system", text: "Panier abandonnÃ© dÃ©tectÃ© (Montant : 45 000 XOF)", time: "14:15" },
+        { sender: "agent", text: "Bonjour Marc ðŸ‘‹ Nous avons remarquÃ© que votre commande est en attente. Une hÃ©sitation particuliÃ¨re ?", time: "14:28" },
         { sender: "client", text: "Est-ce qu'on peut payer par tranche de 2 fois ?", time: "14:30" }
       ]
     },
     {
       id: "conv_3",
       name: "Fatou Diallo",
-      phone: "+221 77 123 45 67 • Dakar, SN",
+      phone: "+221 77 123 45 67 â€¢ Dakar, SN",
       avatar: "FD",
       lastMessage: "Parfait, je finalise la commande ce soir.",
       time: "12:15",
@@ -185,23 +185,23 @@ const MOCK_DATA = {
       tag: "Prospect Chaud",
       messages: [
         { sender: "client", text: "Bonjour, vos livraisons sur Dakar se font en combien de temps ?", time: "12:10" },
-        { sender: "agent", text: "Bonjour Fatou ! Livraison express en 24h ouvrées partout à Dakar par nos livreurs partenaires.", time: "12:12" },
+        { sender: "agent", text: "Bonjour Fatou ! Livraison express en 24h ouvrÃ©es partout Ã  Dakar par nos livreurs partenaires.", time: "12:12" },
         { sender: "client", text: "Parfait, je finalise la commande ce soir.", time: "12:15" }
       ]
     },
     {
       id: "conv_4",
-      name: "Moussa Koné",
-      phone: "+223 66 78 90 12 • Bamako, ML",
+      name: "Moussa KonÃ©",
+      phone: "+223 66 78 90 12 â€¢ Bamako, ML",
       avatar: "MK",
-      lastMessage: "Colis bien reçu par mon frère, merci !",
+      lastMessage: "Colis bien reÃ§u par mon frÃ¨re, merci !",
       time: "Hier",
       unread: false,
       aiActive: false,
-      tag: "Client Fidèle",
+      tag: "Client FidÃ¨le",
       messages: [
-        { sender: "client", text: "Colis bien reçu par mon frère, merci !", time: "Hier 19:10" },
-        { sender: "agent", text: "Un plaisir de vous servir Moussa ! N'hésitez pas si vous avez besoin d'aide pour l'installation.", time: "Hier 19:12" }
+        { sender: "client", text: "Colis bien reÃ§u par mon frÃ¨re, merci !", time: "Hier 19:10" },
+        { sender: "agent", text: "Un plaisir de vous servir Moussa ! N'hÃ©sitez pas si vous avez besoin d'aide pour l'installation.", time: "Hier 19:12" }
       ]
     }
   ],
@@ -209,16 +209,16 @@ const MOCK_DATA = {
   campaigns: [
     {
       name: "Promo Flash VIP Weekend",
-      audience: "Clients VIP & Récents",
+      audience: "Clients VIP & RÃ©cents",
       recipients: "1 500",
       openRate: "94.2%",
       date: "08 Oct 2026",
-      status: "Terminé",
+      status: "TerminÃ©",
       statusType: "green"
     },
     {
-      name: "Relance Paniers Abandonnés 48h",
-      audience: "Paniers non payés",
+      name: "Relance Paniers AbandonnÃ©s 48h",
+      audience: "Paniers non payÃ©s",
       recipients: "142",
       openRate: "88.5%",
       date: "07 Oct 2026",
@@ -231,7 +231,7 @@ const MOCK_DATA = {
       recipients: "5 280",
       openRate: "97.1%",
       date: "01 Oct 2026",
-      status: "Terminé",
+      status: "TerminÃ©",
       statusType: "green"
     }
   ],
@@ -239,7 +239,7 @@ const MOCK_DATA = {
   automations: [
     {
       title: "Tunnel Vente Flash WhatsApp",
-      trigger: "Mot-clé 'PROMO' ou Scan QR Code",
+      trigger: "Mot-clÃ© 'PROMO' ou Scan QR Code",
       steps: 5,
       contacts: "0 contact",
       conversion: "0.0%",
@@ -247,10 +247,10 @@ const MOCK_DATA = {
       icon: "fa-bolt"
     },
     {
-      title: "Relance Panier Abandonné",
+      title: "Relance Panier AbandonnÃ©",
       trigger: "Abandon Shopify/WooCommerce > 30 min",
       steps: 3,
-      contacts: "0 relancé",
+      contacts: "0 relancÃ©",
       conversion: "0.0%",
       active: true,
       icon: "fa-cart-arrow-down"
@@ -265,7 +265,7 @@ const MOCK_DATA = {
       icon: "fa-clipboard-question"
     },
     {
-      title: "Réactivation Clients Inactifs (30 jours)",
+      title: "RÃ©activation Clients Inactifs (30 jours)",
       trigger: "Aucune commande depuis 30 jours",
       steps: 2,
       contacts: "0 cible",
@@ -276,10 +276,10 @@ const MOCK_DATA = {
   ],
 
   contacts: [
-    { name: "Amina Traoré", phone: "+225 07 48 99 12", date: "Il y a 3 min", tag: "VIP", tagClass: "badge-purple", total: "145 000 XOF", avatar: "AT" },
+    { name: "Amina TraorÃ©", phone: "+225 07 48 99 12", date: "Il y a 3 min", tag: "VIP", tagClass: "badge-purple", total: "145 000 XOF", avatar: "AT" },
     { name: "Marc Koffi", phone: "+225 05 99 22 11", date: "Il y a 1h", tag: "Panier", tagClass: "badge-amber", total: "45 000 XOF", avatar: "MK" },
     { name: "Fatou Diallo", phone: "+221 77 123 45 67", date: "Il y a 3h", tag: "Chaud", tagClass: "badge-cyan", total: "25 000 XOF", avatar: "FD" },
-    { name: "Moussa Koné", phone: "+223 66 78 90 12", date: "Hier", tag: "VIP", tagClass: "badge-purple", total: "220 000 XOF", avatar: "MK" },
+    { name: "Moussa KonÃ©", phone: "+223 66 78 90 12", date: "Hier", tag: "VIP", tagClass: "badge-purple", total: "220 000 XOF", avatar: "MK" },
     { name: "Sophie Badolo", phone: "+226 70 88 11 22", date: "Hier", tag: "Chaud", tagClass: "badge-cyan", total: "85 000 XOF", avatar: "SB" },
     { name: "Jean-Eudes Kouassi", phone: "+225 01 22 33 44", date: "Il y a 2j", tag: "Tous", tagClass: "badge-subtle", total: "15 000 XOF", avatar: "JK" }
   ],
@@ -288,44 +288,44 @@ const MOCK_DATA = {
     {
       name: "Confirmation Commande & Wave",
       category: "Utilitaire",
-      status: "Approuvé Meta",
+      status: "ApprouvÃ© Meta",
       statusType: "green",
-      content: "Bonjour {{1}}, votre commande #{{2}} a bien été enregistrée. Cliquez ci-dessous pour régler directement via Wave en un clic.",
+      content: "Bonjour {{1}}, votre commande #{{2}} a bien Ã©tÃ© enregistrÃ©e. Cliquez ci-dessous pour rÃ©gler directement via Wave en un clic.",
       cta: "Payer via Wave"
     },
     {
       name: "Promo Flash VIP Exclusive",
       category: "Marketing",
-      status: "Approuvé Meta",
+      status: "ApprouvÃ© Meta",
       statusType: "green",
-      content: "Salut {{1}} ! 🔥 Accès exclusif à notre vente flash 48h. Profitez de -20% sur l'ensemble de vos articles favoris dès maintenant.",
+      content: "Salut {{1}} ! ðŸ”¥ AccÃ¨s exclusif Ã  notre vente flash 48h. Profitez de -20% sur l'ensemble de vos articles favoris dÃ¨s maintenant.",
       cta: "Voir les Offres"
     },
     {
       name: "Relance Douce Panier 30min",
       category: "Marketing",
-      status: "Approuvé Meta",
+      status: "ApprouvÃ© Meta",
       statusType: "green",
-      content: "Bonjour {{1}} 👋 Votre panier vous attend ! Avez-vous besoin d'un conseil ou d'une précision sur un produit avant de valider ?",
+      content: "Bonjour {{1}} ðŸ‘‹ Votre panier vous attend ! Avez-vous besoin d'un conseil ou d'une prÃ©cision sur un produit avant de valider ?",
       cta: "Finaliser la commande"
     },
     {
-      name: "Notification Expédition Colis",
+      name: "Notification ExpÃ©dition Colis",
       category: "Utilitaire",
       status: "En attente Meta",
       statusType: "amber",
-      content: "Excellente nouvelle {{1}} ! Votre colis vient d'être remis au transporteur. Suivez l'acheminement en direct avec le code {{2}}.",
+      content: "Excellente nouvelle {{1}} ! Votre colis vient d'Ãªtre remis au transporteur. Suivez l'acheminement en direct avec le code {{2}}.",
       cta: "Suivre mon colis"
     }
   ],
 
   integrations: [
-    { name: "Wave Mobile Money", desc: "Paiements instantanés sans frais cachés en Côte d'Ivoire & Sénégal.", icon: "fa-water", color: "var(--cyan)", status: "Connecté", active: true },
-    { name: "Orange Money", desc: "Passerelle Web Payment & QR Code pour toute la zone UEMOA.", icon: "fa-circle", color: "#f97316", status: "Connecté", active: true },
-    { name: "MTN MoMo", desc: "Paiements mobiles MTN pour Côte d'Ivoire, Bénin, Ghana.", icon: "fa-bolt", color: "var(--amber)", status: "Connecté", active: true },
-    { name: "Stripe", desc: "Encaissement international par Carte Bancaire Visa & Mastercard.", icon: "fa-credit-card", color: "var(--purple)", status: "Connecté", active: true },
-    { name: "Shopify", desc: "Synchronisation des commandes, stocks et paniers abandonnés.", icon: "fa-bag-shopping", color: "#95bf47", status: "Connecté", active: true },
-    { name: "Webhooks Meta API", desc: "Flux direct d'événements et double routage vers vos serveurs.", icon: "fa-network-wired", color: "var(--whatsapp-green)", status: "Actif (200 OK)", active: true }
+    { name: "Wave Mobile Money", desc: "Paiements instantanÃ©s sans frais cachÃ©s en CÃ´te d'Ivoire & SÃ©nÃ©gal.", icon: "fa-water", color: "var(--cyan)", status: "ConnectÃ©", active: true },
+    { name: "Orange Money", desc: "Passerelle Web Payment & QR Code pour toute la zone UEMOA.", icon: "fa-circle", color: "#f97316", status: "ConnectÃ©", active: true },
+    { name: "MTN MoMo", desc: "Paiements mobiles MTN pour CÃ´te d'Ivoire, BÃ©nin, Ghana.", icon: "fa-bolt", color: "var(--amber)", status: "ConnectÃ©", active: true },
+    { name: "Stripe", desc: "Encaissement international par Carte Bancaire Visa & Mastercard.", icon: "fa-credit-card", color: "var(--purple)", status: "ConnectÃ©", active: true },
+    { name: "Shopify", desc: "Synchronisation des commandes, stocks et paniers abandonnÃ©s.", icon: "fa-bag-shopping", color: "#95bf47", status: "ConnectÃ©", active: true },
+    { name: "Webhooks Meta API", desc: "Flux direct d'Ã©vÃ©nements et double routage vers vos serveurs.", icon: "fa-network-wired", color: "var(--whatsapp-green)", status: "Actif (200 OK)", active: true }
   ]
 };
 
@@ -380,7 +380,7 @@ function initDashboard() {
 
   // Welcome Toast
   setTimeout(() => {
-    showToast("Connexion WhatsApp active • Agent IA prêt en 24/7", "info");
+    showToast("Connexion WhatsApp active â€¢ Agent IA prÃªt en 24/7", "info");
   }, 900);
 }
 
@@ -443,7 +443,7 @@ function setupNavigation() {
     });
   }
 
-  // "Voir tout >" Conversations Récentes link
+  // "Voir tout >" Conversations RÃ©centes link
   const seeAllChats = document.querySelector(".see-all-chats-link");
   if (seeAllChats) {
     seeAllChats.addEventListener("click", (e) => {
@@ -452,7 +452,7 @@ function setupNavigation() {
     });
   }
 
-  // Recent WhatsApp Conversation Rows (Fatou Diallo, Ibrahim Koné, Mariam Traoré)
+  // Recent WhatsApp Conversation Rows (Fatou Diallo, Ibrahim KonÃ©, Mariam TraorÃ©)
   document.querySelectorAll(".mobile-chat-row").forEach(row => {
     row.addEventListener("click", () => {
       showView("inbox");
@@ -465,15 +465,15 @@ function setupNavigation() {
         targetConv = {
           id: "conv_sim_" + Date.now(),
           name: contactName,
-          phone: contactPhone + " • Abidjan, CI",
+          phone: contactPhone + " â€¢ Abidjan, CI",
           avatar: contactName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
           lastMessage: preview,
-          time: "À l'instant",
+          time: "Ã€ l'instant",
           unread: false,
           aiActive: true,
           tag: "Prospect Chaud",
           messages: [
-            { sender: "client", text: preview, time: "À l'instant" }
+            { sender: "client", text: preview, time: "Ã€ l'instant" }
           ]
         };
       }
@@ -619,14 +619,14 @@ function setupMobileSidebar() {
     backdrop.addEventListener("click", closeMenu);
   }
 
-  // Empêche la fermeture quand on clique à l'intérieur du tiroir
+  // EmpÃªche la fermeture quand on clique Ã  l'intÃ©rieur du tiroir
   if (sidebar) {
     sidebar.addEventListener("click", (e) => {
       e.stopPropagation();
     });
   }
 
-  // Fermeture avec la touche Échap
+  // Fermeture avec la touche Ã‰chap
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && sidebar && sidebar.classList.contains("open")) {
       closeMenu(e);
@@ -687,7 +687,7 @@ function setupModals() {
       e.preventDefault();
       const campaignName = document.getElementById("broadcast-name").value;
       closeBroadcastModal();
-      showToast(`Diffusion "${campaignName}" programmée avec succès via SafeSend™ !`, "success");
+      showToast(`Diffusion "${campaignName}" programmÃ©e avec succÃ¨s via SafeSendâ„¢ !`, "success");
       broadcastForm.reset();
     });
   }
@@ -697,7 +697,7 @@ function setupModals() {
   if (simScanBtn) {
     simScanBtn.addEventListener("click", () => {
       closeQrModal();
-      showToast("Appareil WhatsApp synchronisé avec succès en mode Coexistence !", "success");
+      showToast("Appareil WhatsApp synchronisÃ© avec succÃ¨s en mode Coexistence !", "success");
     });
   }
 }
@@ -746,7 +746,7 @@ function initSalesActivityChart() {
       labels: dataset.labels,
       datasets: [
         {
-          label: currentCurrency === "XOF" ? "Ventes Encaissées (XOF)" : "Ventes Encaissées ($)",
+          label: currentCurrency === "XOF" ? "Ventes EncaissÃ©es (XOF)" : "Ventes EncaissÃ©es ($)",
           data: salesData,
           borderColor: "#25d366",
           backgroundColor: (context) => {
@@ -769,7 +769,7 @@ function initSalesActivityChart() {
           yAxisID: "y"
         },
         {
-          label: "Conversations Automatisées IA",
+          label: "Conversations AutomatisÃ©es IA",
           data: dataset.conversations,
           borderColor: "#8b5cf6",
           borderDash: [5, 4],
@@ -875,14 +875,14 @@ function initHourlyChart() {
       labels: ["08h", "10h", "12h", "14h", "16h", "18h", "20h", "22h", "00h"],
       datasets: [
         {
-          label: "Commandes Clôturées",
+          label: "Commandes ClÃ´turÃ©es",
           data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
           backgroundColor: "rgba(37, 211, 102, 0.75)",
           borderRadius: 6,
           hoverBackgroundColor: "rgba(37, 211, 102, 1)"
         },
         {
-          label: "Messages Reçus",
+          label: "Messages ReÃ§us",
           data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
           backgroundColor: "rgba(6, 182, 212, 0.4)",
           borderRadius: 6,
@@ -926,7 +926,7 @@ function setupChartFilters() {
 }
 
 function isCurrentUserDemo() {
-  return false; // Tous les comptes en production démarrent à 0
+  return false; // Tous les comptes en production dÃ©marrent Ã  0
 }
 
 function getUserKpis() {
@@ -934,15 +934,15 @@ function getUserKpis() {
     salesUsd: 0,
     salesXof: 0,
     salesTrend: "0%",
-    salesNote: "En attente de vos premières commandes WhatsApp",
+    salesNote: "En attente de vos premiÃ¨res commandes WhatsApp",
     conversations: 0,
     conversationsTrend: "0%",
-    conversationsNote: "Votre commercial IA est prêt et en attente",
+    conversationsNote: "Votre commercial IA est prÃªt et en attente",
     conversionRate: "0.0%",
     conversionTrend: "0%",
-    conversionNote: "Taux calculé dès vos premières commandes",
+    conversionNote: "Taux calculÃ© dÃ¨s vos premiÃ¨res commandes",
     abandonedRecovered: 0,
-    abandonedRecoveredRate: "0 relancé",
+    abandonedRecoveredRate: "0 relancÃ©",
     abandonedSavedUsd: 0,
     abandonedSavedXof: 0
   };
@@ -1029,7 +1029,7 @@ function renderKpis() {
     const savedFormatted = currentCurrency === "USD" 
       ? `$${kpis.abandonedSavedUsd.toLocaleString()}` 
       : `${kpis.abandonedSavedXof.toLocaleString()} XOF`;
-    kpiCartsNote.innerHTML = `Revenus sauvés : <strong class="kpi-val-currency">${savedFormatted}</strong>`;
+    kpiCartsNote.innerHTML = `Revenus sauvÃ©s : <strong class="kpi-val-currency">${savedFormatted}</strong>`;
   }
 }
 
@@ -1045,9 +1045,9 @@ function renderActivityFeed() {
         </div>
         <div class="activity-info">
           <div class="activity-text">
-            <strong>Votre instance VANDIA IA est active et prête !</strong> Les commandes WhatsApp et paiements Wave/OM apparaîtront ici en direct.
+            <strong>Votre instance VANDIA IA est active et prÃªte !</strong> Les commandes WhatsApp et paiements Wave/OM apparaÃ®tront ici en direct.
           </div>
-          <div class="activity-meta">À l'instant • Mode Réel Actif</div>
+          <div class="activity-meta">Ã€ l'instant â€¢ Mode RÃ©el Actif</div>
         </div>
       </div>
     `;
@@ -1061,9 +1061,9 @@ function renderActivityFeed() {
       </div>
       <div class="activity-info">
         <div class="activity-text">
-          Paiement reçu de <strong>Amina Traoré</strong> via Wave (<strong>25 000 XOF</strong>) après recommandation de l'Agent IA.
+          Paiement reÃ§u de <strong>Amina TraorÃ©</strong> via Wave (<strong>25 000 XOF</strong>) aprÃ¨s recommandation de l'Agent IA.
         </div>
-        <div class="activity-meta">Il y a 3 minutes • Tunnel Vente Flash WhatsApp</div>
+        <div class="activity-meta">Il y a 3 minutes â€¢ Tunnel Vente Flash WhatsApp</div>
       </div>
     </div>
     <div class="activity-item">
@@ -1072,9 +1072,9 @@ function renderActivityFeed() {
       </div>
       <div class="activity-info">
         <div class="activity-text">
-          Relance automatique panier abandonné envoyée à <strong>Marc Koffi</strong> (Panier: 45 000 XOF).
+          Relance automatique panier abandonnÃ© envoyÃ©e Ã  <strong>Marc Koffi</strong> (Panier: 45 000 XOF).
         </div>
-        <div class="activity-meta">Il y a 14 minutes • Relance Panier 48h</div>
+        <div class="activity-meta">Il y a 14 minutes â€¢ Relance Panier 48h</div>
       </div>
     </div>
     <div class="activity-item">
@@ -1083,9 +1083,9 @@ function renderActivityFeed() {
       </div>
       <div class="activity-info">
         <div class="activity-text">
-          L'Agent IA a répondu à <strong>Fatou Diallo</strong> concernant les délais de livraison à Dakar.
+          L'Agent IA a rÃ©pondu Ã  <strong>Fatou Diallo</strong> concernant les dÃ©lais de livraison Ã  Dakar.
         </div>
-        <div class="activity-meta">Il y a 32 minutes • FAQ &amp; Service Client Auto</div>
+        <div class="activity-meta">Il y a 32 minutes â€¢ FAQ &amp; Service Client Auto</div>
       </div>
     </div>
     <div class="activity-item">
@@ -1094,9 +1094,9 @@ function renderActivityFeed() {
       </div>
       <div class="activity-info">
         <div class="activity-text">
-          Campagne <em>Promo Flash VIP Weekend</em> terminée : <strong>1 500 contacts</strong> touchés, 94.2% taux d'ouverture.
+          Campagne <em>Promo Flash VIP Weekend</em> terminÃ©e : <strong>1 500 contacts</strong> touchÃ©s, 94.2% taux d'ouverture.
         </div>
-        <div class="activity-meta">Il y a 1 heure • Diffusion SafeSend™</div>
+        <div class="activity-meta">Il y a 1 heure â€¢ Diffusion SafeSendâ„¢</div>
       </div>
     </div>
   `;
@@ -1120,14 +1120,14 @@ function setupCurrencyToggle() {
       // Update Chart label & dataset
       const legendSales = document.getElementById("chart-legend-sales-label");
       if (legendSales) {
-        legendSales.textContent = currentCurrency === "USD" ? "Ventes Encaissées ($)" : "Ventes Encaissées (FCFA)";
+        legendSales.textContent = currentCurrency === "USD" ? "Ventes EncaissÃ©es ($)" : "Ventes EncaissÃ©es (FCFA)";
       }
 
       const activePill = document.querySelector("#chart-filter-group .chart-pill-btn.active");
       const currentPeriod = activePill ? activePill.getAttribute("data-period") : "14";
       updateChartPeriod(currentPeriod);
 
-      showToast(`Devise d'affichage basculée sur : ${currentCurrency}`, "info");
+      showToast(`Devise d'affichage basculÃ©e sur : ${currentCurrency}`, "info");
     });
   });
 }
@@ -1200,12 +1200,12 @@ function setupInboxInteraction() {
         aiBadge.innerHTML = `<i class="fa-solid fa-robot"></i><span class="chat-ai-status-text">IA Active</span>`;
         aiBadge.style.color = "var(--whatsapp-green)";
         aiBadge.style.borderColor = "rgba(37, 211, 102, 0.3)";
-        showToast("Agent IA réactivé sur cette conversation", "info");
+        showToast("Agent IA rÃ©activÃ© sur cette conversation", "info");
       } else {
         aiBadge.innerHTML = `<i class="fa-solid fa-user-check"></i><span class="chat-ai-status-text">Relais Humain</span>`;
         aiBadge.style.color = "var(--cyan)";
         aiBadge.style.borderColor = "rgba(6, 182, 212, 0.3)";
-        showToast("Prise en main manuelle activée", "info");
+        showToast("Prise en main manuelle activÃ©e", "info");
       }
     });
   }
@@ -1262,7 +1262,7 @@ function renderConversationList() {
         found.unread = false;
         loadConversation(found);
 
-        // Sur mobile, bascule vers la fenêtre de discussion active
+        // Sur mobile, bascule vers la fenÃªtre de discussion active
         const inboxLayout = document.querySelector(".inbox-layout");
         if (inboxLayout) inboxLayout.classList.add("chat-open");
       }
@@ -1319,10 +1319,10 @@ function renderChatMessages() {
 
 function simulateClientResponse() {
   const responses = [
-    "D'accord, je regarde ça de suite !",
-    "C'est noté, je valide le paiement Wave dès que possible.",
-    "Merci beaucoup pour la rapidité de réponse !",
-    "Pouvez-vous me confirmer le numéro pour la livraison ?"
+    "D'accord, je regarde Ã§a de suite !",
+    "C'est notÃ©, je valide le paiement Wave dÃ¨s que possible.",
+    "Merci beaucoup pour la rapiditÃ© de rÃ©ponse !",
+    "Pouvez-vous me confirmer le numÃ©ro pour la livraison ?"
   ];
   const randomResp = responses[Math.floor(Math.random() * responses.length)];
   const now = new Date();
@@ -1381,7 +1381,7 @@ function renderBroadcastCampaigns() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          Aucune campagne de diffusion enregistrée. Cliquez sur « Nouvelle Diffusion » pour programmer votre premier envoi.
+          Aucune campagne de diffusion enregistrÃ©e. Cliquez sur Â« Nouvelle Diffusion Â» pour programmer votre premier envoi.
         </td>
       </tr>
     `;
@@ -1413,7 +1413,7 @@ function renderAutomations() {
           </div>
           <div>
             <h3 style="font-size: 15px; font-weight: 700;">${auto.title}</h3>
-            <span style="font-size: 11.5px; color: var(--text-muted);">Déclencheur : ${auto.trigger}</span>
+            <span style="font-size: 11.5px; color: var(--text-muted);">DÃ©clencheur : ${auto.trigger}</span>
           </div>
         </div>
         <label class="switch-control">
@@ -1424,12 +1424,12 @@ function renderAutomations() {
 
       <div class="auto-stats-row">
         <div class="auto-stat-item">
-          <span class="auto-stat-val">${auto.steps} étapes</span>
+          <span class="auto-stat-val">${auto.steps} Ã©tapes</span>
           <span class="auto-stat-lbl">Structure Funnel</span>
         </div>
         <div class="auto-stat-item">
           <span class="auto-stat-val">${auto.contacts}</span>
-          <span class="auto-stat-lbl">Passages Enregistrés</span>
+          <span class="auto-stat-lbl">Passages EnregistrÃ©s</span>
         </div>
         <div class="auto-stat-item">
           <span class="auto-stat-val" style="color: var(--whatsapp-green);">${auto.conversion}</span>
@@ -1438,7 +1438,7 @@ function renderAutomations() {
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn-secondary-glass" style="padding: 6px 14px; font-size: 12px;">Éditer le flux</button>
+        <button class="btn-secondary-glass" style="padding: 6px 14px; font-size: 12px;">Ã‰diter le flux</button>
         <button class="btn-primary-glow" style="padding: 6px 14px; font-size: 12px;">Tester</button>
       </div>
     </div>
@@ -1453,7 +1453,7 @@ function renderContacts() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          Votre base CRM est prête. Vos prospects WhatsApp seront enregistrés automatiquement dès leur premier message.
+          Votre base CRM est prÃªte. Vos prospects WhatsApp seront enregistrÃ©s automatiquement dÃ¨s leur premier message.
         </td>
       </tr>
     `;
@@ -1483,7 +1483,7 @@ function renderContacts() {
   // Attach direct chat trigger
   tbody.querySelectorAll(".btn-open-chat-contact").forEach(btn => {
     btn.addEventListener("click", () => {
-      showView("inbox", "Boîte de Réception WhatsApp");
+      showView("inbox", "BoÃ®te de RÃ©ception WhatsApp");
     });
   });
 }
@@ -1497,7 +1497,7 @@ function renderTemplates() {
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h3 style="font-size: 14.5px; font-weight: 700;">${tpl.name}</h3>
-          <span style="font-size: 11px; color: var(--text-muted);">Catégorie : ${tpl.category}</span>
+          <span style="font-size: 11px; color: var(--text-muted);">CatÃ©gorie : ${tpl.category}</span>
         </div>
         <span class="badge badge-${tpl.statusType}">${tpl.status}</span>
       </div>
@@ -1548,7 +1548,7 @@ function renderIntegrations() {
 }
 
 // ==============================================================================
-// 11. GLOBAL SEARCH (⌘K / Ctrl+K)
+// 11. GLOBAL SEARCH (âŒ˜K / Ctrl+K)
 // ==============================================================================
 function setupSearch() {
   const searchBtn = document.getElementById("header-search-btn");
@@ -1600,18 +1600,18 @@ function renderSearchResults(query) {
   if (!resultsContainer) return;
 
   const searchableItems = [
-    { title: "Vue d'ensemble", desc: "Statistiques et activité temps réel", view: "overview", icon: "fa-chart-line" },
-    { title: "Boîte de Réception", desc: "Discussions en direct avec vos clients WhatsApp", view: "inbox", icon: "fa-inbox" },
-    { title: "Agent IA Vendeur", desc: "Configuration des règles et prompt commercial", view: "ai-agent", icon: "fa-robot" },
-    { title: "Diffusions de Masse", desc: "Envoyer une campagne marketing à tous vos contacts", view: "broadcast", icon: "fa-bullhorn" },
-    { title: "Flow Builder (Funnels)", desc: "Tunnels de vente et arbres automatisés", view: "automations", icon: "fa-diagram-project" },
-    { title: "Contacts & CRM", desc: "Base de prospects, clients et données d'achat", view: "contacts", icon: "fa-users" },
-    { title: "Modèles WhatsApp", desc: "Templates officiels approuvés par Meta", view: "templates", icon: "fa-file-lines" },
-    { title: "Numéros & Coexistence", desc: "Gérer la liaison WhatsApp Business", view: "devices", icon: "fa-mobile-screen-button" },
-    { title: "Intégrations & Paiements", desc: "Wave, Orange Money, MoMo, Stripe", view: "integrations", icon: "fa-plug-circle-bolt" },
-    { title: "Statistiques & ROI", desc: "Analyse approfondie de rentabilité", view: "analytics", icon: "fa-chart-pie" },
-    { title: "Amina Traoré", desc: "Contact VIP (+225 07 48 99 12)", view: "inbox", icon: "fa-user" },
-    { title: "Marc Koffi", desc: "Panier abandonné (+225 05 99 22 11)", view: "inbox", icon: "fa-user" }
+    { title: "Vue d'ensemble", desc: "Statistiques et activitÃ© temps rÃ©el", view: "overview", icon: "fa-chart-line" },
+    { title: "BoÃ®te de RÃ©ception", desc: "Discussions en direct avec vos clients WhatsApp", view: "inbox", icon: "fa-inbox" },
+    { title: "Agent IA Vendeur", desc: "Configuration des rÃ¨gles et prompt commercial", view: "ai-agent", icon: "fa-robot" },
+    { title: "Diffusions de Masse", desc: "Envoyer une campagne marketing Ã  tous vos contacts", view: "broadcast", icon: "fa-bullhorn" },
+    { title: "Flow Builder (Funnels)", desc: "Tunnels de vente et arbres automatisÃ©s", view: "automations", icon: "fa-diagram-project" },
+    { title: "Contacts & CRM", desc: "Base de prospects, clients et donnÃ©es d'achat", view: "contacts", icon: "fa-users" },
+    { title: "ModÃ¨les WhatsApp", desc: "Templates officiels approuvÃ©s par Meta", view: "templates", icon: "fa-file-lines" },
+    { title: "NumÃ©ros & Coexistence", desc: "GÃ©rer la liaison WhatsApp Business", view: "devices", icon: "fa-mobile-screen-button" },
+    { title: "IntÃ©grations & Paiements", desc: "Wave, Orange Money, MoMo, Stripe", view: "integrations", icon: "fa-plug-circle-bolt" },
+    { title: "Statistiques & ROI", desc: "Analyse approfondie de rentabilitÃ©", view: "analytics", icon: "fa-chart-pie" },
+    { title: "Amina TraorÃ©", desc: "Contact VIP (+225 07 48 99 12)", view: "inbox", icon: "fa-user" },
+    { title: "Marc Koffi", desc: "Panier abandonnÃ© (+225 05 99 22 11)", view: "inbox", icon: "fa-user" }
   ];
 
   const filtered = query
@@ -1619,7 +1619,7 @@ function renderSearchResults(query) {
     : searchableItems.slice(0, 6);
 
   if (filtered.length === 0) {
-    resultsContainer.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--text-muted);">Aucun résultat trouvé pour "${escapeHtml(query)}".</div>`;
+    resultsContainer.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--text-muted);">Aucun rÃ©sultat trouvÃ© pour "${escapeHtml(query)}".</div>`;
     return;
   }
 
@@ -1656,7 +1656,7 @@ function setupActionButtons() {
   const floatBtn = document.getElementById("floating-whatsapp-btn");
   if (floatBtn) {
     floatBtn.addEventListener("click", () => {
-      showView("inbox", "Boîte de Réception WhatsApp");
+      showView("inbox", "BoÃ®te de RÃ©ception WhatsApp");
       showToast("Ouverture de la discussion client en direct", "info");
     });
   }
@@ -1665,7 +1665,7 @@ function setupActionButtons() {
   const saveAgentBtn = document.getElementById("btn-save-agent");
   if (saveAgentBtn) {
     saveAgentBtn.addEventListener("click", () => {
-      showToast("Configuration de l'Agent IA synchronisée avec succès !", "success");
+      showToast("Configuration de l'Agent IA synchronisÃ©e avec succÃ¨s !", "success");
     });
   }
 
@@ -1680,7 +1680,7 @@ function setupActionButtons() {
 
   // Shortcut tiles
   document.querySelectorAll("[data-action='go-inbox']").forEach(btn => {
-    btn.addEventListener("click", () => showView("inbox", "Boîte de Réception WhatsApp"));
+    btn.addEventListener("click", () => showView("inbox", "BoÃ®te de RÃ©ception WhatsApp"));
   });
   document.querySelectorAll("[data-action='go-automations']").forEach(btn => {
     btn.addEventListener("click", () => showView("automations", "Flow Builder & Tunnels de Vente"));
@@ -1693,7 +1693,7 @@ function setupActionButtons() {
   const bannerAgentBtn = document.getElementById("btn-banner-agent");
   if (bannerAgentBtn) {
     bannerAgentBtn.addEventListener("click", () => {
-      showView("ai-agent", "Agent IA Vendeur & Paramétrage");
+      showView("ai-agent", "Agent IA Vendeur & ParamÃ©trage");
     });
   }
 
@@ -1701,7 +1701,7 @@ function setupActionButtons() {
   const notifBtn = document.getElementById("btn-notifications");
   if (notifBtn) {
     notifBtn.addEventListener("click", () => {
-      showToast("Toutes vos notifications sont à jour (0 non lue).", "info");
+      showToast("Toutes vos notifications sont Ã  jour (0 non lue).", "info");
     });
   }
 
@@ -1709,7 +1709,7 @@ function setupActionButtons() {
   const testWebhookBtn = document.getElementById("btn-test-webhook");
   if (testWebhookBtn) {
     testWebhookBtn.addEventListener("click", () => {
-      showToast("Webhook testé : HTTP 200 OK (Latence : 142ms)", "success");
+      showToast("Webhook testÃ© : HTTP 200 OK (Latence : 142ms)", "success");
     });
   }
 
@@ -1717,9 +1717,9 @@ function setupActionButtons() {
   const exportCrmBtn = document.getElementById("btn-export-crm");
   if (exportCrmBtn) {
     exportCrmBtn.addEventListener("click", () => {
-      showToast("Génération de l'export contacts_crm_vandia.csv...", "info");
+      showToast("GÃ©nÃ©ration de l'export contacts_crm_vandia.csv...", "info");
       setTimeout(() => {
-        showToast("Téléchargement du fichier CSV terminé !", "success");
+        showToast("TÃ©lÃ©chargement du fichier CSV terminÃ© !", "success");
       }, 1000);
     });
   }
@@ -1728,7 +1728,7 @@ function setupActionButtons() {
   const logoutBtn = document.getElementById("btn-logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      if (confirm("Voulez-vous vraiment vous déconnecter de votre espace VANDIA AI ?")) {
+      if (confirm("Voulez-vous vraiment vous dÃ©connecter de votre espace VANDIA AI ?")) {
         if (window.AuthEngine) {
           window.AuthEngine.logout();
         } else {
@@ -1815,7 +1815,7 @@ function setupProfileSystem() {
     if (phoneEl) phoneEl.textContent = user.fullPhone || user.phoneNumber || "";
 
     const roleEl = document.getElementById("settings-display-role");
-    if (roleEl) roleEl.textContent = user.role || "Propriétaire";
+    if (roleEl) roleEl.textContent = user.role || "PropriÃ©taire";
 
     const avatarBox = document.getElementById("settings-avatar-display");
     if (avatarBox) {
@@ -1919,12 +1919,12 @@ function setupProfileSystem() {
 
       const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
       if (!allowedMimes.includes(file.type.toLowerCase())) {
-        alert("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP). Les formats vectoriels SVG ne sont pas autorisés pour des raisons de sécurité.");
+        alert("Veuillez sÃ©lectionner un fichier image valide (JPG, PNG, WebP). Les formats vectoriels SVG ne sont pas autorisÃ©s pour des raisons de sÃ©curitÃ©.");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("La taille de l'image ne doit pas dépasser 5 Mo.");
+        alert("La taille de l'image ne doit pas dÃ©passer 5 Mo.");
         return;
       }
 
@@ -1934,7 +1934,7 @@ function setupProfileSystem() {
         if (typeof dataUrl === "string" && sanitizeUrl(dataUrl)) {
           tempAvatarBase64 = dataUrl;
           if (avatarPreview) {
-            avatarPreview.innerHTML = `<img src="${sanitizeUrl(tempAvatarBase64)}" class="avatar-preview-img" alt="Aperçu photo">`;
+            avatarPreview.innerHTML = `<img src="${sanitizeUrl(tempAvatarBase64)}" class="avatar-preview-img" alt="AperÃ§u photo">`;
           }
         }
       };
@@ -1972,7 +1972,7 @@ function setupProfileSystem() {
       const role = document.getElementById("profile-role")?.value.trim() || "";
 
       if (!firstName) {
-        alert("Veuillez renseigner votre prénom.");
+        alert("Veuillez renseigner votre prÃ©nom.");
         return;
       }
       if (!lastName) {
@@ -1980,7 +1980,7 @@ function setupProfileSystem() {
         return;
       }
       if (window.AuthEngine && !window.AuthEngine.isValidPhone(phoneNumber)) {
-        alert("Veuillez renseigner un numéro WhatsApp valide.");
+        alert("Veuillez renseigner un numÃ©ro WhatsApp valide.");
         return;
       }
 
@@ -2014,9 +2014,9 @@ function setupProfileSystem() {
         closeProfileModal();
         syncSettingsCard(res.user);
         window.AuthEngine.syncProfileUI(res.user);
-        window.AuthEngine.showToast("Profil mis à jour avec succès.", "success");
+        window.AuthEngine.showToast("Profil mis Ã  jour avec succÃ¨s.", "success");
       } else {
-        alert(res.error || "Une erreur est survenue lors de la mise à jour.");
+        alert(res.error || "Une erreur est survenue lors de la mise Ã  jour.");
       }
     });
   }
@@ -2130,20 +2130,20 @@ function setupBillingAndAffiliate() {
 
     const isAnnual = selectedCycle === "annual";
 
-    let planName = "Formule Pro 🚀";
+    let planName = "Formule Pro ðŸš€";
     let basePriceMonthly = 14900;
 
     if (selectedTier === "basic") {
-      planName = "Formule Basic 🦾";
+      planName = "Formule Basic ðŸ¦¾";
       basePriceMonthly = 7900;
     } else if (selectedTier === "business" || selectedTier === "enterprise") {
-      planName = "Formule Business 💎";
+      planName = "Formule Business ðŸ’Ž";
       basePriceMonthly = 30000;
     }
 
     if (titleEl) titleEl.textContent = planName;
     if (cycleEl) {
-      cycleEl.textContent = isAnnual ? "Annuel (-20% déduit)" : "Mensuel (Sans engagement)";
+      cycleEl.textContent = isAnnual ? "Annuel (-20% dÃ©duit)" : "Mensuel (Sans engagement)";
     }
 
     if (amountEl) {
@@ -2255,7 +2255,7 @@ function setupBillingAndAffiliate() {
 
       if (submitBtn) {
         submitBtn.disabled = true;
-        if (submitText) submitText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement sécurisé...';
+        if (submitText) submitText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement sÃ©curisÃ©...';
       }
 
       setTimeout(() => {
@@ -2265,16 +2265,16 @@ function setupBillingAndAffiliate() {
         }
 
         // Update User Plan Mock
-        let planTitle = "Formule Pro 🚀";
+        let planTitle = "Formule Pro ðŸš€";
         let planTokens = 6000;
         let planPriceStr = "14 900 FCFA";
 
         if (selectedTier === "basic") {
-          planTitle = "Formule Basic 🦾";
+          planTitle = "Formule Basic ðŸ¦¾";
           planTokens = 2500;
           planPriceStr = "7 900 FCFA";
         } else if (selectedTier === "business" || selectedTier === "enterprise") {
-          planTitle = "Formule Business 💎";
+          planTitle = "Formule Business ðŸ’Ž";
           planTokens = 15000;
           planPriceStr = "30 000 FCFA";
         }
@@ -2287,10 +2287,10 @@ function setupBillingAndAffiliate() {
         if (sidebarPlanName) sidebarPlanName.textContent = planTitle;
 
         const subTokensMax = document.getElementById("sub-tokens-max");
-        if (subTokensMax) subTokensMax.textContent = `Max ${planTokens.toLocaleString("fr-FR")} crédits`;
+        if (subTokensMax) subTokensMax.textContent = `Max ${planTokens.toLocaleString("fr-FR")} crÃ©dits`;
 
         const subTokensUsed = document.getElementById("sub-tokens-used");
-        if (subTokensUsed) subTokensUsed.textContent = "0 crédit";
+        if (subTokensUsed) subTokensUsed.textContent = "0 crÃ©dit";
 
         const navBadgePlan = document.getElementById("nav-badge-plan");
         if (navBadgePlan) {
@@ -2305,12 +2305,12 @@ function setupBillingAndAffiliate() {
 
         const billingTitleDisplay = document.getElementById("billing-title-display");
         if (billingTitleDisplay) {
-          billingTitleDisplay.textContent = "Votre abonnement est actif et opérationnel !";
+          billingTitleDisplay.textContent = "Votre abonnement est actif et opÃ©rationnel !";
         }
 
         const billingSubtitleDisplay = document.getElementById("billing-subtitle-display");
         if (billingSubtitleDisplay) {
-          billingSubtitleDisplay.textContent = "Vos réponses IA 24h/24, automatisations WhatsApp et intégrations de paiement sont pleinement actives sans coupure.";
+          billingSubtitleDisplay.textContent = "Vos rÃ©ponses IA 24h/24, automatisations WhatsApp et intÃ©grations de paiement sont pleinement actives sans coupure.";
         }
 
         const billingDaysLeft = document.getElementById("billing-days-left");
@@ -2324,19 +2324,19 @@ function setupBillingAndAffiliate() {
           const payLabel = selectedPayMethod === "wave" ? "Wave CI/SN" : selectedPayMethod === "orange" ? "Orange Money" : selectedPayMethod === "mtn" ? "MTN MoMo" : "Carte Bancaire";
           const newRow = document.createElement("tr");
           newRow.innerHTML = `
-            <td>À l'instant</td>
+            <td>Ã€ l'instant</td>
             <td><strong>${planTitle}</strong></td>
             <td>${payLabel}</td>
             <td>${planPriceStr}</td>
-            <td><span class="badge badge-green">Payé</span></td>
-            <td><button class="btn-secondary-glass btn-receipt-view" style="padding: 4px 10px; font-size: 11.5px;">Télécharger</button></td>
+            <td><span class="badge badge-green">PayÃ©</span></td>
+            <td><button class="btn-secondary-glass btn-receipt-view" style="padding: 4px 10px; font-size: 11.5px;">TÃ©lÃ©charger</button></td>
           `;
           historyTbody.insertBefore(newRow, historyTbody.firstChild);
         }
 
         closePlanModal();
 
-        showToast(`🎉 Félicitations ! Votre ${planTitle} a été activée avec succès.`, "success");
+        showToast(`ðŸŽ‰ FÃ©licitations ! Votre ${planTitle} a Ã©tÃ© activÃ©e avec succÃ¨s.`, "success");
       }, 1200);
     });
   }
@@ -2366,7 +2366,7 @@ function setupBillingAndAffiliate() {
 
       function triggerCopySuccess() {
         const originalContent = copyAffiliateBtn.innerHTML;
-        copyAffiliateBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>✓ Lien copié !</span>';
+        copyAffiliateBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>âœ“ Lien copiÃ© !</span>';
         copyAffiliateBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
         
         setTimeout(() => {
@@ -2374,7 +2374,7 @@ function setupBillingAndAffiliate() {
           copyAffiliateBtn.style.background = "";
         }, 2500);
 
-        showToast("Lien de parrainage copié ! Partagez-le pour toucher 20% chaque mois.", "success");
+        showToast("Lien de parrainage copiÃ© ! Partagez-le pour toucher 20% chaque mois.", "success");
       }
     });
   }
@@ -2398,8 +2398,81 @@ function setupBillingAndAffiliate() {
       }
 
       closePayoutModal();
-      showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyée avec succès ! Traitement sous 2h à 24h ouvrées via Wave/MoMo.`, "success");
+      showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyÃ©e avec succÃ¨s ! Traitement sous 2h Ã  24h ouvrÃ©es via Wave/MoMo.`, "success");
       payoutForm.reset();
     });
   }
 }
+
+// --- LOGIQUE DE CONNEXION WHATSAPP V2 (SAAS) ---
+(function() {
+    function initWhatsAppSaaS() {
+        const qrModal = document.getElementById('qr-modal');
+        if(!qrModal) return;
+        const qrBox = qrModal.querySelector('.qr-code-box');
+        if(!qrBox) return;
+        
+        const originalQrContent = qrBox.innerHTML;
+        const userId = localStorage.getItem('vendia_user_id') || 'demo-user-123';
+        let statusInterval;
+
+        // On intercepte les clics sur tous les boutons pour ouvrir le QR code
+        document.body.addEventListener('click', (e) => {
+            if(e.target.closest('.btn-open-qr')) {
+                startWhatsApp();
+            }
+            if(e.target.closest('[data-close-modal="qr-modal"]')) {
+                clearInterval(statusInterval);
+                qrBox.innerHTML = originalQrContent;
+            }
+        });
+
+        async function startWhatsApp() {
+            // Remplacer l'image SVG par un loader
+            qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">⏳ Démarrage du moteur WhatsApp...</p></div>';
+
+            try {
+                await fetch('http://localhost:8080/api/whatsapp/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId })
+                });
+
+                statusInterval = setInterval(checkStatus, 2000);
+            } catch (error) {
+                qrBox.innerHTML = '<p style="color:red; font-weight:bold;">❌ Erreur de serveur (Vérifiez que le terminal tourne).</p>';
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const res = await fetch('http://localhost:8080/api/whatsapp/status/' + userId);
+                const data = await res.json();
+
+                if (data.status === 'QR_READY' && data.qr) {
+                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="Vrai QR Code" style="width: 100%; height: 100%; border-radius: 8px;">';
+                } 
+                else if (data.status === 'CONNECTED') {
+                    clearInterval(statusInterval);
+                    qrModal.classList.remove('active');
+                    
+                    const badge = document.getElementById('sidebar-status-badge');
+                    if(badge) {
+                        badge.textContent = "Connecté";
+                        badge.className = "status-badge-mini badge-green";
+                    }
+                    const num = document.getElementById('sidebar-connected-num');
+                    if(num) num.textContent = "IA Active";
+                    
+                    alert("🎉 Succès ! WhatsApp est connecté. L'IA va maintenant répondre aux messages !");
+                }
+            } catch (error) {}
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWhatsAppSaaS);
+    } else {
+        initWhatsAppSaaS();
+    }
+})();
