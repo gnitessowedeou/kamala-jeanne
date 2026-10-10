@@ -146,3 +146,6 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`[KAMALA JEANNE] Moteur Backend démarré sur http://localhost:${PORT}`);
 });
+
+// Fix pour forcer le maintien du processus Node.js en vie
+setInterval(() => {}, 1000 * 60 * 60);
