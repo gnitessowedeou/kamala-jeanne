@@ -2017,12 +2017,12 @@ function setupBillingAndAffiliate() {
   // 1. Upgrade Trigger Buttons
   const headerUpgradeBtn = document.getElementById("btn-header-upgrade");
   if (headerUpgradeBtn) {
-    headerUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
+    headerUpgradeBtn.addEventListener("click", () => showView("billing"));
   }
 
   const sidebarUpgradeBtn = document.getElementById("btn-sidebar-upgrade");
   if (sidebarUpgradeBtn) {
-    sidebarUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
+    sidebarUpgradeBtn.addEventListener("click", () => showView("billing"));
   }
 
     document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
