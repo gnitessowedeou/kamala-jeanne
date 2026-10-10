@@ -1,3 +1,13 @@
+
+// Capture d'affiliation
+(function() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get('ref');
+        if (ref) localStorage.setItem('vendia_ref', ref);
+    } catch(e) {}
+})();
+
 ﻿/**
  * ==============================================================================
  * VENDIA AI — CORE AUTHENTICATION & SUPABASE REST PROFILE ENGINE
@@ -273,7 +283,9 @@
             email: cleanEmail,
             whatsapp_number: fullPhone,
             avatar_url: "",
-            credits: 100
+            credits: 100,
+            affiliate_code: (firstName.trim().substring(0,3) + Math.floor(Math.random()*10000)).toUpperCase(),
+            referred_by: localStorage.getItem('vendia_ref') || null
           }, accessToken);
         } catch (profileErr) {
           console.warn("Avertissement upsert table profiles:", profileErr);
