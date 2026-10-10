@@ -122,6 +122,49 @@ let activeConversation = MOCK_DATA.conversations[0];
 // 3. INITIALIZATION
 // ==============================================================================
 document.addEventListener("DOMContentLoaded", () => {
+
+  // Correct Action Chips (Quick Replies)
+  const quickChips = document.querySelectorAll('.chat-quick-actions .quick-chip');
+  quickChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      alert("Cette fonctionnalité nécessitera la connexion d'un numéro WhatsApp au préalable.");
+    });
+  });
+
+  // Correct Attachment Button
+  const attachIconBtn = document.querySelector('.chat-input-bar .header-icon-btn');
+  if (attachIconBtn) {
+    attachIconBtn.addEventListener('click', () => {
+      alert("La galerie et l'envoi de fichiers seront disponibles une fois votre numéro WhatsApp lié.");
+    });
+  }
+
+
+  // Inbox Tabs
+  const inboxTabs = document.querySelectorAll('.inbox-tab-btn');
+  inboxTabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      inboxTabs.forEach(t => t.classList.remove('active'));
+      e.target.classList.add('active');
+    });
+  });
+
+  // Action Chips (Quick Replies)
+  const chips = document.querySelectorAll('.chat-quick-replies .chip-btn');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      alert("Cette fonctionnalité nécessitera la connexion d'un numéro WhatsApp au préalable.");
+    });
+  });
+
+  // Attachment Button
+  const attachBtn = document.querySelector('.chat-input-toolbar .icon-btn');
+  if (attachBtn) {
+    attachBtn.addEventListener('click', () => {
+      alert("La galerie sera disponible une fois votre numéro WhatsApp lié.");
+    });
+  }
+
   initDashboard();
 });
 
