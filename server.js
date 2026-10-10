@@ -285,6 +285,23 @@ app.post('/api/payments/webhook', async (req, res) => {
                     .eq('id', userId);
                     
                 console.log(`[PAIEMENT] Compte ${userId} recharge avec ${credits} credits.`);
+                
+                // LOGIQUE D'AFFILIATION 20%
+                try {
+                    const amountPaid = parseFloat(payload.data?.amount || "0");
+                    const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', userId).single();
+                    if (payer && payer.referred_by && amountPaid > 0) {
+                        const commission = Math.floor(amountPaid * 0.20);
+                        const { data: sponsor } = await supabase.from('profiles').select('id, affiliate_balance').eq('affiliate_code', payer.referred_by).single();
+                        if (sponsor) {
+                            const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
+                            await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
+                            console.log(`[AFFILIATION] Commission de ${commission} FCFA versee au parrain ${payer.referred_by}`);
+                        }
+                    }
+                } catch(affErr) {
+                    console.error("[AFFILIATION] Erreur webhook:", affErr.message);
+                }
             }
         }
         res.status(200).send('Webhook OK');
