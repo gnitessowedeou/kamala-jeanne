@@ -512,6 +512,45 @@
             affiliateLinkEl.value = window.location.origin + "/?ref=" + codeToUse;
         }
 
+        
+        // Update WhatsApp Limits
+        const waLimitStatus = document.getElementById("wa-limit-status");
+        if (waLimitStatus) {
+            const plan = user.plan?.name?.toLowerCase() || "";
+            let maxWa = 1;
+            if (plan.includes("pro")) maxWa = 2;
+            if (plan.includes("business")) maxWa = 5;
+            
+            // On regarde si un numero est connecte (dans le header ou sidebar)
+            const isConnected = document.getElementById('sidebar-status-badge')?.textContent.includes('Connect') ? 1 : 0;
+            
+            waLimitStatus.textContent = isConnected + " / " + maxWa + " Numéros";
+            if (isConnected >= maxWa) {
+                waLimitStatus.style.color = "#f43f5e"; // Red
+                waLimitStatus.style.background = "rgba(244, 63, 94, 0.1)";
+            } else {
+                waLimitStatus.style.color = "var(--whatsapp-green)";
+                waLimitStatus.style.background = "rgba(37, 211, 102, 0.1)";
+            }
+            
+            // Intercept QR modal button if limit reached
+            const btnAddWa = document.getElementById("btn-add-whatsapp-num");
+            if (btnAddWa) {
+                // Remove old listeners to avoid duplicates
+                const newBtn = btnAddWa.cloneNode(true);
+                btnAddWa.parentNode.replaceChild(newBtn, btnAddWa);
+                
+                newBtn.addEventListener("click", () => {
+                    if (isConnected >= maxWa) {
+                        alert("Vous avez atteint la limite de numéros pour votre forfait actuel (" + maxWa + "). Veuillez upgrader votre forfait pour en connecter d'autres.");
+                    } else {
+                        const qrModal = document.getElementById("qr-modal");
+                        if (qrModal) qrModal.classList.add("active");
+                    }
+                });
+            }
+        }
+
         const welcomeNames = document.querySelectorAll(".welcome-name");
       welcomeNames.forEach(el => {
         el.textContent = user.firstName || "Cher Partenaire";

@@ -1090,13 +1090,16 @@
         <section class="view-section" id="view-devices">
           <div class="section-header-bar">
             <div class="section-title-wrap">
-              <h2>Numéros &amp; Coexistence WhatsApp</h2>
-              <p class="section-desc">Gérez vos lignes WhatsApp Business connectées à l'API Meta Cloud avec coexistence active.</p>
-            </div>
-            <button class="btn-primary-glow btn-open-qr">
-              <i class="fa-solid fa-qrcode"></i>
-              <span>Connecter un Numéro</span>
-            </button>
+                              <h2>Numros &amp; Coexistence WhatsApp</h2>
+                <p class="section-desc">Grez vos lignes WhatsApp Business connectes  l'API Meta Cloud avec coexistence active.</p>
+              </div>
+              <div style="display:flex; align-items:center; gap: 15px;">
+                <span id="wa-limit-status" style="font-size: 14px; font-weight: 600; color: var(--amber); background: rgba(245, 158, 11, 0.1); padding: 5px 10px; border-radius: 6px;">0 / 1 Numro</span>
+                <button class="btn-primary-glow btn-open-qr" id="btn-add-whatsapp-num">
+                  <i class="fa-solid fa-qrcode"></i>
+                  <span>Connecter un Numro</span>
+                </button>
+              </div>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px;">
