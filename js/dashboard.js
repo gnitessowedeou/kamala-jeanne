@@ -1241,8 +1241,19 @@ function setupInboxInteraction() {
 }
 
 function renderConversationList() {
+  
   const listContainer = document.getElementById("inbox-conversation-list");
   if (!listContainer) return;
+  
+  if (!MOCK_DATA.conversations || MOCK_DATA.conversations.length === 0) {
+    listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 13px;">Aucune conversation pour le moment.</div>';
+    document.getElementById("chat-messages-stream").innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color: var(--text-secondary);">En attente de nouveaux messages...</div>';
+    document.getElementById("active-chat-name").textContent = "Boîte de Réception";
+    document.getElementById("active-chat-phone").textContent = "---";
+    document.getElementById("active-chat-avatar").textContent = "-";
+    return;
+  }
+
 
   listContainer.innerHTML = MOCK_DATA.conversations.map((conv, idx) => `
     <div class="conv-item ${idx === 0 ? 'active' : ''}" data-conv-id="${conv.id}">
