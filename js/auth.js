@@ -629,6 +629,12 @@
           const pct = max > 0 ? Math.min(100, Math.max(0, (used / max) * 100)).toFixed(1) : 0;
           if (planPctEl) planPctEl.textContent = `${pct}%`;
           if (planFillEl) planFillEl.style.width = `${pct}%`;
+
+            const billingCreditsDisplay = document.getElementById("billing-credits-display");
+            if (billingCreditsDisplay) {
+                billingCreditsDisplay.innerHTML = 'Crédits IA : <strong>' + (user.plan.tokensMax || 100).toLocaleString("fr-FR") + ' inclus</strong>';
+            }
+
         }
 
     },
