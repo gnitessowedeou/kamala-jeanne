@@ -149,6 +149,28 @@ const authMiddleware = async (req, res, next) => {
   return res.status(401).json({ error: 'Acc�s refus� : Authentification ou identifiant utilisateur requis.' });
 };
 
+function getChromiumExecutablePath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  const possiblePaths = [
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    '/root/.nix-profile/bin/chromium',
+    '/nix/var/nix/profiles/default/bin/chromium'
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  try {
+    const { execSync } = require('child_process');
+    const out = execSync('which chromium 2>/dev/null || which chromium-browser 2>/dev/null', { encoding: 'utf8' }).trim();
+    if (out && fs.existsSync(out)) return out;
+  } catch (e) {}
+  return undefined;
+}
+
 // === 3. GESTIONNAIRE WHATSAPP MULTI-CLIENTS ===
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes générés
@@ -168,6 +190,9 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   waStatuses[userId] = 'STARTING';
   
   // Lancement d'un navigateur invisible pour le client
+  const chromiumPath = getChromiumExecutablePath();
+  console.log(`[WA] Chemin Chromium dtect: ${chromiumPath || 'Puppeteer standard'}`);
+
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: userId }),
     puppeteer: {
@@ -181,9 +206,8 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         '--no-zygote',
         '--disable-gpu'
       ],
-      ...(process.env.PUPPETEER_EXECUTABLE_PATH ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH } : {})
-    },
-    webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }
+      ...(chromiumPath ? { executablePath: chromiumPath } : {})
+    }
   });
 
   waClients[userId] = client;

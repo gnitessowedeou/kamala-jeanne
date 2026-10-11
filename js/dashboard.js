@@ -2805,8 +2805,13 @@ function setupBillingAndAffiliate() {
             }
         });
 
-                async function startWhatsApp() {
+                let pollAttempts = 0;
+
+        async function startWhatsApp(forceRestart = false) {
             window.startWhatsApp = startWhatsApp;
+            clearInterval(statusInterval);
+            pollAttempts = 0;
+
             // S'assurer d'avoir un userId valide
             if (!userId) {
                 try {
@@ -2821,20 +2826,22 @@ function setupBillingAndAffiliate() {
                 }
             }
 
-            qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">? D�marrage du moteur WhatsApp...</p><span style="font-size:11px; color:#94a3b8; margin-top:4px;">G�n�ration du QR Code en cours...</span></div>';
+            qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">⚡ Démarrage du moteur WhatsApp...</p><span style="font-size:11px; color:#94a3b8; margin-top:4px;">Génération du QR Code en cours...</span></div>';
 
             try {
                 const res = await fetch(API_URL + '/api/whatsapp/start', {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ userId: userId })
+                    body: JSON.stringify({ userId: userId, restart: forceRestart })
                 });
                 
                 const data = await res.json().catch(() => ({}));
                 if (data.status === 'QR_READY' && data.qr) {
                     qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                    return;
                 } else if (data.status === 'CONNECTED') {
-                    qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">? Bot WhatsApp d�j� connect� !</div>';
+                    qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
+                    return;
                 }
                 
                 statusInterval = setInterval(checkStatus, 2000);
@@ -2842,15 +2849,13 @@ function setupBillingAndAffiliate() {
                 console.error("Erreur connexion WhatsApp:", error);
                 qrBox.innerHTML = `
                     <div style="padding: 14px; text-align: center;">
-                        <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">? Serveur local non connect� sur le port 8080</p>
+                        <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⚠️ Serveur Cloud temporairement injoignable</p>
                         <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                            Le moteur WhatsApp s'ex�cute sur votre machine locale.<br>
-                            1. V�rifiez que votre terminal a bien lanc� : <code style="background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 3px; color: var(--whatsapp-green);">node server.js</code><br>
-                            2. Ou ouvrez directement le tableau de bord local :<br>
-                            <a href="http://localhost:8080/dashboard.html" target="_blank" style="color: #38bdf8; font-weight: 600; text-decoration: underline; display: inline-block; margin-top: 6px;">?? Ouvrir http://localhost:8080/dashboard.html</a>
+                            Connexion à ${API_URL} en cours de synchronisation.<br>
+                            Veuillez patienter quelques secondes.
                         </p>
-                        <button class="btn-primary-glow" onclick="startWhatsApp()" style="padding: 6px 14px; font-size: 12px;">
-                            <i class="fa-solid fa-rotate-right"></i> R�essayer
+                        <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
+                            <i class="fa-solid fa-rotate-right"></i> Réessayer
                         </button>
                     </div>
                 `;
@@ -2858,12 +2863,14 @@ function setupBillingAndAffiliate() {
         }
 
         async function checkStatus() {
+            pollAttempts++;
             try {
                 const res = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 if (data.status === 'QR_READY' && data.qr) {
-                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="Vrai QR Code" style="width: 100%; height: 100%; border-radius: 8px;">';
+                    clearInterval(statusInterval);
+                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
                 } 
                 else if (data.status === 'CONNECTED') {
                     clearInterval(statusInterval);
@@ -2890,8 +2897,23 @@ function setupBillingAndAffiliate() {
                     if(num) num.textContent = "IA Active";
                     
                     if (wasActive) {
-                        showToast("🎉 Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : '', "info"));
+                        showToast("✅ Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : ''), "success");
                     }
+                }
+                else if (data.status === 'ERROR' || pollAttempts > 25) {
+                    clearInterval(statusInterval);
+                    qrBox.innerHTML = `
+                        <div style="padding: 14px; text-align: center;">
+                            <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⏳ Initialisation prolongée</p>
+                            <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                                Le navigateur Cloud redémarre sa session WhatsApp Web.<br>
+                                Cliquez ci-dessous pour actualiser la session.
+                            </p>
+                            <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
+                                <i class="fa-solid fa-rotate-right"></i> Forcer la régénération du QR Code
+                            </button>
+                        </div>
+                    `;
                 }
             } catch (error) {}
         }
