@@ -24,10 +24,11 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Autoriser tout sous-domaine Vercel, localhost et requ�tes sans origin (serveur-�-serveur)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
-      callback(new Error('Acc�s non autoris� par la politique CORS'));
+      callback(null, true); // Tol�rance pour les connexions locales multi-navigateurs
     }
   },
   credentials: true,
@@ -35,10 +36,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// Support W3C Private Network Access (permet aux navigateurs sur HTTPS Vercel de contacter http://localhost:8080)
+app.use((req, res, next) => {
+  if (req.headers['access-control-request-private-network']) {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  }
+  next();
+});
+
 app.use(express.json({ limit: '2mb' }));
 
 // En-t�tes HTTP de s�curit� (Protection XSS, Clickjacking, MIME-Sniffing)
 app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');

@@ -20,7 +20,16 @@ function getAuthHeaders(extraHeaders = {}) {
   return headers;
 }
 
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://kamala-jeanne.onrender.com';
+// D�tection dynamique et r�siliente de l'URL API Backend
+let API_URL = 'http://localhost:8080';
+try {
+  const custom = localStorage.getItem('vandia_api_url') || localStorage.getItem('vandia_backend_url');
+  if (custom) {
+    API_URL = custom;
+  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    API_URL = window.location.origin;
+  }
+} catch (e) {}
 ﻿/**
  * ==============================================================================
  * VANDIA AI — DASHBOARD JAVASCRIPT ENGINE
@@ -2795,18 +2804,54 @@ function setupBillingAndAffiliate() {
             }
         });
 
-        async function startWhatsApp() {
-            qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">⏳ Démarrage du moteur WhatsApp...</p></div>';
+                async function startWhatsApp() {
+            // S'assurer d'avoir un userId valide
+            if (!userId) {
+                try {
+                    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+                    userId = u.id || ('usr_' + Math.random().toString(36).substring(2, 9));
+                    if (!u.id) {
+                        u.id = userId;
+                        localStorage.setItem('vendia_current_user', JSON.stringify(u));
+                    }
+                } catch(e) {
+                    userId = 'client_' + Date.now();
+                }
+            }
+
+            qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">? D�marrage du moteur WhatsApp...</p><span style="font-size:11px; color:#94a3b8; margin-top:4px;">G�n�ration du QR Code en cours...</span></div>';
 
             try {
-                await fetch(API_URL + '/api/whatsapp/start', {
+                const res = await fetch(API_URL + '/api/whatsapp/start', {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({ userId: userId })
                 });
+                
+                const data = await res.json().catch(() => ({}));
+                if (data.status === 'QR_READY' && data.qr) {
+                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                } else if (data.status === 'CONNECTED') {
+                    qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">? Bot WhatsApp d�j� connect� !</div>';
+                }
+                
                 statusInterval = setInterval(checkStatus, 2000);
             } catch (error) {
-                qrBox.innerHTML = '<p style="color:red; font-weight:bold;">❌ Erreur serveur (Vérifiez le terminal).</p>';
+                console.error("Erreur connexion WhatsApp:", error);
+                qrBox.innerHTML = `
+                    <div style="padding: 14px; text-align: center;">
+                        <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">? Serveur local non connect� sur le port 8080</p>
+                        <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                            Le moteur WhatsApp s'ex�cute sur votre machine locale.<br>
+                            1. V�rifiez que votre terminal a bien lanc� : <code style="background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 3px; color: var(--whatsapp-green);">node server.js</code><br>
+                            2. Ou ouvrez directement le tableau de bord local :<br>
+                            <a href="http://localhost:8080/dashboard.html" target="_blank" style="color: #38bdf8; font-weight: 600; text-decoration: underline; display: inline-block; margin-top: 6px;">?? Ouvrir http://localhost:8080/dashboard.html</a>
+                        </p>
+                        <button class="btn-primary-glow" onclick="startWhatsApp()" style="padding: 6px 14px; font-size: 12px;">
+                            <i class="fa-solid fa-rotate-right"></i> R�essayer
+                        </button>
+                    </div>
+                `;
             }
         }
 
