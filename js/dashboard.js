@@ -2567,6 +2567,7 @@ function setupBillingAndAffiliate() {
   const dashPriceBusiness = document.getElementById("dash-price-business");
 
   function updateDashboardPricingDisplay(isAnnual) {
+    window.updateDashboardPricingDisplay = updateDashboardPricingDisplay;
     if (dashFreqMonthly) dashFreqMonthly.classList.toggle("active", !isAnnual);
     if (dashFreqAnnual) dashFreqAnnual.classList.toggle("active", isAnnual);
 
@@ -2805,6 +2806,7 @@ function setupBillingAndAffiliate() {
         });
 
                 async function startWhatsApp() {
+            window.startWhatsApp = startWhatsApp;
             // S'assurer d'avoir un userId valide
             if (!userId) {
                 try {
@@ -2910,3 +2912,4 @@ window.closePlanModal = closePlanModal;
 window.updatePlanModalSummary = updatePlanModalSummary;
 window.updateTemplateLivePreview = updateTemplateLivePreview;
 window.renderTemplates = renderTemplates;
+if (typeof updateDashboardPricingDisplay !== 'undefined') window.updateDashboardPricingDisplay = updateDashboardPricingDisplay;

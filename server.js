@@ -1,3 +1,11 @@
+// Anti-Crash Process Guards (empche le serveur de couper brutalement)
+process.on('uncaughtException', (err) => {
+  console.error('[SERVER] Exception non intercepte :', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[SERVER] Rejet non gr :', reason);
+});
+
 ﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -189,6 +197,23 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   });
 
   // Quand le client a scanné et est connecté
+  // Gestion de la dconnexion et rinitialisation propre
+  client.on('auth_failure', (msg) => {
+    console.error(`[WA] ?chec d'authentification pour ${userId} :`, msg);
+    waStatuses[userId] = 'DISCONNECTED';
+    delete waClients[userId];
+    delete waSessionsQR[userId];
+  });
+
+  client.on('disconnected', (reason) => {
+    console.log(`[WA] Client ${userId} dconnect :`, reason);
+    waStatuses[userId] = 'DISCONNECTED';
+    delete waClients[userId];
+    delete waSessionsQR[userId];
+    delete waNumbers[userId];
+    try { client.destroy(); } catch (e) {}
+  });
+
   client.on('ready', () => {
     waStatuses[userId] = 'CONNECTED';
     waNumbers[userId] = client.info ? client.info.wid.user : null;
@@ -292,6 +317,21 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   });
 
   res.json({ status: 'STARTING', message: "Génération du QR Code..." });
+});
+
+app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId manquant" });
+  if (waClients[userId]) {
+    try {
+      await waClients[userId].destroy();
+    } catch (e) {}
+    delete waClients[userId];
+  }
+  waStatuses[userId] = 'DISCONNECTED';
+  delete waSessionsQR[userId];
+  delete waNumbers[userId];
+  res.json({ success: true, message: "Session WhatsApp rinitialise avec succs" });
 });
 
 app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
