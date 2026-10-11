@@ -10,9 +10,64 @@ const { OpenAI } = require('openai');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// === S�CURIT� : D�SACTIVER X-POWERED-BY & RESTRICTION CORS ===
+app.disable('x-powered-by');
+
+const allowedOrigins = [
+  'https://kamala-jeanne.vercel.app',
+  'https://vandia.ai',
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Acc�s non autoris� par la politique CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+app.use(express.json({ limit: '2mb' }));
+
+// En-t�tes HTTP de s�curit� (Protection XSS, Clickjacking, MIME-Sniffing)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// Protection stricte : Emp�cher l'acc�s direct aux fichiers sensibles
+app.use((req, res, next) => {
+  const forbiddenPatterns = [/.env/i, /server.js/i, /package.*.json/i, /.git/i, /.log/i];
+  const reqUrl = req.url.toLowerCase();
+  for (const pattern of forbiddenPatterns) {
+    if (pattern.test(reqUrl)) {
+      return res.status(403).json({ error: 'Acc�s interdit par la politique de s�curit�.' });
+    }
+  }
+  next();
+});
+
+// Servir uniquement les r�pertoires et fichiers publics autoris�s
+app.use('/css', express.static(path.join(__dirname, 'css'), { dotfiles: 'ignore' }));
+app.use('/js', express.static(path.join(__dirname, 'js'), { dotfiles: 'ignore' }));
+if (fs.existsSync(path.join(__dirname, 'assets'))) {
+  app.use('/assets', express.static(path.join(__dirname, 'assets'), { dotfiles: 'ignore' }));
+}
+
+// Pages HTML publiques
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 // === 1. CONNEXION BDD ===
 let supabase;
@@ -28,13 +83,50 @@ if (process.env.OPENAI_API_KEY) {
   console.log("✅ OpenAI connecté.");
 }
 
+
+// ============================================================================
+// MIDDLEWARE DE S�CURIT� : AUTHENTIFICATION & CONTR�LE D'ACC�S (IDOR)
+// ============================================================================
+const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+  if (!token) {
+    if (supabase) {
+      return res.status(401).json({ error: 'Acc�s refus� : Jeton d\'authentification manquant.' });
+    }
+    return next();
+  }
+
+  if (supabase) {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (error || !user) {
+        return res.status(401).json({ error: 'Session invalide ou expir�e.' });
+      }
+      req.user = user;
+    } catch (err) {
+      return res.status(401).json({ error: 'Erreur lors de la v�rification de session.' });
+    }
+  }
+
+  // Protection IDOR : Emp�cher un utilisateur d'acc�der aux donn�es d'un autre
+  const targetUserId = req.params.userId || (req.body && req.body.userId);
+  if (req.user && targetUserId && req.user.id !== targetUserId) {
+    console.warn(`[ALERTE S�CURIT�] Tentative d'acc�s non autoris� par ${req.user.id} sur le compte ${targetUserId}`);
+    return res.status(403).json({ error: 'Acc�s interdit : Vous ne pouvez pas acc�der aux donn�es d\'un autre compte.' });
+  }
+
+  next();
+};
+
 // === 3. GESTIONNAIRE WHATSAPP MULTI-CLIENTS ===
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes générés
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
 const waNumbers = {};    // Stocke le numéro de téléphone connecté
 
-app.post('/api/whatsapp/start', async (req, res) => {
+app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
 
@@ -169,39 +261,20 @@ app.post('/api/whatsapp/start', async (req, res) => {
   res.json({ status: 'STARTING', message: "Génération du QR Code..." });
 });
 
-app.get('/api/whatsapp/status/:userId', (req, res) => {
+app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
   const { userId } = req.params;
   res.json({ status: waStatuses[userId] || 'DISCONNECTED', qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null });
 });
 
-// === 4. WEBHOOK DE FACTURATION ===
-app.post('/api/payments/webhook', async (req, res) => {
-  const { userId, planId } = req.body;
-  if (!supabase) return res.status(500).json({ error: 'Supabase non configuré' });
-
-  let creditsToAdd = 0;
-  if (planId === 'basic') creditsToAdd = 2500;
-  else if (planId === 'pro') creditsToAdd = 6000;
-  else if (planId === 'business') creditsToAdd = 15000;
-  else return res.status(400).json({ error: 'Forfait invalide' });
-
-  try {
-    const { data: profile } = await supabase.from('profiles').select('credits').eq('id', userId).single();
-    const newBalance = (profile?.credits || 0) + creditsToAdd;
-    await supabase.from('profiles').update({ credits: newBalance }).eq('id', userId);
-    res.json({ success: true, message: `Paiement validé. ${creditsToAdd} crédits ajoutés.` });
-  } catch (error) { res.status(500).json({ error: 'Erreur facturation' }); }
-});
-
 // === 5. CONFIGURATION IA ===
-app.get('/api/ai/config/:userId', async (req, res) => {
+app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
     const { userId } = req.params;
     const { data, error } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
     if (error) return res.status(500).json({ error: error.message });
     res.json({ prompt: data.ai_prompt || "Tu es un assistant IA poli. Réponds brièvement." });
 });
 
-app.post('/api/ai/config', async (req, res) => {
+app.post('/api/ai/config', authMiddleware, async (req, res) => {
     const { userId, prompt } = req.body;
     console.log('--- REQUETE API CONFIG ---');
     console.log('userId reçu:', userId);
@@ -334,7 +407,7 @@ app.post('/api/payments/webhook', async (req, res) => {
 
 
 // === 6. GET CONTACTS CRM ===
-app.get('/api/contacts/:userId', async (req, res) => {
+app.get('/api/contacts/:userId', authMiddleware, async (req, res) => {
     const { userId } = req.params;
     try {
         const { data, error } = await supabase.from('contacts').select('*').eq('user_id', userId).order('updated_at', { ascending: false });
@@ -348,7 +421,7 @@ app.get('/api/contacts/:userId', async (req, res) => {
 
 
 // === 7. DEMANDE DE RETRAIT (AFFILIATION) ===
-app.post('/api/payouts/request', async (req, res) => {
+app.post('/api/payouts/request', authMiddleware, async (req, res) => {
     const { userId, amount, payout_method, payout_number } = req.body;
     try {
         const { data: profile } = await supabase.from('profiles').select('affiliate_balance').eq('id', userId).single();

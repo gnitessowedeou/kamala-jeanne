@@ -1,3 +1,25 @@
+
+// Helper d'authentification s�curis� pour les requ�tes API
+function getAuthHeaders(extraHeaders = {}) {
+  let token = null;
+  try {
+    token = localStorage.getItem('vendia_supabase_token');
+    if (!token) {
+      const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+      if (u && u.token) token = u.token;
+    }
+  } catch(e) {}
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...extraHeaders
+  };
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  return headers;
+}
+
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://kamala-jeanne.onrender.com';
 ﻿/**
  * ==============================================================================
@@ -1322,7 +1344,7 @@ async function renderContacts() {
     if (!userId) return;
 
     try {
-        const res = await fetch(API_URL + '/api/contacts/' + userId);
+        const res = await fetch(API_URL + '/api/contacts/' + userId, { headers: getAuthHeaders() });
         const data = await res.json();
         
         if (data.success && data.contacts && data.contacts.length > 0) {
@@ -1929,7 +1951,7 @@ function setupActionButtons() {
       } catch(e) {}
     
     if (agentPromptInput) {
-        fetch(API_URL + '/api/ai/config/' + userId)
+        fetch(API_URL + '/api/ai/config/' + userId, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 if (data.prompt) {
@@ -1948,7 +1970,7 @@ function setupActionButtons() {
         
         fetch(API_URL + '/api/ai/config', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ userId: userId, prompt: agentPromptInput.value })
         })
         .then(res => res.json())
@@ -2620,7 +2642,7 @@ function setupBillingAndAffiliate() {
         
         const res = await fetch(API_URL + '/api/payments/create-session', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             userId: userId,
             planTier: selectedTier,
@@ -2728,7 +2750,7 @@ function setupBillingAndAffiliate() {
       try {
         const res = await fetch(API_URL + '/api/payouts/request', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ userId: userId, amount: amount, payout_method: method, payout_number: phone })
         });
         const data = await res.json();
@@ -2779,7 +2801,7 @@ function setupBillingAndAffiliate() {
             try {
                 await fetch(API_URL + '/api/whatsapp/start', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ userId: userId })
                 });
                 statusInterval = setInterval(checkStatus, 2000);
@@ -2790,7 +2812,7 @@ function setupBillingAndAffiliate() {
 
         async function checkStatus() {
             try {
-                const res = await fetch(API_URL + '/api/whatsapp/status/' + userId);
+                const res = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 if (data.status === 'QR_READY' && data.qr) {
