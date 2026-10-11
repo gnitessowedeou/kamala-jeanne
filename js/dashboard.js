@@ -1,4 +1,4 @@
-
+﻿
 // Helper d'authentification s�curis� pour les requ�tes API
 function getAuthHeaders(extraHeaders = {}) {
   let token = null;
@@ -21,7 +21,7 @@ function getAuthHeaders(extraHeaders = {}) {
 }
 
 // D�tection dynamique et r�siliente de l'URL API Backend
-let API_URL = 'http://localhost:8080';
+let API_URL = 'https://kamala-jeanne-production.up.railway.app';
 try {
   const custom = localStorage.getItem('vandia_api_url') || localStorage.getItem('vandia_backend_url');
   if (custom) {
