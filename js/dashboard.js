@@ -2834,3 +2834,12 @@ function setupBillingAndAffiliate() {
         initWhatsAppSaaS();
     }
 })();
+
+// Export global helper functions to window for zero-latency direct invocation
+window.openTemplateModal = openTemplateModal;
+window.closeTemplateModal = closeTemplateModal;
+window.openPlanModal = openPlanModal;
+window.closePlanModal = closePlanModal;
+window.updatePlanModalSummary = updatePlanModalSummary;
+window.updateTemplateLivePreview = updateTemplateLivePreview;
+window.renderTemplates = renderTemplates;

@@ -252,7 +252,7 @@
             <span id="sub-tokens-used">0 crédit</span>
             <span id="sub-tokens-max">Max ...</span>
           </div>
-          <button type="button" class="btn-sidebar-upgrade" id="btn-sidebar-upgrade">
+          <button type="button" class="btn-sidebar-upgrade" id="btn-sidebar-upgrade" onclick="openPlanModal('pro')">
             <i class="fa-solid fa-bolt"></i>
             <span>Choisir un Forfait</span>
           </button>
@@ -1073,7 +1073,7 @@
               <h2>Modèles WhatsApp Approuvés par Meta</h2>
               <p class="section-desc">Modèles officiels Meta Cloud API nécessaires pour initier des conversations sortantes et diffusions.</p>
             </div>
-            <button class="btn-primary-glow" id="btn-new-template">
+            <button class="btn-primary-glow" id="btn-new-template" onclick="openTemplateModal()">
               <i class="fa-solid fa-plus"></i>
               <span>Créer un Modèle Meta</span>
             </button>
@@ -1395,12 +1395,12 @@
 
           <!-- Billing Frequency Toggle Switch -->
           <div class="pricing-toggle-wrap-dashboard">
-            <span class="toggle-freq-lbl active" id="dash-freq-monthly">Facturation Mensuelle</span>
+            <span class="toggle-freq-lbl active" id="dash-freq-monthly" onclick="document.getElementById('dash-pricing-toggle').checked=false; updateDashboardPricingDisplay(false);">Facturation Mensuelle</span>
             <label class="pricing-switch" aria-label="Bascule facturation">
-              <input type="checkbox" id="dash-pricing-toggle">
+              <input type="checkbox" id="dash-pricing-toggle" onchange="updateDashboardPricingDisplay(this.checked)">
               <span class="pricing-slider"></span>
             </label>
-            <span class="toggle-freq-lbl" id="dash-freq-annual">Facturation Annuelle <span class="badge badge-green">-20% SUPPLÉMENTAIRE</span></span>
+            <span class="toggle-freq-lbl" id="dash-freq-annual" onclick="document.getElementById('dash-pricing-toggle').checked=true; updateDashboardPricingDisplay(true);">Facturation Annuelle <span class="badge badge-green">-20% SUPPLÉMENTAIRE</span></span>
           </div>
 
           <!-- 3 Plans Cards Grid -->
@@ -1433,7 +1433,7 @@
                 <li><i class="fa-solid fa-check"></i> Diffusions sécurisées SafeSend™</li>
               </ul>
 
-              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="basic">
+              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="basic" onclick="openPlanModal('basic')">
                 <span>Choisir la Formule Basic</span>
                 <i class="fa-solid fa-arrow-right"></i>
               </button>
@@ -1468,7 +1468,7 @@
                 <li><i class="fa-solid fa-check"></i> Support prioritaire dédié WhatsApp 24/7</li>
               </ul>
 
-              <button class="btn-tier-select btn-primary-glow btn-trigger-plan-modal" data-plan="pro">
+              <button class="btn-tier-select btn-primary-glow btn-trigger-plan-modal" data-plan="pro" onclick="openPlanModal('pro')">
                 <span>Passer à la Formule Pro 🚀</span>
                 <i class="fa-solid fa-arrow-right"></i>
               </button>
@@ -1501,7 +1501,7 @@
                 <li><i class="fa-solid fa-check"></i> SLA &amp; Garantie de disponibilité 99.9%</li>
               </ul>
 
-              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="business">
+              <button class="btn-tier-select btn-secondary-glass btn-trigger-plan-modal" data-plan="business" onclick="openPlanModal('business')">
                 <span>Passer à la Formule Business 💎</span>
                 <i class="fa-solid fa-arrow-right"></i>
               </button>
@@ -2069,7 +2069,7 @@
             <p style="font-size: 12px; color: #94a3b8; margin: 0;">Maintenez votre commercial WhatsApp IA actif 24h/24 sans coupure</p>
           </div>
         </div>
-        <button class="modal-close-btn" data-close-modal="plan-modal" aria-label="Fermer la modale">
+        <button class="modal-close-btn" data-close-modal="plan-modal" onclick="closePlanModal()" aria-label="Fermer la modale">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -2364,7 +2364,7 @@
             <p style="font-size: 12px; color: #94a3b8; margin: 0;">Conforme aux normes officielles Meta HSM pour diffusions et relances sans blocage.</p>
           </div>
         </div>
-        <button class="modal-close-btn" data-close-modal="template-modal" aria-label="Fermer la modale">
+        <button class="modal-close-btn" data-close-modal="template-modal" onclick="closeTemplateModal()" aria-label="Fermer la modale">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -2535,6 +2535,107 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=2"></script>
-  <script src="js/dashboard.js?v=6"></script>
+  <script src="js/dashboard.js?v=20261011_v7"></script>
+
+  <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
+  <script>
+    window.openTemplateModal = function(prefillData, isDuplicate) {
+      var modal = document.getElementById("template-modal");
+      if (modal) {
+        modal.classList.add("active");
+        modal.style.display = "flex";
+        modal.style.opacity = "1";
+        modal.style.pointerEvents = "auto";
+      }
+      if (typeof updateTemplateLivePreview === "function") {
+        updateTemplateLivePreview();
+      }
+    };
+
+    window.closeTemplateModal = function() {
+      var modal = document.getElementById("template-modal");
+      if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+        modal.style.opacity = "0";
+        modal.style.pointerEvents = "none";
+      }
+    };
+
+    window.openPlanModal = function(tier) {
+      tier = tier || "pro";
+      var modal = document.getElementById("plan-modal");
+      if (modal) {
+        modal.classList.add("active");
+        modal.style.display = "flex";
+        modal.style.opacity = "1";
+        modal.style.pointerEvents = "auto";
+        var radio = document.querySelector('input[name="modal_plan_tier"][value="' + tier + '"]');
+        if (radio) {
+          radio.checked = true;
+          document.querySelectorAll(".plan-select-card").forEach(function(c) { c.classList.remove("selected"); });
+          var parent = radio.closest(".plan-select-card");
+          if (parent) parent.classList.add("selected");
+        }
+        if (typeof updatePlanModalSummary === "function") {
+          updatePlanModalSummary();
+        }
+      }
+    };
+
+    window.closePlanModal = function() {
+      var modal = document.getElementById("plan-modal");
+      if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+        modal.style.opacity = "0";
+        modal.style.pointerEvents = "none";
+      }
+    };
+
+    window.updateDashboardPricingDisplay = function(isAnnual) {
+      var toggle = document.getElementById("dash-pricing-toggle");
+      if (toggle && toggle.checked !== isAnnual) toggle.checked = isAnnual;
+
+      var freqMonthly = document.getElementById("dash-freq-monthly");
+      var freqAnnual = document.getElementById("dash-freq-annual");
+      if (freqMonthly) freqMonthly.classList.toggle("active", !isAnnual);
+      if (freqAnnual) freqAnnual.classList.toggle("active", isAnnual);
+
+      var basic = document.getElementById("dash-price-basic");
+      var pro = document.getElementById("dash-price-pro");
+      var biz = document.getElementById("dash-price-business");
+      if (basic) basic.textContent = isAnnual ? "6 320" : "7 900";
+      if (pro) pro.textContent = isAnnual ? "11 920" : "14 900";
+      if (biz) biz.textContent = isAnnual ? "24 000" : "30 000";
+
+      var subs = document.querySelectorAll(".plan-tier-price-sub");
+      if (subs && subs.length >= 3) {
+        if (isAnnual) {
+          subs[0].innerHTML = '<strong style="color:var(--whatsapp-green); font-size:12px;">-20% D�DUIT : 75 840 FCFA/an</strong>';
+          subs[1].innerHTML = '<strong style="color:var(--whatsapp-green); font-size:12px;">-20% D�DUIT : 143 040 FCFA/an</strong>';
+          subs[2].innerHTML = '<strong style="color:var(--whatsapp-green); font-size:12px;">-20% D�DUIT : 288 000 FCFA/an</strong>';
+        } else {
+          subs[0].textContent = "~ 12 $/mois � 50% � vie garanti";
+          subs[1].textContent = "~ 24 $/mois � 50% � vie garanti";
+          subs[2].textContent = "~ 50 $/mois � Annuel : 24 000 FCFA/mois (-20%)";
+        }
+      }
+
+      var modalRadios = document.querySelectorAll('input[name="modal_cycle"]');
+      modalRadios.forEach(function(r) {
+        if (r.value === (isAnnual ? "annual" : "monthly")) {
+          r.checked = true;
+          var parent = r.closest(".cycle-pill");
+          if (parent) {
+            document.querySelectorAll(".cycle-pill").forEach(function(p) { p.classList.remove("active"); });
+            parent.classList.add("active");
+          }
+        }
+      });
+      if (typeof updatePlanModalSummary === "function") updatePlanModalSummary();
+    };
+  </script>
+
 </body>
 </html>
