@@ -371,6 +371,40 @@ app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
     res.json({ prompt: data.ai_prompt || "Tu es un assistant IA poli. Réponds brièvement." });
 });
 
+app.post('/api/ai/chat-test', authMiddleware, async (req, res) => {
+  try {
+    const { userId, message } = req.body;
+    if (!message) return res.status(400).json({ error: "Message requis" });
+
+    let systemPrompt = "Tu es Sarah, conseillre commerciale IA d'lite pour VANDIA AI sur WhatsApp. Sois chaleureuse, persuasive, trs polie et rponds en 2 ou 3 phrases percutantes avec des emojis adapts.";
+    if (userId && supabase) {
+      try {
+        const { data: profile } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
+        if (profile && profile.ai_prompt) systemPrompt = profile.ai_prompt;
+      } catch (pErr) {}
+    }
+
+    if (!openai) {
+      return res.json({ success: true, reply: "Bonjour ! Je suis votre Agent Commercial IA VANDIA. Mon intelligence est active et prte  rpondre  vos clients !" });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message }
+      ],
+      max_tokens: 200
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ success: true, reply });
+  } catch (err) {
+    console.error("Erreur chat test IA:", err);
+    res.status(500).json({ error: "Erreur lors de la gnration de la rponse IA" });
+  }
+});
+
 app.post('/api/ai/config', authMiddleware, async (req, res) => {
     const { userId, prompt } = req.body;
     console.log('--- REQUETE API CONFIG ---');

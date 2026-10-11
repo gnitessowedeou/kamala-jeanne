@@ -1002,12 +1002,11 @@ function setupInboxInteraction() {
   const chatInput = document.getElementById("chat-message-input");
 
   if (chatForm && chatInput) {
-    chatForm.addEventListener("submit", (e) => {
+    chatForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const messageText = chatInput.value.trim();
       if (!messageText) return;
 
-      // Add user message to conversation
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -1020,10 +1019,38 @@ function setupInboxInteraction() {
       renderChatMessages();
       chatInput.value = "";
 
-      // Simulate client response after 1.5s
-      setTimeout(() => {
+      // Appel direct  l'IA GPT-4o sur le serveur Cloud Railway
+      try {
+        let uId = null;
+        try {
+          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          uId = u.id;
+        } catch(e) {}
+
+        const res = await fetch(API_URL + '/api/ai/chat-test', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId: uId, message: messageText })
+        });
+        const data = await res.json();
+        
+        if (data && data.reply) {
+          const now2 = new Date();
+          const timeStr2 = `${String(now2.getHours()).padStart(2, '0')}:${String(now2.getMinutes()).padStart(2, '0')}`;
+          activeConversation.messages.push({
+            sender: "client",
+            text: data.reply,
+            time: timeStr2
+          });
+          renderChatMessages();
+          showToast("Rponse de votre Agent Commercial IA VANDIA", "info");
+        } else {
+          simulateClientResponse();
+        }
+      } catch (err) {
+        console.warn("Notice chat IA:", err);
         simulateClientResponse();
-      }, 1400);
+      }
     });
   }
 
