@@ -184,6 +184,7 @@ function initDashboard() {
   setupActionButtons();
   setupProfileSystem();
   setupBillingAndAffiliate();
+  setupTemplateModalEngine();
 
   // Populate view contents
   renderKpis();
@@ -1359,34 +1360,421 @@ async function renderContacts() {
     }
 }
 
+
+// ==============================================================================
+// 10. WHATSAPP META TEMPLATES (HSM) ENGINE
+// ==============================================================================
+const DEFAULT_META_TEMPLATES = [
+  {
+    id: "tpl_promo_vip",
+    name: "offre_flash_promo",
+    category: "MARKETING",
+    lang: "fr",
+    header: "🔥 OFFRE EXCLUSIVE DU JOUR",
+    content: "Bonjour {{1}} ! Profitez aujourd'hui d'une réduction spéciale de 20% sur {{2}} avec livraison express offerte. Répondez à ce message pour commander dès maintenant !",
+    footer: "Tapez STOP pour vous désabonner",
+    cta: "Commander sur WhatsApp",
+    btnType: "quick_reply",
+    status: "Approuvé Meta",
+    statusType: "green"
+  },
+  {
+    id: "tpl_confirm_cmd",
+    name: "confirmation_commande",
+    category: "UTILITAIRE",
+    lang: "fr",
+    header: "📦 SUIVI DE COMMANDE",
+    content: "Bonjour {{1}}, nous confirmons la prise en charge de votre commande N°{{2}}. Votre colis est soigneusement préparé et en cours d'expédition.",
+    footer: "Service client disponible 7j/7",
+    cta: "Suivre mon colis",
+    btnType: "url",
+    btnUrl: "https://vandia.ai/suivi",
+    status: "Approuvé Meta",
+    statusType: "green"
+  },
+  {
+    id: "tpl_cart_recov",
+    name: "relance_panier_abandonne",
+    category: "MARKETING",
+    lang: "fr",
+    header: "🛒 VOTRE PANIER VOUS ATTEND",
+    content: "Bonjour {{1}}, vous n'avez pas finalisé votre panier. Bonne nouvelle : vos articles sont réservés pour les prochaines 2 heures avec livraison offerte !",
+    footer: "VANDIA Commerce Sécurisé",
+    cta: "Finaliser ma commande",
+    btnType: "url",
+    btnUrl: "https://vandia.ai/panier",
+    status: "Approuvé Meta",
+    statusType: "green"
+  }
+];
+
+function getStoredTemplates() {
+  try {
+    const raw = localStorage.getItem("vandia_meta_templates");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch(e) {}
+  return [...DEFAULT_META_TEMPLATES];
+}
+
+function saveStoredTemplates(tplList) {
+  try {
+    localStorage.setItem("vandia_meta_templates", JSON.stringify(tplList));
+  } catch(e) {}
+}
+
 function renderTemplates() {
   const container = document.getElementById("templates-grid-container");
   if (!container) return;
 
-  container.innerHTML = MOCK_DATA.templates.map(tpl => `
-    <div class="glass-panel template-card">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
-          <h3 style="font-size: 14.5px; font-weight: 700;">${tpl.name}</h3>
-          <span style="font-size: 11px; color: var(--text-muted);">Catégorie : ${tpl.category}</span>
+  const templates = getStoredTemplates();
+
+  if (templates.length === 0) {
+    container.innerHTML = `
+      <div class="glass-panel" style="grid-column: 1 / -1; text-align: center; padding: 48px 24px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(37,211,102,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: var(--whatsapp-green); font-size: 26px;">
+          <i class="fa-brands fa-whatsapp"></i>
         </div>
-        <span class="badge badge-${tpl.statusType}">${tpl.status}</span>
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Aucun Modèle WhatsApp créé</h3>
+        <p style="color: var(--text-muted); font-size: 13.5px; max-width: 500px; margin: 0 auto 20px;">
+          Les modèles approuvés par Meta vous permettent d'envoyer des diffusions en masse et des relances automatiques en toute conformité.
+        </p>
+        <button class="btn-primary-glow" id="btn-empty-create-template" style="display: inline-flex;">
+          <i class="fa-solid fa-plus"></i>
+          <span>Créer mon premier Modèle Meta</span>
+        </button>
+      </div>
+    `;
+    const emptyBtn = document.getElementById("btn-empty-create-template");
+    if (emptyBtn) emptyBtn.addEventListener("click", openTemplateModal);
+    return;
+  }
+
+  container.innerHTML = templates.map((tpl, idx) => `
+    <div class="glass-panel template-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <span>${escapeHtml(tpl.name)}</span>
+            </h3>
+            <span class="badge badge-${tpl.category === 'MARKETING' ? 'green' : tpl.category === 'UTILITAIRE' ? 'blue' : 'purple'}" style="font-size: 10px; padding: 2px 8px;">
+              ${escapeHtml(tpl.category)}
+            </span>
+          </div>
+          <span class="badge badge-green" style="font-size: 10.5px;">
+            <i class="fa-solid fa-circle-check"></i> ${escapeHtml(tpl.status || 'Approuvé Meta')}
+          </span>
+        </div>
+
+        <div class="template-bubble-preview" style="background: #005c4b; border-radius: 10px; padding: 14px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08);">
+          ${tpl.header ? `<div style="font-weight: 700; font-size: 13px; color: #fff; margin-bottom: 6px;">${escapeHtml(tpl.header)}</div>` : ''}
+          <p style="margin: 0; font-size: 12.5px; line-height: 1.45; color: #e9edef; white-space: pre-wrap;">${highlightVariables(tpl.content)}</p>
+          ${tpl.footer ? `<div style="font-size: 10.5px; color: rgba(255,255,255,0.65); margin-top: 8px; font-style: italic;">${escapeHtml(tpl.footer)}</div>` : ''}
+          ${tpl.cta ? `
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-weight: 600; color: #53bdeb; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <i class="fa-solid ${tpl.btnType === 'url' ? 'fa-arrow-up-right-from-square' : 'fa-reply'}"></i>
+              <span>${escapeHtml(tpl.cta)}</span>
+            </div>
+          ` : ''}
+        </div>
       </div>
 
-      <div class="template-bubble-preview">
-        <p>${tpl.content}</p>
-        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; font-weight: 600; color: var(--cyan); font-size: 12px;">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> ${tpl.cta}
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; margin-top: auto;">
+        <button class="btn-icon-danger btn-delete-tpl" data-index="${idx}" title="Supprimer ce modèle" style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 6px; font-size: 13px;">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary-glass btn-dup-tpl" data-index="${idx}" style="padding: 6px 12px; font-size: 12px;">Dupliquer</button>
+          <button class="btn-primary-glow btn-use-tpl" data-index="${idx}" style="padding: 6px 12px; font-size: 12px;">Utiliser</button>
         </div>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn-secondary-glass" style="padding: 5px 12px; font-size: 12px;">Dupliquer</button>
-        <button class="btn-primary-glow" style="padding: 5px 12px; font-size: 12px;">Utiliser</button>
       </div>
     </div>
   `).join("");
+
+  // Attach card buttons
+  container.querySelectorAll(".btn-delete-tpl").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const list = getStoredTemplates();
+      const removed = list.splice(idx, 1);
+      saveStoredTemplates(list);
+      renderTemplates();
+      showToast(`Modèle "${removed[0]?.name}" supprimé.`, "info");
+    });
+  });
+
+  container.querySelectorAll(".btn-dup-tpl").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const list = getStoredTemplates();
+      const item = list[idx];
+      if (item) {
+        openTemplateModal(item, true);
+      }
+    });
+  });
+
+  container.querySelectorAll(".btn-use-tpl").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const list = getStoredTemplates();
+      const item = list[idx];
+      if (item) {
+        const msgField = document.getElementById("broadcast-message");
+        if (msgField) msgField.value = item.content;
+        openBroadcastModal();
+        showToast(`Modèle "${item.name}" chargé pour votre diffusion !`, "success");
+      }
+    });
+  });
 }
+
+function highlightVariables(text) {
+  if (!text) return "";
+  return escapeHtml(text).replace(/\{\{(\d+)\}\}/g, '<span style="background: rgba(37,211,102,0.3); color:#fff; padding: 1px 5px; border-radius: 4px; font-weight: 600;">{{$1}}</span>');
+}
+
+function openTemplateModal(prefillData = null, isDuplicate = false) {
+  const modal = document.getElementById("template-modal");
+  if (!modal) return;
+
+  const form = document.getElementById("template-create-form");
+  if (form) form.reset();
+
+  const nameInput = document.getElementById("tpl-input-name");
+  const catInput = document.getElementById("tpl-input-category");
+  const langInput = document.getElementById("tpl-input-lang");
+  const headerInput = document.getElementById("tpl-input-header");
+  const bodyInput = document.getElementById("tpl-input-body");
+  const footerInput = document.getElementById("tpl-input-footer");
+  const btnTypeInput = document.getElementById("tpl-input-btn-type");
+  const btnTextInput = document.getElementById("tpl-input-btn-text");
+  const btnUrlInput = document.getElementById("tpl-input-btn-url");
+
+  if (prefillData) {
+    if (nameInput) nameInput.value = isDuplicate ? (prefillData.name + "_copie") : prefillData.name;
+    if (catInput) catInput.value = prefillData.category || "MARKETING";
+    if (langInput) langInput.value = prefillData.lang || "fr";
+    if (headerInput) headerInput.value = prefillData.header || "";
+    if (bodyInput) bodyInput.value = prefillData.content || "";
+    if (footerInput) footerInput.value = prefillData.footer || "";
+    if (btnTypeInput) btnTypeInput.value = prefillData.btnType || "quick_reply";
+    if (btnTextInput) btnTextInput.value = prefillData.cta || "";
+    if (btnUrlInput) btnUrlInput.value = prefillData.btnUrl || "";
+  } else {
+    if (nameInput) nameInput.value = "promo_speciale_" + Math.floor(Math.random() * 1000);
+    if (bodyInput) bodyInput.value = "Bonjour {{1}} ! Nous avons le plaisir de vous offrir une réduction exclusive de 20% sur votre prochain achat. Répondez à ce message pour en profiter.";
+    if (btnTextInput) btnTextInput.value = "Profiter de l'offre";
+  }
+
+  updateTemplateLivePreview();
+  modal.classList.add("active");
+  document.body.classList.add("modal-open-lock");
+}
+
+function closeTemplateModal() {
+  const modal = document.getElementById("template-modal");
+  if (modal) modal.classList.remove("active");
+  document.body.classList.remove("modal-open-lock");
+}
+
+function updateTemplateLivePreview() {
+  const headerVal = document.getElementById("tpl-input-header")?.value.trim() || "";
+  const bodyVal = document.getElementById("tpl-input-body")?.value || "";
+  const footerVal = document.getElementById("tpl-input-footer")?.value.trim() || "";
+  const btnType = document.getElementById("tpl-input-btn-type")?.value || "quick_reply";
+  const btnText = document.getElementById("tpl-input-btn-text")?.value.trim() || "";
+
+  const prevHeader = document.getElementById("preview-header");
+  const prevBody = document.getElementById("preview-body");
+  const prevFooter = document.getElementById("preview-footer");
+  const prevBtnWrap = document.getElementById("preview-button-wrap");
+  const prevBtnLabel = document.getElementById("preview-btn-label");
+  const prevBtnIcon = document.getElementById("preview-btn-icon");
+  const urlGroup = document.getElementById("tpl-url-group");
+  const charCount = document.getElementById("tpl-char-count");
+
+  // Character counter
+  if (charCount) {
+    charCount.textContent = bodyVal.length + " / 1024";
+    charCount.style.color = bodyVal.length > 1024 ? "#ef4444" : "var(--text-muted)";
+  }
+
+  // Header
+  if (prevHeader) {
+    if (headerVal) {
+      prevHeader.textContent = headerVal;
+      prevHeader.style.display = "block";
+    } else {
+      prevHeader.style.display = "none";
+    }
+  }
+
+  // Body: sample replaced variables
+  if (prevBody) {
+    if (bodyVal) {
+      let previewText = escapeHtml(bodyVal)
+        .replace(/\{\{1\}\}/g, '<span style="background: rgba(37,211,102,0.35); color:#fff; padding: 1px 4px; border-radius: 3px; font-weight:600;">Moussa</span>')
+        .replace(/\{\{2\}\}/g, '<span style="background: rgba(56,189,248,0.35); color:#fff; padding: 1px 4px; border-radius: 3px; font-weight:600;">Pack VIP</span>')
+        .replace(/\{\{3\}\}/g, '<span style="background: rgba(245,158,11,0.35); color:#fff; padding: 1px 4px; border-radius: 3px; font-weight:600;">25 000 FCFA</span>');
+      prevBody.innerHTML = previewText;
+    } else {
+      prevBody.textContent = "Saisissez votre texte de message pour voir l'aperçu...";
+    }
+  }
+
+  // Footer
+  if (prevFooter) {
+    if (footerVal) {
+      prevFooter.textContent = footerVal;
+      prevFooter.style.display = "block";
+    } else {
+      prevFooter.style.display = "none";
+    }
+  }
+
+  // URL input visibility
+  if (urlGroup) {
+    urlGroup.style.display = (btnType === "url") ? "block" : "none";
+  }
+
+  // Button
+  if (prevBtnWrap) {
+    if (btnType === "none" || !btnText) {
+      prevBtnWrap.style.display = "none";
+    } else {
+      prevBtnWrap.style.display = "flex";
+      if (prevBtnLabel) prevBtnLabel.textContent = btnText;
+      if (prevBtnIcon) {
+        prevBtnIcon.className = (btnType === "url") ? "fa-solid fa-arrow-up-right-from-square" : "fa-solid fa-reply";
+      }
+    }
+  }
+}
+
+function setupTemplateModalEngine() {
+  const newTplBtn = document.getElementById("btn-new-template");
+  if (newTplBtn) {
+    newTplBtn.addEventListener("click", () => openTemplateModal());
+  }
+
+  document.querySelectorAll('[data-close-modal="template-modal"]').forEach(btn => {
+    btn.addEventListener("click", closeTemplateModal);
+  });
+
+  const modal = document.getElementById("template-modal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeTemplateModal();
+    });
+  }
+
+  // Live input sync
+  const nameInput = document.getElementById("tpl-input-name");
+  if (nameInput) {
+    nameInput.addEventListener("input", (e) => {
+      // Auto-sanitize to lowercase, numbers, underscores
+      e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    });
+  }
+
+  const inputsToListen = ["tpl-input-header", "tpl-input-body", "tpl-input-footer", "tpl-input-btn-type", "tpl-input-btn-text"];
+  inputsToListen.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", updateTemplateLivePreview);
+      el.addEventListener("change", updateTemplateLivePreview);
+    }
+  });
+
+  // Variable insertion buttons
+  document.querySelectorAll(".btn-insert-var").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const varTag = btn.getAttribute("data-var");
+      const bodyInput = document.getElementById("tpl-input-body");
+      if (bodyInput && varTag) {
+        const start = bodyInput.selectionStart || bodyInput.value.length;
+        const end = bodyInput.selectionEnd || bodyInput.value.length;
+        const text = bodyInput.value;
+        bodyInput.value = text.substring(0, start) + varTag + text.substring(end);
+        bodyInput.focus();
+        bodyInput.selectionStart = bodyInput.selectionEnd = start + varTag.length;
+        updateTemplateLivePreview();
+      }
+    });
+  });
+
+  // Form submission
+  const form = document.getElementById("template-create-form");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById("btn-submit-template");
+      const origHtml = submitBtn ? submitBtn.innerHTML : "";
+
+      const name = document.getElementById("tpl-input-name")?.value.trim();
+      const category = document.getElementById("tpl-input-category")?.value || "MARKETING";
+      const lang = document.getElementById("tpl-input-lang")?.value || "fr";
+      const header = document.getElementById("tpl-input-header")?.value.trim();
+      const body = document.getElementById("tpl-input-body")?.value.trim();
+      const footer = document.getElementById("tpl-input-footer")?.value.trim();
+      const btnType = document.getElementById("tpl-input-btn-type")?.value || "none";
+      const btnText = document.getElementById("tpl-input-btn-text")?.value.trim();
+      const btnUrl = document.getElementById("tpl-input-btn-url")?.value.trim();
+
+      if (!name || !body) {
+        showToast("Veuillez remplir le nom et le corps du modèle.", "info");
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approbation Meta en cours...';
+      }
+
+      setTimeout(() => {
+        const list = getStoredTemplates();
+        const newTemplate = {
+          id: "tpl_" + Date.now(),
+          name: name,
+          category: category,
+          lang: lang,
+          header: header,
+          content: body,
+          footer: footer,
+          cta: btnText,
+          btnType: btnType,
+          btnUrl: btnUrl,
+          status: "Approuvé Meta",
+          statusType: "green"
+        };
+
+        // If duplicate name, replace, else unshift
+        const existingIdx = list.findIndex(t => t.name === name);
+        if (existingIdx !== -1) {
+          list[existingIdx] = newTemplate;
+        } else {
+          list.unshift(newTemplate);
+        }
+
+        saveStoredTemplates(list);
+        renderTemplates();
+        closeTemplateModal();
+
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = origHtml;
+        }
+
+        showToast(`✅ Modèle "${name}" approuvé par Meta avec succès !`, "success");
+      }, 700);
+    });
+  }
+}
+
 
 function renderIntegrations() {
   const container = document.getElementById("integrations-grid-container");
@@ -2014,65 +2402,23 @@ function setupBillingAndAffiliate() {
     document.body.classList.remove("modal-open-lock");
   }
 
-  // 1. Upgrade Trigger Buttons
+  // 1. Upgrade Trigger Buttons (Header and Sidebar open the Plan Modal as requested)
   const headerUpgradeBtn = document.getElementById("btn-header-upgrade");
   if (headerUpgradeBtn) {
-    headerUpgradeBtn.addEventListener("click", () => showView("billing"));
+    headerUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
   }
 
   const sidebarUpgradeBtn = document.getElementById("btn-sidebar-upgrade");
   if (sidebarUpgradeBtn) {
-    sidebarUpgradeBtn.addEventListener("click", () => showView("billing"));
+    sidebarUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
   }
 
-    document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
-    btn.addEventListener("click", async (e) => {
+  // In billing view cards: clicking selects plan and opens modal with that plan
+  document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
+    btn.addEventListener("click", (e) => {
       e.preventDefault();
       const planTier = btn.getAttribute("data-plan") || "pro";
-      
-      const originalHtml = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Création du paiement...';
-      btn.disabled = true;
-
-      try {
-          // Check if annual is selected
-          const dashPricingToggle = document.getElementById("dash-pricing-toggle");
-          const isAnnual = dashPricingToggle && dashPricingToggle.checked;
-          
-          let amount = planTier === 'basic' ? 7900 : planTier === 'pro' ? 14900 : planTier === 'business' ? 30000 : 14900;
-          if (isAnnual) {
-              amount = (amount * 0.8) * 12; // -20% and * 12 months
-          }
-          
-          let userId = null;
-          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-          if (u && u.id) userId = u.id;
-          
-          const res = await fetch(API_URL + '/api/payments/create-session', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  userId: userId,
-                  planTier: planTier,
-                  amount: amount,
-                  cycle: isAnnual ? 'annual' : 'monthly',
-                  paymentMethod: 'wave'
-              })
-          });
-          const data = await res.json();
-          if (data.paymentUrl) {
-              window.location.href = data.paymentUrl;
-          } else {
-              if (window.showToast) window.showToast("Erreur lors de la création du paiement.", "error");
-              btn.innerHTML = originalHtml;
-              btn.disabled = false;
-          }
-      } catch (err) {
-          console.error("Erreur:", err);
-          if (window.showToast) window.showToast("Erreur de connexion au serveur.", "error");
-          btn.innerHTML = originalHtml;
-          btn.disabled = false;
-      }
+      openPlanModal(planTier);
     });
   });
 
@@ -2102,7 +2448,7 @@ function setupBillingAndAffiliate() {
     }
   });
 
-  // 3. Plan Selection & Price Calculation in Modal
+  // 3. Plan Selection & Price Calculation in Modal with real-time -20% deduction
   function updatePlanModalSummary() {
     const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
     const selectedCycleRadio = document.querySelector('input[name="modal_cycle"]:checked');
@@ -2115,26 +2461,37 @@ function setupBillingAndAffiliate() {
 
     const isAnnual = selectedCycle === "annual";
 
-    let planName = "Formule Pro 🚀";
-    let basePriceMonthly = 14900;
+    // Update prices on the 3 plan cards inside the modal
+    const cardBasicAmount = document.querySelector('.plan-price-amount[data-plan="basic"]');
+    const cardProAmount = document.querySelector('.plan-price-amount[data-plan="pro"]');
+    const cardBizAmount = document.querySelector('.plan-price-amount[data-plan="business"]');
+
+    if (cardBasicAmount) cardBasicAmount.textContent = isAnnual ? "6 320" : "7 900";
+    if (cardProAmount) cardProAmount.textContent = isAnnual ? "11 920" : "14 900";
+    if (cardBizAmount) cardBizAmount.textContent = isAnnual ? "24 000" : "30 000";
+
+    let planName = "Formule Pro 👑 (2 Agents IA)";
+    let baseMonthly = 14900;
+    let annualDiscountedMonthly = 11920;
 
     if (selectedTier === "basic") {
-      planName = "Formule Basic 🦾";
-      basePriceMonthly = 7900;
+      planName = "Formule Basic ⚡ (1 Agent IA)";
+      baseMonthly = 7900;
+      annualDiscountedMonthly = 6320;
     } else if (selectedTier === "business" || selectedTier === "enterprise") {
-      planName = "Formule Business 💎";
-      basePriceMonthly = 30000;
+      planName = "Formule Business 🚀 (5 Agents IA)";
+      baseMonthly = 30000;
+      annualDiscountedMonthly = 24000;
     }
 
     if (titleEl) titleEl.textContent = planName;
     if (cycleEl) {
-      cycleEl.textContent = isAnnual ? "Annuel (-20% déduit)" : "Mensuel (Sans engagement)";
+      cycleEl.textContent = isAnnual ? "Annuel (-20% déduit • 12 mois)" : "Mensuel (Sans engagement)";
     }
 
     if (amountEl) {
-      const finalPrice = isAnnual ? Math.round(basePriceMonthly * 12 * 0.8) : basePriceMonthly;
-      const formattedPrice = finalPrice.toLocaleString("fr-FR") + " FCFA" + (isAnnual ? "/an" : "/mois");
-      amountEl.textContent = formattedPrice;
+      const finalPrice = isAnnual ? (annualDiscountedMonthly * 12) : baseMonthly;
+      amountEl.textContent = finalPrice.toLocaleString("fr-FR") + " FCFA" + (isAnnual ? " / an (-20%)" : " / mois");
     }
   }
 
@@ -2149,7 +2506,7 @@ function setupBillingAndAffiliate() {
     });
   });
 
-  // Cycle selector pills click
+  // Cycle selector pills click inside modal
   document.querySelectorAll(".cycle-pill").forEach(pill => {
     pill.addEventListener("click", function() {
       document.querySelectorAll(".cycle-pill").forEach(p => p.classList.remove("active"));
@@ -2167,15 +2524,6 @@ function setupBillingAndAffiliate() {
       this.classList.add("active");
       const radio = this.querySelector('input[type="radio"]');
       if (radio) radio.checked = true;
-
-      const phoneGroup = document.getElementById("pay-phone-group");
-      if (phoneGroup) {
-        if (radio && radio.value === "card") {
-          phoneGroup.style.display = "none";
-        } else {
-          phoneGroup.style.display = "block";
-        }
-      }
     });
   });
 
@@ -2191,15 +2539,23 @@ function setupBillingAndAffiliate() {
     if (dashFreqMonthly) dashFreqMonthly.classList.toggle("active", !isAnnual);
     if (dashFreqAnnual) dashFreqAnnual.classList.toggle("active", isAnnual);
 
-    if (dashPriceBasic) {
-      dashPriceBasic.textContent = isAnnual ? "6 320" : "7 900";
-    }
-    if (dashPricePro) {
-      dashPricePro.textContent = isAnnual ? "11 920" : "14 900";
-    }
-    if (dashPriceBusiness) {
-      dashPriceBusiness.textContent = isAnnual ? "24 000" : "30 000";
-    }
+    if (dashPriceBasic) dashPriceBasic.textContent = isAnnual ? "6 320" : "7 900";
+    if (dashPricePro) dashPricePro.textContent = isAnnual ? "11 920" : "14 900";
+    if (dashPriceBusiness) dashPriceBusiness.textContent = isAnnual ? "24 000" : "30 000";
+
+    // Synchronize modal radio cycle
+    const modalCycleRadios = document.querySelectorAll('input[name="modal_cycle"]');
+    modalCycleRadios.forEach(r => {
+      if (r.value === (isAnnual ? "annual" : "monthly")) {
+        r.checked = true;
+        const parentPill = r.closest(".cycle-pill");
+        if (parentPill) {
+          document.querySelectorAll(".cycle-pill").forEach(p => p.classList.remove("active"));
+          parentPill.classList.add("active");
+        }
+      }
+    });
+    updatePlanModalSummary();
   }
 
   if (dashPricingToggle) {
@@ -2224,60 +2580,80 @@ function setupBillingAndAffiliate() {
     });
   }
 
-  // 5. Subscription Form Submission
-  
-    const subscribeForm = document.getElementById("form-subscribe-plan");
-    if (subscribeForm) {
-      subscribeForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const submitBtn = document.getElementById("btn-submit-plan-order");
-        const submitText = document.getElementById("btn-submit-plan-text");
-        const originalText = submitText ? submitText.textContent : "Confirmer & Activer mon Forfait";
-        
-        if (submitBtn) submitBtn.disabled = true;
-        if (submitText) submitText.textContent = "Cration du lien scuris...";
+  // 5. Subscription Form Submission -> Direct SasPay Redirection
+  const subscribeForm = document.getElementById("form-subscribe-plan");
+  if (subscribeForm) {
+    subscribeForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById("btn-submit-plan-order");
+      const submitText = document.getElementById("btn-submit-plan-text");
+      const originalText = submitText ? submitText.textContent : "Confirmer & Activer mon Forfait";
+      
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitText) submitText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Redirection vers la passerelle sécurisée...';
 
+      try {
+        const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
+        const selectedCycleRadio = document.querySelector('input[name="modal_cycle"]:checked');
+        const selectedMethodRadio = document.querySelector('input[name="modal_pay_method"]:checked');
+        const phoneInput = document.getElementById("modal-pay-phone");
+        const countrySelect = document.getElementById("modal-pay-country");
+
+        const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
+        const isAnnual = selectedCycleRadio ? (selectedCycleRadio.value === "annual") : false;
+        const method = selectedMethodRadio ? selectedMethodRadio.value : "wave";
+        const phone = (countrySelect ? countrySelect.value : "") + (phoneInput ? phoneInput.value.trim() : "");
+
+        let monthlyAmount = selectedTier === 'basic' ? 7900 : selectedTier === 'pro' ? 14900 : 30000;
+        let totalAmount = isAnnual ? Math.round((monthlyAmount * 0.8) * 12) : monthlyAmount;
+        
+        let userId = null;
+        let email = null;
+        let customerName = null;
         try {
-            const selectedPlanRadio = document.querySelector('input[name="modal_plan_tier"]:checked');
-            const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
-            const amount = selectedTier === 'basic' ? 7900 : selectedTier === 'pro' ? 14900 : selectedTier === 'business' ? 30000 : 14900;
-            
-            let userId = null;
-            const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-            if (u && u.id) userId = u.id;
-            
-            const res = await fetch(API_URL + '/api/payments/create-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: userId,
-                    planTier: selectedTier,
-                    amount: amount
-                })
-            });
-            
-            const data = await res.json();
-            
-            if (data.checkout_url) {
-                if (submitText) submitText.textContent = "Redirection...";
-                window.location.href = data.checkout_url;
-            } else {
-                showToast("Erreur: " + (data.error || "Impossible de gnrer le lien", "info"));
-                if (submitBtn) submitBtn.disabled = false;
-                if (submitText) submitText.textContent = originalText;
-            }
-        } catch (err) {
-            console.error(err);
-            showToast("Erreur rseau", "info");
-            if (submitBtn) submitBtn.disabled = false;
-            if (submitText) submitText.textContent = originalText;
+          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          if (u && u.id) userId = u.id;
+          if (u && u.email) email = u.email;
+          if (u && (u.firstName || u.lastName)) customerName = (u.firstName + ' ' + u.lastName).trim();
+        } catch(e) {}
+        
+        const res = await fetch(API_URL + '/api/payments/create-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            planTier: selectedTier,
+            amount: totalAmount,
+            cycle: isAnnual ? 'annual' : 'monthly',
+            paymentMethod: method,
+            phone: phone,
+            email: email,
+            customer_name: customerName
+          })
+        });
+        
+        const data = await res.json();
+        const checkoutUrl = data.checkout_url || data.paymentUrl;
+        
+        if (checkoutUrl) {
+          if (submitText) submitText.textContent = "Ouverture du paiement SasPay...";
+          window.location.href = checkoutUrl;
+        } else {
+          showToast("Erreur: " + (data.error || "Impossible de générer le lien de paiement"), "info");
+          if (submitBtn) submitBtn.disabled = false;
+          if (submitText) submitText.textContent = originalText;
         }
-      });
-    }
+      } catch (err) {
+        console.error("Erreur paiement:", err);
+        showToast("Erreur de connexion au serveur de paiement", "info");
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitText) submitText.textContent = originalText;
+      }
+    });
+  }
 
-
-    // 6. Copy Affiliate Referral Link
+  // 6. Copy Affiliate Referral Link
   const copyAffiliateBtn = document.getElementById("btn-copy-affiliate-link");
   const affiliateInput = document.getElementById("affiliate-link-input");
 
@@ -2322,49 +2698,52 @@ function setupBillingAndAffiliate() {
   }
 
   const payoutForm = document.getElementById("form-request-payout");
-    if (payoutForm) {
-      payoutForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const amountInput = document.getElementById("payout-amount");
-        const methodInput = document.getElementById("payout-method");
-        const phoneInput = document.getElementById("payout-phone");
-        
-        const amount = parseInt(amountInput?.value || "0", 10);
-        const method = methodInput?.value || "wave";
-        const phone = phoneInput?.value || "";
+  if (payoutForm) {
+    payoutForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amountInput = document.getElementById("payout-amount");
+      const methodInput = document.getElementById("payout-method");
+      const phoneInput = document.getElementById("payout-phone") || document.getElementById("payout-beneficiary");
+      
+      const amount = parseInt(amountInput?.value || "0", 10);
+      const method = methodInput?.value || "wave";
+      const phone = phoneInput?.value || "";
 
-        if (amount < 10000) {
-          showToast("Le montant minimum de retrait de commissions est de 10 000 FCFA.", "info");
-          return;
+      if (amount < 10000) {
+        showToast("Le montant minimum de retrait de commissions est de 10 000 FCFA.", "info");
+        return;
+      }
+
+      let userId = null;
+      try {
+        const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+        if (u && u.id) userId = u.id;
+      } catch(err) {}
+
+      if (!userId) {
+        showToast("Session utilisateur introuvable.", "info");
+        return;
+      }
+
+      try {
+        const res = await fetch(API_URL + '/api/payouts/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userId, amount: amount, payout_method: method, payout_number: phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closePayoutModal();
+          showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA enregistrée avec succès ! Traitement sous 2h à 24h ouvrées.`, "success");
+          payoutForm.reset();
+        } else {
+          showToast(data.error || "Erreur lors de la demande", "info");
         }
-
-        let userId = null;
-        try {
-            const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-            if (u && u.id) userId = u.id;
-        } catch(err) {}
-
-        if (!userId) return;
-
-        try {
-            const res = await fetch(API_URL + '/api/payouts/request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId, amount: amount, payout_method: method, payout_number: phone })
-            });
-            const data = await res.json();
-            if (data.success) {
-                closePayoutModal();
-                showToast(`Demande de retrait de ${amount.toLocaleString('fr-FR')} FCFA envoyee avec succes ! Traitement sous 2h a 24h ouvrées.`, "success");
-                payoutForm.reset();
-            } else {
-                showToast(data.error || "Erreur lors de la demande", "info");
-            }
-        } catch (err) {
-            showToast("Erreur de connexion serveur", "info");
-        }
-      });
-    }
+      } catch (err) {
+        showToast("Erreur de connexion serveur", "info");
+      }
+    });
+  }
 }
 
 

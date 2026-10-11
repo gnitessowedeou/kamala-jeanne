@@ -2093,7 +2093,7 @@
                     <strong class="plan-price-amount" data-plan="basic">7 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
                   </div>
                   <ul class="plan-select-features">
-                    <li>1 Numéro WhatsApp</li>
+                    <li>1 Agent IA Commercial</li>
                     <li>2 500 crédits IA/mois</li>
                     <li>Paiements Wave &amp; MoMo</li>
                   </ul>
@@ -2112,7 +2112,7 @@
                     <strong class="plan-price-amount" data-plan="pro">14 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
                   </div>
                   <ul class="plan-select-features">
-                    <li>Omnicanal (WhatsApp + IG)</li>
+                    <li><strong>2 Agents IA (WhatsApp + Instagram)</strong></li>
                     <li>6 000 crédits IA/mois</li>
                     <li>Jusqu'à 10 collaborateurs</li>
                   </ul>
@@ -2130,7 +2130,7 @@
                     <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois (50 $)</small>
                   </div>
                   <ul class="plan-select-features">
-                    <li>Multi-numéros illimités</li>
+                    <li><strong>5 Agents IA Omnicanal illimités</strong></li>
                     <li>15 000 crédits IA/mois</li>
                     <li>Account Manager VIP dédié</li>
                   </ul>
@@ -2348,6 +2348,185 @@
     </div>
   </div>
 
+  
+  <!-- ==========================================================================
+       MODAL 7: CRÉER UN MODÈLE META (#template-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="template-modal" role="dialog" aria-modal="true" aria-labelledby="modal-template-title">
+    <div class="modal-dialog" style="max-width: 920px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="brand-icon-box" style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green); font-size: 20px;"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="modal-template-title">Créer un Modèle WhatsApp Approuvé (Meta Cloud API)</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Conforme aux normes officielles Meta HSM pour diffusions et relances sans blocage.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" data-close-modal="template-modal" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="template-create-form">
+        <div class="modal-body" style="padding: 24px; display: grid; grid-template-columns: 1fr 340px; gap: 24px;">
+          
+          <!-- Colonne Gauche : Formulaire de configuration -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            
+            <div class="form-group">
+              <label class="form-label" for="tpl-input-name">
+                Nom technique du Modèle <span class="required">*</span>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: 6px;">(minuscules, chiffres, tirets bas uniquement)</span>
+              </label>
+              <input type="text" class="form-control" id="tpl-input-name" placeholder="ex: offre_flash_promo" required pattern="^[a-z0-9_]+$">
+              <span style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">Exemple : <code>promo_flash</code>, <code>relance_panier</code>, <code>confirmation_commande</code></span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div class="form-group">
+                <label class="form-label" for="tpl-input-category">Catégorie Meta <span class="required">*</span></label>
+                <select class="form-control" id="tpl-input-category" required>
+                  <option value="MARKETING">📢 MARKETING (Promos, Relances)</option>
+                  <option value="UTILITAIRE">⚙️ UTILITAIRE (Commandes, Suivis)</option>
+                  <option value="AUTHENTIFICATION">🔐 AUTHENTIFICATION (Codes OTP)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="tpl-input-lang">Langue <span class="required">*</span></label>
+                <select class="form-control" id="tpl-input-lang" required>
+                  <option value="fr">Français (fr)</option>
+                  <option value="en">Anglais (en)</option>
+                  <option value="es">Espagnol (es)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="tpl-input-header">
+                En-tête du message <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Optionnel)</span>
+              </label>
+              <input type="text" class="form-control" id="tpl-input-header" placeholder="Ex: 🔥 OFFRE EXCLUSIVE DU JOUR">
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" for="tpl-input-body" style="margin-bottom: 0;">
+                  Corps du message (Texte principal) <span class="required">*</span>
+                </label>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn-secondary-glass btn-insert-var" data-var="{{1}}" style="padding: 2px 8px; font-size: 11px;">+ {{1}} Prénom</button>
+                  <button type="button" class="btn-secondary-glass btn-insert-var" data-var="{{2}}" style="padding: 2px 8px; font-size: 11px;">+ {{2}} Offre</button>
+                  <button type="button" class="btn-secondary-glass btn-insert-var" data-var="{{3}}" style="padding: 2px 8px; font-size: 11px;">+ {{3}} Info</button>
+                </div>
+              </div>
+              <textarea class="form-control form-control-textarea" id="tpl-input-body" rows="4" placeholder="Bonjour {{1}}, profitez de notre remise de 20% sur {{2}} valable aujourd'hui seulement..." required></textarea>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                <span>Utilisez <code>{{1}}</code>, <code>{{2}}</code> pour personnaliser chaque contact</span>
+                <span id="tpl-char-count">0 / 1024</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="tpl-input-footer">
+                Pied de page <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Optionnel)</span>
+              </label>
+              <input type="text" class="form-control" id="tpl-input-footer" placeholder="Ex: Répondez STOP pour vous désabonner">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div class="form-group">
+                <label class="form-label" for="tpl-input-btn-type">Type de Bouton</label>
+                <select class="form-control" id="tpl-input-btn-type">
+                  <option value="quick_reply">Réponse Rapide (Quick Reply)</option>
+                  <option value="url">Lien Web (Call-To-Action)</option>
+                  <option value="none">Aucun bouton</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="tpl-input-btn-text">Texte du bouton</label>
+                <input type="text" class="form-control" id="tpl-input-btn-text" placeholder="Ex: Commander maintenant">
+              </div>
+            </div>
+
+            <div id="tpl-url-group" class="form-group" style="display: none;">
+              <label class="form-label" for="tpl-input-btn-url">URL de redirection</label>
+              <input type="url" class="form-control" id="tpl-input-btn-url" placeholder="https://votresite.com/offre">
+            </div>
+
+          </div>
+
+          <!-- Colonne Droite : Aperçu WhatsApp en Direct -->
+          <div>
+            <span style="font-size: 12px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <i class="fa-solid fa-eye" style="margin-right: 6px; color: var(--whatsapp-green);"></i> Aperçu WhatsApp Direct
+            </span>
+
+            <div style="background: #0b141a; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+              
+              <!-- WhatsApp Header inside Phone -->
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #00a884; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;">
+                  <i class="fa-brands fa-whatsapp"></i>
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <strong style="font-size: 13px; color: #e9edef;">VANDIA Business</strong>
+                    <i class="fa-solid fa-circle-check" style="color: #00a884; font-size: 11px;"></i>
+                  </div>
+                  <span style="font-size: 10.5px; color: #8696a0;">Compte Officiel Meta</span>
+                </div>
+              </div>
+
+              <!-- Message Bubble -->
+              <div style="background: #005c4b; border-radius: 10px; border-top-right-radius: 2px; padding: 12px 14px; color: #e9edef; font-size: 13px; line-height: 1.45; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                <div id="preview-header" style="font-weight: 700; font-size: 13.5px; margin-bottom: 8px; color: #fff; display: none;"></div>
+                <div id="preview-body" style="white-space: pre-wrap; word-break: break-word;">
+                  Bonjour Moussa ! Profitez de notre offre spéciale...
+                </div>
+                <div id="preview-footer" style="font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 8px; font-style: italic; display: none;"></div>
+                
+                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.6);">
+                  <span>14:32</span>
+                  <i class="fa-solid fa-check-double" style="color: #53bdeb;"></i>
+                </div>
+              </div>
+
+              <!-- Action Button Preview -->
+              <div id="preview-button-wrap" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <div id="preview-btn" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 9px; text-align: center; color: #53bdeb; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                  <i id="preview-btn-icon" class="fa-solid fa-reply"></i>
+                  <span id="preview-btn-label">Commander maintenant</span>
+                </div>
+              </div>
+
+              <!-- Meta Status Badge -->
+              <div style="margin-top: 16px; background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.2); border-radius: 8px; padding: 10px; font-size: 11px; color: #8696a0; display: flex; gap: 8px; align-items: center;">
+                <i class="fa-solid fa-shield-halved" style="color: var(--whatsapp-green); font-size: 16px;"></i>
+                <span>Approbation automatique Meta Cloud API sous 1 à 5 minutes.</span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn-secondary-glass" data-close-modal="template-modal">Annuler</button>
+          <button type="submit" class="btn-primary-glow" id="btn-submit-template">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Soumettre & Enregistrer le Modèle</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
   <!-- Supabase JS Client via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -2356,6 +2535,6 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=2"></script>
-  <script src="js/dashboard.js?v=5"></script>
+  <script src="js/dashboard.js?v=6"></script>
 </body>
 </html>

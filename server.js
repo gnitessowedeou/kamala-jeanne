@@ -222,21 +222,37 @@ app.post('/api/ai/config', async (req, res) => {
 // ============================================================================
 app.post('/api/payments/create-session', async (req, res) => {
     try {
-        const { userId, planTier, amount } = req.body;
+        const { userId, planTier, amount, cycle, email, customer_name } = req.body;
         
-        // Recuperer infos utilisateur
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-        if (!profile) return res.status(404).json({ error: 'User not found' });
+        let customerEmail = email || "client@kamalajeanne.com";
+        let customerName = customer_name || "Client VANDIA";
+
+        if (userId && supabase) {
+            try {
+                const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+                if (profile) {
+                    if (profile.email) customerEmail = profile.email;
+                    if (profile.first_name || profile.last_name) {
+                        customerName = ((profile.first_name || '') + ' ' + (profile.last_name || '')).trim();
+                    }
+                }
+            } catch (pErr) {
+                console.log("Profile fetch notice:", pErr.message);
+            }
+        }
+
+        const numericAmount = Math.round(Number(amount) || (planTier === 'basic' ? 7900 : planTier === 'pro' ? 14900 : 30000));
 
         const saspayPayload = {
-            amount: amount.toString(),
+            amount: numericAmount.toString(),
             currency: "XOF",
-            customer_email: profile.email || "client@kamalajeanne.com",
-            customer_name: (profile.first_name || "Client") + " " + (profile.last_name || ""),
-            return_url: "https://kamala-jeanne.vercel.app/dashboard.html",
+            customer_email: customerEmail,
+            customer_name: customerName,
+            return_url: "https://kamala-jeanne.vercel.app/dashboard.html?payment=success&tier=" + (planTier || 'pro'),
             metadata: {
-                userId: userId,
-                planTier: planTier
+                userId: userId || 'anonymous',
+                planTier: planTier || 'pro',
+                cycle: cycle || 'monthly'
             }
         };
 
@@ -252,15 +268,19 @@ app.post('/api/payments/create-session', async (req, res) => {
 
         const data = await saspayRes.json();
         
-        if (data.data && data.data.checkout_url) {
-            res.json({ checkout_url: data.data.checkout_url });
+        if (data && data.data && data.data.checkout_url) {
+            res.json({ 
+                success: true, 
+                checkout_url: data.data.checkout_url,
+                paymentUrl: data.data.checkout_url
+            });
         } else {
-            console.error('Saspay Error:', data);
-            res.status(500).json({ error: 'Erreur lors de la creation du paiement' });
+            console.error('Saspay Error Response:', data);
+            res.status(500).json({ error: (data && data.message) || 'Erreur SasPay lors de la création de session' });
         }
     } catch (err) {
-        console.error('Payment Session Error:', err);
-        res.status(500).json({ error: 'Erreur serveur' });
+        console.error('Payment Session Fatal Error:', err);
+        res.status(500).json({ error: 'Erreur interne du serveur de paiement' });
     }
 });
 
