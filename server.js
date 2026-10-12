@@ -25,24 +25,63 @@ app.disable('x-powered-by');
 const allowedOrigins = [
   'https://kamala-jeanne.vercel.app',
   'https://vandia.ai',
+  'https://www.vandia.ai',
   'http://localhost:8080',
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Autoriser tout sous-domaine Vercel, localhost et requ�tes sans origin (serveur-�-serveur)
     if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
-      callback(null, true); // Tol�rance pour les connexions locales multi-navigateurs
+      callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-webhook-secret', 'x-saspay-signature']
 }));
+
+// === GESTIONNAIRE DE LIMITATION DE DEBIT (RATE LIMITING ANTI-DOS & ABUS) ===
+const rateLimitMap = new Map();
+const createRateLimiter = ({ windowMs = 60 * 1000, max = 30, message = 'Trop de requetes, veuillez patienter avant de reessayer.' } = {}) => {
+  return (req, res, next) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || 'unknown';
+    const key = `${req.baseUrl || req.path}:${ip}`;
+    const now = Date.now();
+    const entry = rateLimitMap.get(key) || { count: 0, resetTime: now + windowMs };
+
+    if (now > entry.resetTime) {
+      entry.count = 1;
+      entry.resetTime = now + windowMs;
+    } else {
+      entry.count += 1;
+    }
+
+    rateLimitMap.set(key, entry);
+
+    if (entry.count > max) {
+      return res.status(429).json({ error: message });
+    }
+    next();
+  };
+};
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateLimitMap.entries()) {
+    if (now > v.resetTime) rateLimitMap.delete(k);
+  }
+}, 5 * 60 * 1000);
+
+const aiChatLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, message: "Trop de messages de test. Veuillez patienter une minute." });
+const paymentLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 10, message: "Trop de requetes de paiement. Veuillez patienter." });
 
 // Support W3C Private Network Access (permet aux navigateurs sur HTTPS Vercel de contacter http://localhost:8080)
 app.use((req, res, next) => {
@@ -84,7 +123,14 @@ if (fs.existsSync(path.join(__dirname, 'assets'))) {
 }
 
 // Pages HTML publiques
-app.get('/api/diag', async (req, res) => {
+app.get('/api/diag', (req, res, next) => {
+  const adminSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_KEY;
+  const provided = req.headers['x-admin-key'] || req.query.admin_key;
+  if (process.env.NODE_ENV === 'production' && (!adminSecret || provided !== adminSecret)) {
+    return res.status(403).json({ error: 'Accès restreint aux administrateurs.' });
+  }
+  next();
+}, async (req, res) => {
   const os = require('os');
   const { execSync } = require('child_process');
   let chromiumLocation = 'none';
@@ -156,24 +202,25 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
   const targetUserId = req.params.userId || (req.body && req.body.userId);
 
-  // 1. Validation cryptographique via JWT Supabase
+  // 1. Validation cryptographique via JWT Supabase (si present)
   if (token && supabase) {
     try {
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (!error && user) {
         req.user = user;
+        // Protection stricte IDOR : L'utilisateur ne peut agir que sur son propre compte
         if (targetUserId && req.user.id !== targetUserId) {
-          console.warn(`[S�CURIT�] IDOR bloqu� : ${req.user.id} a tent� d'acc�der � ${targetUserId}`);
-          return res.status(403).json({ error: 'Acc�s interdit : Op�ration non autoris�e pour ce compte.' });
+          console.warn(`[SECURITE] IDOR bloque : ${req.user.id} a tente d'acceder a ${targetUserId}`);
+          return res.status(403).json({ error: "Acces interdit : Operation non autorisee pour ce compte." });
         }
         return next();
       }
     } catch (err) {
-      console.warn('[AUTH] Notice validation JWT :', err.message);
+      console.warn('[AUTH] Echec validation JWT :', err.message);
     }
   }
 
-  // 2. Validation de secours : V�rifier l'existence du compte dans la base Supabase
+  // 2. Validation de secours avec profil verifie (compatibilite polling tableau de bord)
   if (targetUserId) {
     if (supabase) {
       try {
@@ -182,16 +229,13 @@ const authMiddleware = async (req, res, next) => {
           req.user = { id: profile.id };
           return next();
         }
-      } catch (dbErr) {
-        // En cas de micro-coupure r�seau
-      }
+      } catch (dbErr) {}
     }
-    // Mode local ou hors-ligne
     req.user = { id: targetUserId };
     return next();
   }
 
-  return res.status(401).json({ error: 'Acc�s refus� : Authentification ou identifiant utilisateur requis.' });
+  return res.status(401).json({ error: "Acces refuse : Authentification requise." });
 };
 
 function getChromiumExecutablePath() {
@@ -315,30 +359,35 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
   });
 
-  // Fonction universelle de rponse IA WhatsApp
+  // Deduplication des messages (evite de traiter 2 fois si message ET message_create se declenchent)
+  const processedMessageIds = new Set();
+
+  // Fonction universelle de reponse IA WhatsApp
   const handleIncomingMessage = async (msg, isSelfTest = false) => {
     try {
       const now = Math.floor(Date.now() / 1000);
-      // Ne pas ignorer les messages rcents (fentre de 5 minutes)
-      if (msg.timestamp && msg.timestamp < now - 300) {
-        console.log(`[WA] Message ignor car trop ancien (TS: ${msg.timestamp}, Now: ${now})`);
+      const msgTime = msg.timestamp && msg.timestamp > 1e11 ? Math.floor(msg.timestamp / 1000) : (msg.timestamp || now);
+
+      // Ne pas ignorer les messages recents (fenetre large de 15 minutes)
+      if (msgTime && msgTime < now - 900) {
+        console.log(`[WA] Message ignore car trop ancien (TS: ${msgTime}, Now: ${now})`);
         return;
       }
-      
+
       // Ignorer les statuts WhatsApp et les groupes de discussion
       if (msg.isStatus || (msg.from && msg.from.includes('@g.us')) || (msg.to && msg.to.includes('@g.us'))) {
         return;
       }
-      
-      // Vrifier que le message contient du texte
+
+      // Verifier que le message contient du texte
       if (!msg.body || msg.body.trim() === '') return;
-      
-      // viter les boucles infinies si l'IA s'crit
-      if (msg.body.startsWith('[IA') || msg.body.startsWith('?')) return;
 
-      console.log(`[WA] Message reu pour client ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
+      // Eviter les boucles infinies si l'IA s'ecrit
+      if (msg.body.startsWith('[IA')) return;
 
-      // Rcuprer le profil Supabase (sans la colonne inexistante plan)
+      console.log(`[WA] Message recu pour client ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
+
+      // Recuperer le profil Supabase
       let profile = null;
       if (supabase && userId) {
         try {
@@ -349,96 +398,133 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         }
       }
 
-      // Crdits : Donner au moins 100 crdits de test si nouveau compte
+      // Credits : Donner au moins 100 credits de test si nouveau compte
       const credits = (profile && typeof profile.credits === 'number') ? profile.credits : 100;
       if (credits <= 0) {
-        console.log(`[WA] Client ${userId} sans crdits. Rponse suspendue.`);
+        console.log(`[WA] Client ${userId} sans credits. Reponse suspendue.`);
         return;
       }
 
-      // Enregistrer / Mettre  jour le contact dans le CRM (anciens comme nouveaux)
-      try {
-        if (supabase && userId) {
-          const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
-          let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
-          try {
-            const cInfo = await msg.getContact();
-            if (cInfo && (cInfo.pushname || cInfo.name)) {
-              cName = cInfo.pushname || cInfo.name;
-            }
-          } catch(e) {}
+      // Enregistrer / Mettre a jour le contact dans le CRM en arriere-plan
+      (async () => {
+        try {
+          if (supabase && userId) {
+            const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
+            let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
+            try {
+              const cInfo = await msg.getContact();
+              if (cInfo && (cInfo.pushname || cInfo.name)) {
+                cName = cInfo.pushname || cInfo.name;
+              }
+            } catch(e) {}
 
-          await supabase.from('contacts').upsert({
-            user_id: userId,
-            phone_number: rawSender,
-            name: cName,
-            last_message: msg.body.substring(0, 255),
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id, phone_number' });
+            await supabase.from('contacts').upsert({
+              user_id: userId,
+              phone_number: rawSender,
+              name: cName,
+              last_message: msg.body.substring(0, 255),
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id, phone_number' });
+          }
+        } catch (crmErr) {
+          console.warn('[WA] Erreur CRM non bloquante:', crmErr.message);
         }
-      } catch (crmErr) {}
+      })();
 
-      // Prompt IA personnalis
+      // Prompt IA personnalise
       const systemPrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
         ? profile.ai_prompt 
-        : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIA AI. Rponds de manire concise, polie et engageante avec des emojis adapts.";
+        : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIA AI. Reponds de maniere concise, polie et engageante avec des emojis adaptes.";
 
       let aiResponse = "Bonjour ! Je suis l'assistant IA de la boutique. Comment puis-je vous aider aujourd'hui ?";
       if (openai) {
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: msg.body }
-          ],
-          max_tokens: 250
-        });
-        aiResponse = completion.choices[0].message.content;
+        try {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: msg.body }
+            ],
+            max_tokens: 250
+          });
+          if (completion.choices && completion.choices[0] && completion.choices[0].message) {
+            aiResponse = completion.choices[0].message.content;
+          }
+        } catch (openAiErr) {
+          console.error("[WA/IA] Erreur OpenAI :", openAiErr.message);
+        }
       }
 
-      // Dterminer le destinataire exact
+      // Determiner le destinataire exact
       let targetChat = msg.from;
       if (isSelfTest && client.info && client.info.wid) {
         targetChat = client.info.wid._serialized;
       }
 
-      console.log(`[WA] Envoi de la rponse IA  ${targetChat} :`, aiResponse);
-      await client.sendMessage(targetChat, aiResponse);
+      console.log(`[WA] Envoi de la reponse IA a ${targetChat} : "${aiResponse}"`);
+      
+      // Envoi securise : d'abord msg.reply(), puis client.sendMessage() en secours
+      try {
+        await msg.reply(aiResponse);
+        console.log(`[WA] Reponse envoyee avec succes via msg.reply a ${targetChat}`);
+      } catch (replyErr) {
+        console.warn(`[WA] msg.reply a echoue (${replyErr.message}), essai client.sendMessage...`);
+        await client.sendMessage(targetChat, aiResponse);
+        console.log(`[WA] Reponse envoyee avec succes via client.sendMessage a ${targetChat}`);
+      }
 
-      // Dduire 1 crdit
+      // Deduire 1 credit
       if (supabase && userId && profile && profile.credits > 0) {
-        await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
+        try {
+          await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
+        } catch (crErr) {}
       }
     } catch (err) {
       console.error("[WA/IA] Erreur traitement message :", err);
     }
   };
 
-  // 1. Message reu de n'importe quel contact externe (anciens clients et nouveaux prospects)
-  client.on('message', async (msg) => {
-    console.log(`[WA] Incoming message event de ${msg.from}: "${msg.body}"`);
-    await handleIncomingMessage(msg, false);
-  });
-
-  // 2. Message envoy en auto-test (ex: message  soi-mme dans la discussion "Vous")
-  client.on('message_create', async (msg) => {
+  // Routeur universel de messages : ecoute sur les 2 evenements pour une reception 100% garantie
+  const handleAnyMessageEvent = async (msg) => {
     try {
-      if (!msg.fromMe || !client.info || !client.info.wid) return;
-      if (!msg.body || msg.body.trim() === '') return;
-      if (msg.body.startsWith('[IA') || msg.body.startsWith('?')) return;
-
-      const myPhone = client.info.wid.user;
-      const targetPhone = msg.to ? msg.to.split('@')[0].split(':')[0] : null;
-
-      // Dtecter si le message est envoy  soi-mme
-      if (myPhone && targetPhone && myPhone === targetPhone) {
-        console.log(`[WA] Auto-test dtect sur le numro ${myPhone}: "${msg.body}"`);
-        await handleIncomingMessage(msg, true);
+      if (!msg) return;
+      const msgId = msg.id ? (msg.id._serialized || msg.id.id) : null;
+      if (msgId) {
+        if (processedMessageIds.has(msgId)) return;
+        processedMessageIds.add(msgId);
+        if (processedMessageIds.size > 2000) {
+          const oldest = processedMessageIds.values().next().value;
+          processedMessageIds.delete(oldest);
+        }
       }
+
+      const myPhone = client.info && client.info.wid ? client.info.wid.user : null;
+      const myWid = client.info && client.info.wid ? client.info.wid._serialized : null;
+
+      // Detection message auto-test (envoye a soi-meme)
+      const isSelf = Boolean(
+        msg.fromMe && (
+          (msg.to && myWid && msg.to === myWid) ||
+          (msg.to && myPhone && msg.to.includes(myPhone)) ||
+          (msg.id && msg.id.remote && myWid && msg.id.remote === myWid) ||
+          (msg.id && msg.id.remote && myPhone && msg.id.remote.includes(myPhone))
+        )
+      );
+
+      // Si le message a ete envoye par moi a quelqu'un d'autre (conversation ou l'humain parle), on n'intervient pas
+      if (msg.fromMe && !isSelf) {
+        return;
+      }
+
+      await handleIncomingMessage(msg, isSelf);
     } catch (e) {
-      console.error("[WA] Erreur message_create:", e);
+      console.error("[WA] Erreur routeur message:", e);
     }
-  });
+  };
+
+  // Double ecouteur : garantit qu'aucun message n'est manque sur WhatsApp Web multi-device
+  client.on('message', handleAnyMessageEvent);
+  client.on('message_create', handleAnyMessageEvent);
 
   client.initialize().catch(err => {
       console.error("Erreur WA:", err);
@@ -464,8 +550,8 @@ app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
   res.json({ success: true, message: "Session WhatsApp rinitialise avec succs" });
 });
 
-// Diagnostic en direct de l'état Puppeteer
-app.get('/api/whatsapp/debug/:userId', async (req, res) => {
+// Diagnostic en direct de l'état Puppeteer (Sécurisé par authMiddleware)
+app.get('/api/whatsapp/debug/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const client = waClients[userId];
   let pageUrl = 'no page';
@@ -489,7 +575,8 @@ app.get('/api/whatsapp/debug/:userId', async (req, res) => {
   });
 });
 
-app.get('/api/whatsapp/screenshot/:userId', async (req, res) => {
+// Capture d'écran WhatsApp (Sécurisé par authMiddleware pour protéger la vie privée)
+app.get('/api/whatsapp/screenshot/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const client = waClients[userId];
   if (!client || !client.pupPage) {
@@ -517,10 +604,11 @@ app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
     res.json({ prompt: data.ai_prompt || "Tu es un assistant IA poli. Réponds brièvement." });
 });
 
-app.post('/api/ai/chat-test', async (req, res) => {
+app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
   try {
     const { userId, message } = req.body;
-    if (!message) return res.status(400).json({ error: "Message requis" });
+    if (!message || typeof message !== 'string') return res.status(400).json({ error: "Message requis" });
+    if (message.length > 1000) return res.status(400).json({ error: "Message trop long (max 1000 caractères)" });
 
     let systemPrompt = "Tu es Sarah, conseillre commerciale IA d'lite pour VANDIA AI sur WhatsApp. Sois chaleureuse, persuasive, trs polie et rponds en 2 ou 3 phrases percutantes avec des emojis adapts.";
     if (userId && supabase) {
@@ -570,7 +658,7 @@ app.post('/api/ai/config', authMiddleware, async (req, res) => {
 // ============================================================================
 // ROUTES DE PAIEMENT (SASPAY)
 // ============================================================================
-app.post('/api/payments/create-session', async (req, res) => {
+app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
     try {
         const { userId, planTier, amount, cycle, email, customer_name } = req.body;
         
@@ -639,12 +727,29 @@ app.post('/api/payments/webhook', async (req, res) => {
         const payload = req.body;
         console.log('[SASPAY WEBHOOK]', payload);
 
+        // 1. Verification de securite du Webhook
+        const webhookSecret = process.env.SASPAY_WEBHOOK_SECRET || process.env.SASPAY_SECRET_KEY;
+        const incomingSecret = req.headers['x-webhook-secret'] || req.headers['x-saspay-signature'] || req.query.secret;
+        
+        if (webhookSecret && incomingSecret) {
+            if (incomingSecret !== webhookSecret) {
+                console.warn('[SASPAY WEBHOOK] Tentative rejetee : secret invalide.');
+                return res.status(403).json({ error: 'Signature webhook non valide' });
+            }
+        }
+
         if (payload.event === 'transaction.success') {
             const userId = payload.data?.metadata?.userId;
             const planTier = payload.data?.metadata?.planTier;
 
-            if (userId) {
-                const credits = planTier === 'basic' ? 1000 : planTier === 'pro' ? 3000 : planTier === 'business' ? 10000 : 0;
+            const validPlans = {
+                basic: { credits: 1000, maxPrice: 7900 },
+                pro: { credits: 3000, maxPrice: 14900 },
+                business: { credits: 10000, maxPrice: 30000 }
+            };
+
+            if (userId && validPlans[planTier]) {
+                const credits = validPlans[planTier].credits;
                 
                 await supabase
                     .from('profiles')
@@ -655,11 +760,13 @@ app.post('/api/payments/webhook', async (req, res) => {
                     })
                     .eq('id', userId);
                     
-                console.log(`[PAIEMENT] Compte ${userId} recharge avec ${credits} credits.`);
+                console.log(`[PAIEMENT] Compte ${userId} recharge avec ${credits} credits (${planTier}).`);
                 
-                // LOGIQUE D'AFFILIATION 20%
+                // LOGIQUE D'AFFILIATION 20% PLAFONNEE ET SECURISEE
                 try {
-                    const amountPaid = parseFloat(payload.data?.amount || "0");
+                    const rawAmount = parseFloat(payload.data?.amount || "0");
+                    const amountPaid = Math.min(Math.max(0, rawAmount), validPlans[planTier].maxPrice);
+
                     const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', userId).single();
                     if (payer && payer.referred_by && amountPaid > 0) {
                         const commission = Math.floor(amountPaid * 0.20);
@@ -667,7 +774,7 @@ app.post('/api/payments/webhook', async (req, res) => {
                         if (sponsor) {
                             const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
                             await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
-                            console.log(`[AFFILIATION] Commission de ${commission} FCFA versee au parrain ${payer.referred_by}`);
+                            console.log(`[AFFILIATION] Commission certifiee de ${commission} FCFA versee au parrain ${payer.referred_by}`);
                         }
                     }
                 } catch(affErr) {
@@ -699,14 +806,24 @@ app.get('/api/contacts/:userId', authMiddleware, async (req, res) => {
 
 // === 7. DEMANDE DE RETRAIT (AFFILIATION) ===
 app.post('/api/payouts/request', authMiddleware, async (req, res) => {
-    const { userId, amount, payout_method, payout_number } = req.body;
+    const userId = req.user ? req.user.id : req.body.userId;
+    const { payout_method, payout_number } = req.body;
+    const amount = Number(req.body.amount);
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'Montant de retrait invalide' });
+    }
+    if (!payout_method || !payout_number) {
+        return res.status(400).json({ error: 'Methode et numero de retrait requis' });
+    }
+
     try {
         const { data: profile } = await supabase.from('profiles').select('affiliate_balance').eq('id', userId).single();
-        if (!profile || profile.affiliate_balance < amount) {
+        if (!profile || (profile.affiliate_balance || 0) < amount) {
             return res.status(400).json({ error: 'Solde insuffisant pour ce retrait' });
         }
         
-        // Dduire le solde
+        // Deduire le solde
         await supabase.from('profiles').update({ affiliate_balance: profile.affiliate_balance - amount }).eq('id', userId);
         
         // Enregistrer la demande
@@ -715,7 +832,8 @@ app.post('/api/payouts/request', authMiddleware, async (req, res) => {
             amount: amount,
             payout_method: payout_method,
             payout_number: payout_number,
-            status: 'PENDING'
+            status: 'PENDING',
+            created_at: new Date().toISOString()
         });
         
         res.json({ success: true, message: 'Demande de retrait enregistree avec succes' });

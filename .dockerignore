@@ -1,0 +1,10 @@
+node_modules
+.git
+.env
+.env.*
+.wwebjs_auth
+*.log
+Thumbs.db
+.DS_Store
+.system_generated
+railway_screenshot.png

@@ -1408,16 +1408,21 @@ async function renderContacts() {
         
         if (data.success && data.contacts && data.contacts.length > 0) {
             updateDynamicKpis(data.contacts.length);
-            tbody.innerHTML = data.contacts.map(c => `
+            tbody.innerHTML = data.contacts.map(c => {
+              const safeName = escapeHtml(c.name || 'Inconnu');
+              const safeInitial = escapeHtml((c.name || 'I')[0].toUpperCase());
+              const safePhone = escapeHtml(c.phone_number || '');
+              const safeDate = escapeHtml(new Date(c.updated_at).toLocaleDateString());
+              return `
               <tr>
                 <td>
                   <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">${(c.name || 'I')[0].toUpperCase()}</div>
-                    <span>${c.name || 'Inconnu'}</span>
+                    <div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">${safeInitial}</div>
+                    <span>${safeName}</span>
                   </div>
                 </td>
-                <td>${c.phone_number}</td>
-                <td>${new Date(c.updated_at).toLocaleDateString()}</td>
+                <td>${safePhone}</td>
+                <td>${safeDate}</td>
                 <td><span class="badge badge-gray">Prospect</span></td>
                 <td>N/A</td>
                 <td>
@@ -1426,7 +1431,7 @@ async function renderContacts() {
                   </div>
                 </td>
               </tr>
-            `).join("");
+            `;}).join("");
         } else {
             tbody.innerHTML = `
               <tr>
