@@ -6,7 +6,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[SERVER] Rejet non gr :', reason);
 });
 
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -1233,7 +1233,7 @@ app.use((req, res) => {
 });
 
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[KAMALA JEANNE] Moteur Backend démarré sur http://localhost:${PORT}`);
 });
 
