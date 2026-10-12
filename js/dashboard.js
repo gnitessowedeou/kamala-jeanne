@@ -159,23 +159,6 @@ let activeConversation = MOCK_DATA.conversations[0];
 // ==============================================================================
 document.addEventListener("DOMContentLoaded", () => {
 
-  // Correct Action Chips (Quick Replies)
-  const quickChips = document.querySelectorAll('.chat-quick-actions .quick-chip');
-  quickChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      showToast("Veuillez connecter votre numéro WhatsApp pour activer cette fonctionnalité.", "info");
-    });
-  });
-
-  // Correct Attachment Button
-  const attachIconBtn = document.querySelector('.chat-input-bar .header-icon-btn');
-  if (attachIconBtn) {
-    attachIconBtn.addEventListener('click', () => {
-      showToast("La galerie et l'envoi de fichiers seront disponibles une fois votre numéro WhatsApp lié.", "info");
-    });
-  }
-
-
   // Inbox Tabs
   const inboxTabs = document.querySelectorAll('.inbox-tab-btn');
   inboxTabs.forEach(tab => {
@@ -184,22 +167,6 @@ document.addEventListener("DOMContentLoaded", () => {
       e.target.classList.add('active');
     });
   });
-
-  // Action Chips (Quick Replies)
-  const chips = document.querySelectorAll('.chat-quick-replies .chip-btn');
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      showToast("Veuillez connecter votre numéro WhatsApp pour activer cette fonctionnalité.", "info");
-    });
-  });
-
-  // Attachment Button
-  const attachBtn = document.querySelector('.chat-input-toolbar .icon-btn');
-  if (attachBtn) {
-    attachBtn.addEventListener('click', () => {
-      showToast("La galerie sera disponible une fois votre numéro WhatsApp lié.", "info");
-    });
-  }
 
   initDashboard();
 });
@@ -1002,11 +969,83 @@ function setupCurrencyToggle() {
 // ==============================================================================
 // 9. INBOX & WHATSAPP CHAT LOGIC
 // ==============================================================================
+activeConversation = null;
+
+async function syncWhatsAppInbox() {
+  const userId = getAppUserId();
+  if (!userId) return;
+
+  try {
+    const res = await fetch(API_URL + '/api/whatsapp/chats/' + userId, { headers: getAuthHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    // 1. Mise à jour dynamique du badge de notification sur le menu
+    const sidebarBadge = document.getElementById("sidebar-inbox-badge");
+    const unreadCount = Number(data.unreadTotal) || 0;
+    if (sidebarBadge) {
+      if (unreadCount > 0) {
+        sidebarBadge.textContent = unreadCount;
+        sidebarBadge.style.display = "inline-block";
+      } else {
+        sidebarBadge.style.display = "none";
+      }
+    }
+
+    // 2. Synchronisation des discussions réelles
+    if (Array.isArray(data.chats)) {
+      if (data.chats.length > 0) {
+        data.chats.forEach(fresh => {
+          const existing = MOCK_DATA.conversations.find(c => c.id === fresh.id);
+          if (existing && existing.messages && existing.messages.length > 0) {
+            fresh.messages = existing.messages;
+          }
+        });
+        MOCK_DATA.conversations = data.chats;
+        if (!activeConversation) {
+          loadConversation(MOCK_DATA.conversations[0]);
+        }
+        renderConversationList();
+
+        if (activeConversation && activeConversation.id) {
+          fetchActiveChatMessages(activeConversation.id);
+        }
+      } else if (MOCK_DATA.conversations.length === 0) {
+        renderConversationList();
+      }
+    }
+  } catch(e) {}
+}
+
+async function fetchActiveChatMessages(chatId) {
+  if (!chatId || window.currentWhatsAppStatus !== 'CONNECTED') return;
+  try {
+    const res = await fetch(API_URL + '/api/whatsapp/messages/' + getAppUserId() + '/' + encodeURIComponent(chatId), {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.messages) && data.messages.length > 0) {
+        if (activeConversation && activeConversation.id === chatId) {
+          activeConversation.messages = data.messages;
+          renderChatMessages();
+        }
+      }
+    }
+  } catch(e) {}
+}
+
 function setupInboxInteraction() {
   renderConversationList();
-  loadConversation(MOCK_DATA.conversations[0]);
+  if (MOCK_DATA.conversations && MOCK_DATA.conversations.length > 0) {
+    loadConversation(MOCK_DATA.conversations[0]);
+  }
 
-  // Chat message send form
+  // Synchronisation périodique automatique toutes les 5 secondes
+  syncWhatsAppInbox();
+  setInterval(syncWhatsAppInbox, 5000);
+
+  // Formulaire d'envoi de messages WhatsApp
   const chatForm = document.getElementById("chat-input-form");
   const chatInput = document.getElementById("chat-message-input");
 
@@ -1019,67 +1058,91 @@ function setupInboxInteraction() {
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+      // Si aucune discussion active, demander le numéro WhatsApp
+      if (!activeConversation) {
+        const destNumber = prompt("Entrez le numéro WhatsApp du destinataire avec l'indicatif (ex: +229 99 04 47 29) :");
+        if (!destNumber || !destNumber.trim()) return;
+        const cleanPhone = destNumber.trim();
+        activeConversation = {
+          id: cleanPhone.replace(/[^0-9]/g, '') + '@c.us',
+          name: cleanPhone,
+          phone: cleanPhone,
+          avatar: 'WA',
+          messages: [],
+          lastMessage: messageText,
+          time: timeStr,
+          unread: false,
+          aiActive: true
+        };
+        MOCK_DATA.conversations.unshift(activeConversation);
+        renderConversationList();
+        loadConversation(activeConversation);
+      }
+
+      // 1. Ajout instantané du message dans l'interface
+      if (!activeConversation.messages) activeConversation.messages = [];
       activeConversation.messages.push({
         sender: "agent",
         text: messageText,
         time: timeStr
       });
+      activeConversation.lastMessage = messageText;
+      activeConversation.time = timeStr;
 
       renderChatMessages();
+      renderConversationList();
       chatInput.value = "";
 
-      // Appel direct  l'IA GPT-4o sur le serveur Cloud Railway
-      try {
-        let uId = null;
+      // 2. Envoi réel sur WhatsApp via le serveur Cloud
+      const targetPhone = activeConversation.phone || activeConversation.id;
+      if (targetPhone && window.currentWhatsAppStatus === 'CONNECTED') {
         try {
-          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-          uId = u.id;
-        } catch(e) {}
-
-        const headers = { 'Content-Type': 'application/json' };
-        try {
-          const authH = getAuthHeaders();
-          if (authH && authH.Authorization) headers.Authorization = authH.Authorization;
-        } catch(e) {}
-
-        let res = null;
-        try {
-          res = await fetch('/api/ai/chat-test', {
+          const res = await fetch(API_URL + '/api/whatsapp/send', {
             method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ userId: uId, message: messageText })
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              userId: getAppUserId(),
+              to: targetPhone,
+              message: messageText
+            })
           });
-        } catch(e) {}
-
-        if (!res || !res.ok) {
-          try {
-            res = await fetch(API_URL + '/api/ai/chat-test', {
-              method: 'POST',
-              headers: headers,
-              body: JSON.stringify({ userId: uId, message: messageText })
-            });
-          } catch(e) {}
+          const result = await res.json().catch(() => ({}));
+          if (result && result.success) {
+            showToast("Message envoyé avec succès sur WhatsApp !", "success");
+          } else {
+            showToast(result.error || "Erreur d'envoi WhatsApp", "info");
+          }
+        } catch (err) {
+          showToast("Erreur de connexion au serveur", "info");
         }
-
-        const data = res ? await res.json().catch(() => ({})) : {};
-        
-        if (data && data.reply) {
-          const now2 = new Date();
-          const timeStr2 = `${String(now2.getHours()).padStart(2, '0')}:${String(now2.getMinutes()).padStart(2, '0')}`;
-          activeConversation.messages.push({
-            sender: "client",
-            text: data.reply,
-            time: timeStr2
-          });
-          renderChatMessages();
-          showToast("Rponse de votre Agent Commercial IA VANDIA", "info");
-        } else {
-          simulateClientResponse();
-        }
-      } catch (err) {
-        console.warn("Notice chat IA:", err);
-        simulateClientResponse();
+      } else {
+        showToast("Message enregistré dans le fil", "info");
       }
+    });
+  }
+
+  // Bouton Nouveau Message WhatsApp
+  const btnNewChat = document.getElementById("btn-inbox-new-chat");
+  if (btnNewChat) {
+    btnNewChat.addEventListener("click", () => {
+      const destNumber = prompt("Entrez le numéro WhatsApp du destinataire avec l'indicatif (ex: +229 99 04 47 29) :");
+      if (!destNumber || !destNumber.trim()) return;
+      const cleanPhone = destNumber.trim();
+      const newConv = {
+        id: cleanPhone.replace(/[^0-9]/g, '') + '@c.us',
+        name: cleanPhone,
+        phone: cleanPhone,
+        avatar: 'WA',
+        messages: [],
+        lastMessage: "Discussion initiée",
+        time: "À l'instant",
+        unread: false,
+        aiActive: true
+      };
+      MOCK_DATA.conversations.unshift(newConv);
+      renderConversationList();
+      loadConversation(newConv);
+      if (chatInput) chatInput.focus();
     });
   }
 
@@ -1087,7 +1150,6 @@ function setupInboxInteraction() {
   document.querySelectorAll(".quick-chip").forEach(chip => {
     chip.addEventListener("click", () => {
       const text = chip.getAttribute("data-text");
-      const chatInput = document.getElementById("chat-message-input");
       if (chatInput) {
         chatInput.value = text;
         chatInput.focus();
@@ -1095,7 +1157,7 @@ function setupInboxInteraction() {
     });
   });
 
-  // Mobile Back Button to return to conversations list
+  // Mobile Back Button
   const backBtn = document.getElementById("btn-chat-back");
   if (backBtn) {
     backBtn.addEventListener("click", () => {
@@ -1109,6 +1171,7 @@ function setupInboxInteraction() {
   const aiBadge = document.getElementById("chat-ai-status-badge");
   if (toggleHumanBtn && aiBadge) {
     toggleHumanBtn.addEventListener("click", () => {
+      if (!activeConversation) return;
       activeConversation.aiActive = !activeConversation.aiActive;
       if (activeConversation.aiActive) {
         aiBadge.innerHTML = `<i class="fa-solid fa-robot"></i><span class="chat-ai-status-text">IA Active</span>`;
@@ -1124,14 +1187,14 @@ function setupInboxInteraction() {
     });
   }
 
-  // Search filter inside inbox
+  // Recherche dans les discussions
   const inboxSearch = document.getElementById("inbox-search-input");
   if (inboxSearch) {
     inboxSearch.addEventListener("input", (e) => {
       const query = e.target.value.toLowerCase();
       document.querySelectorAll(".conv-item").forEach(item => {
-        const name = item.querySelector(".conv-name").textContent.toLowerCase();
-        const snippet = item.querySelector(".conv-preview").textContent.toLowerCase();
+        const name = (item.querySelector(".conv-name")?.textContent || "").toLowerCase();
+        const snippet = (item.querySelector(".conv-preview")?.textContent || "").toLowerCase();
         if (name.includes(query) || snippet.includes(query)) {
           item.style.display = "flex";
         } else {
@@ -1143,40 +1206,49 @@ function setupInboxInteraction() {
 }
 
 function renderConversationList() {
-  
   const listContainer = document.getElementById("inbox-conversation-list");
   if (!listContainer) return;
   
   if (!MOCK_DATA.conversations || MOCK_DATA.conversations.length === 0) {
-    listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 13px;">Aucune conversation pour le moment.</div>';
-    document.getElementById("chat-messages-stream").innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color: var(--text-secondary);">En attente de nouveaux messages...</div>';
-    document.getElementById("active-chat-name").textContent = "Boîte de Réception";
-    document.getElementById("active-chat-phone").textContent = "---";
-    document.getElementById("active-chat-avatar").textContent = "-";
+    listContainer.innerHTML = `
+      <div style="padding: 24px 16px; text-align: center; color: var(--text-secondary); font-size: 13px;">
+        <i class="fa-brands fa-whatsapp" style="font-size: 28px; color: var(--whatsapp-green); margin-bottom: 8px; display: block;"></i>
+        <p style="margin: 0 0 12px 0;">Aucune conversation pour le moment.</p>
+        <button type="button" class="btn-secondary-glass" onclick="document.getElementById('btn-inbox-new-chat')?.click()" style="font-size: 11.5px; padding: 6px 14px; margin: 0 auto;">
+          <i class="fa-solid fa-plus"></i> Démarrer une discussion
+        </button>
+      </div>
+    `;
+    const stream = document.getElementById("chat-messages-stream");
+    if (stream) stream.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color: var(--text-secondary); font-size: 13px;">En attente de nouveaux messages WhatsApp...</div>';
+    const nameEl = document.getElementById("active-chat-name");
+    if (nameEl) nameEl.textContent = "Boîte de Réception";
+    const phoneEl = document.getElementById("active-chat-phone");
+    if (phoneEl) phoneEl.textContent = "---";
+    const avatarEl = document.getElementById("active-chat-avatar");
+    if (avatarEl) avatarEl.textContent = "-";
     return;
   }
 
-
   listContainer.innerHTML = MOCK_DATA.conversations.map((conv, idx) => `
-    <div class="conv-item ${idx === 0 ? 'active' : ''}" data-conv-id="${conv.id}">
+    <div class="conv-item ${activeConversation && activeConversation.id === conv.id ? 'active' : (!activeConversation && idx === 0 ? 'active' : '')}" data-conv-id="${conv.id}">
       <div class="conv-avatar">
-        ${conv.avatar}
+        ${escapeHtml(conv.avatar || 'WA')}
         <span class="conv-online-dot"></span>
       </div>
       <div class="conv-details">
         <div class="conv-top-row">
-          <span class="conv-name">${conv.name}</span>
-          <span class="conv-time">${conv.time}</span>
+          <span class="conv-name">${escapeHtml(conv.name)}</span>
+          <span class="conv-time">${escapeHtml(conv.time || '')}</span>
         </div>
         <div class="conv-bottom-row">
-          <span class="conv-preview">${conv.lastMessage}</span>
-          ${conv.unread ? `<span class="badge badge-green" style="font-size: 10px;">1</span>` : ''}
+          <span class="conv-preview">${escapeHtml(conv.lastMessage || '')}</span>
+          ${conv.unread ? `<span class="badge badge-green" style="font-size: 10px;">${conv.unreadCount || 1}</span>` : ''}
         </div>
       </div>
     </div>
   `).join("");
 
-  // Attach click listener
   listContainer.querySelectorAll(".conv-item").forEach(item => {
     item.addEventListener("click", () => {
       const convId = item.getAttribute("data-conv-id");
@@ -1185,21 +1257,18 @@ function renderConversationList() {
         listContainer.querySelectorAll(".conv-item").forEach(i => i.classList.remove("active"));
         item.classList.add("active");
         found.unread = false;
+        found.unreadCount = 0;
         loadConversation(found);
 
-        // Sur mobile, bascule vers la fenêtre de discussion active
         const inboxLayout = document.querySelector(".inbox-layout");
         if (inboxLayout) inboxLayout.classList.add("chat-open");
       }
     });
   });
-
-  if (MOCK_DATA.conversations.length > 0) {
-    loadConversation(MOCK_DATA.conversations[0]);
-  }
 }
 
 function loadConversation(conv) {
+  if (!conv) return;
   activeConversation = conv;
 
   const nameEl = document.getElementById("active-chat-name");
@@ -1207,15 +1276,25 @@ function loadConversation(conv) {
   const avatarEl = document.getElementById("active-chat-avatar");
 
   if (nameEl) nameEl.textContent = conv.name;
-  if (phoneEl) phoneEl.textContent = conv.phone;
-  if (avatarEl) avatarEl.textContent = conv.avatar;
+  if (phoneEl) phoneEl.textContent = conv.phone || conv.id || "";
+  if (avatarEl) avatarEl.textContent = conv.avatar || "WA";
 
+  if (!conv.messages) conv.messages = [];
   renderChatMessages();
+
+  if (conv.id && window.currentWhatsAppStatus === 'CONNECTED') {
+    fetchActiveChatMessages(conv.id);
+  }
 }
 
 function renderChatMessages() {
   const stream = document.getElementById("chat-messages-stream");
   if (!stream) return;
+
+  if (!activeConversation || !activeConversation.messages || activeConversation.messages.length === 0) {
+    stream.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color: var(--text-secondary); font-size: 13px;">Aucun message échangé pour le moment. Tapez votre message ci-dessous pour démarrer.</div>';
+    return;
+  }
 
   stream.innerHTML = activeConversation.messages.map(msg => {
     if (msg.sender === "system") {
@@ -1231,41 +1310,16 @@ function renderChatMessages() {
       <div class="message-bubble ${isOutgoing ? 'outgoing' : 'incoming'}">
         <p>${escapeHtml(msg.text)}</p>
         <div class="message-meta">
-          <span>${escapeHtml(msg.time)}</span>
+          <span>${escapeHtml(msg.time || '')}</span>
           ${isOutgoing ? `<i class="fa-solid fa-check-double double-tick"></i>` : ''}
         </div>
       </div>
     `;
   }).join("");
 
-  // Scroll to bottom
   stream.scrollTop = stream.scrollHeight;
 }
 
-function simulateClientResponse() {
-  const responses = [
-    "D'accord, je regarde ça de suite !",
-    "C'est noté, je valide le paiement Wave dès que possible.",
-    "Merci beaucoup pour la rapidité de réponse !",
-    "Pouvez-vous me confirmer le numéro pour la livraison ?"
-  ];
-  const randomResp = responses[Math.floor(Math.random() * responses.length)];
-  const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  activeConversation.messages.push({
-    sender: "client",
-    text: randomResp,
-    time: timeStr
-  });
-
-  renderChatMessages();
-  showToast(`Nouveau message WhatsApp de ${activeConversation.name}`, "info");
-}
-
-// ==============================================================================
-// 10. DYNAMIC CONTENT RENDERING (Tables & Cards)
-// ==============================================================================
 function renderRecentInteractions() {
   const tbody = document.getElementById("table-interactions-body");
   if (!tbody) return;

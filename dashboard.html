@@ -111,7 +111,7 @@
                   <i class="fa-solid fa-inbox nav-item-icon"></i>
                   <span>Boîte de Réception</span>
                 </div>
-                <span class="badge badge-green">1</span>
+                <span class="badge badge-green" id="sidebar-inbox-badge" style="display: none;">0</span>
               </a>
             </li>
             <li>
@@ -756,6 +756,10 @@
                   <i class="fa-solid fa-magnifying-glass"></i>
                   <input type="text" id="inbox-search-input" placeholder="Rechercher une discussion...">
                 </div>
+                <button type="button" class="btn-primary-glow" id="btn-inbox-new-chat" style="padding: 7px 12px; font-size: 11.5px; display: flex; align-items: center; gap: 6px; white-space: nowrap; margin-bottom: 8px; width: 100%; justify-content: center;">
+                  <i class="fa-solid fa-paper-plane"></i>
+                  <span>Nouveau Message WhatsApp</span>
+                </button>
                 <div class="inbox-tabs">
                   <button class="inbox-tab-btn active" data-filter="all">Tous</button>
                   <button class="inbox-tab-btn" data-filter="unread">Non lus</button>
@@ -2459,8 +2463,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261012_v5"></script>
-  <script src="js/dashboard.js?v=20261012_v5"></script>
+  <script src="js/auth.js?v=20261012_v6"></script>
+  <script src="js/dashboard.js?v=20261012_v6"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>

@@ -601,6 +601,92 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
   const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED'); res.json({ status: st, qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null, error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null });
 });
 
+// === 4. GESTION DES DISCUSSIONS & MESSAGES WHATSAPP (BOÎTE DE RÉCEPTION) ===
+app.get('/api/whatsapp/chats/:userId', authMiddleware, async (req, res) => {
+  const { userId } = req.params;
+  const client = waClients[userId];
+  if (!client || waStatuses[userId] !== 'CONNECTED') {
+    return res.json({ chats: [], unreadTotal: 0 });
+  }
+  try {
+    const rawChats = await client.getChats();
+    const chats = [];
+    let unreadTotal = 0;
+    for (const c of rawChats.slice(0, 35)) {
+      if (c.isGroup) continue;
+      const unread = c.unreadCount || 0;
+      unreadTotal += unread;
+      const lastMsg = c.lastMessage ? (c.lastMessage.body || '') : '';
+      const time = c.lastMessage && c.lastMessage.timestamp 
+        ? new Date(c.lastMessage.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '';
+      const contactUser = c.id && c.id.user ? c.id.user : '';
+      chats.push({
+        id: c.id._serialized,
+        name: c.name || (contactUser ? `+${contactUser}` : 'Client WhatsApp'),
+        phone: contactUser ? `+${contactUser}` : '',
+        avatar: (c.name ? c.name.substring(0, 2).toUpperCase() : 'WA'),
+        lastMessage: lastMsg,
+        time: time,
+        unread: unread > 0,
+        unreadCount: unread,
+        aiActive: true
+      });
+    }
+    res.json({ chats, unreadTotal });
+  } catch (err) {
+    console.warn('[WA] Erreur récupération discussions:', err.message);
+    res.json({ chats: [], unreadTotal: 0 });
+  }
+});
+
+app.get('/api/whatsapp/messages/:userId/:chatId', authMiddleware, async (req, res) => {
+  const { userId, chatId } = req.params;
+  const client = waClients[userId];
+  if (!client || waStatuses[userId] !== 'CONNECTED') {
+    return res.json({ messages: [] });
+  }
+  try {
+    const chat = await client.getChatById(chatId);
+    if (!chat) return res.json({ messages: [] });
+    const rawMsgs = await chat.fetchMessages({ limit: 40 });
+    const messages = rawMsgs.map(m => ({
+      id: m.id._serialized,
+      sender: m.fromMe ? 'agent' : 'client',
+      text: m.body || '',
+      time: m.timestamp ? new Date(m.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+    })).filter(m => m.text.trim() !== '');
+    res.json({ messages });
+  } catch (err) {
+    console.warn('[WA] Erreur fetch messages:', err.message);
+    res.json({ messages: [] });
+  }
+});
+
+app.post('/api/whatsapp/send', authMiddleware, async (req, res) => {
+  const { userId, to, message } = req.body;
+  if (!userId || !to || !message) {
+    return res.status(400).json({ error: "Paramètres requis manquants (userId, to, message)" });
+  }
+  const client = waClients[userId];
+  if (!client || waStatuses[userId] !== 'CONNECTED') {
+    return res.status(503).json({ error: "Bot WhatsApp non connecté" });
+  }
+  try {
+    let target = to.trim();
+    if (!target.includes('@')) {
+      const cleanNum = target.replace(/[^0-9]/g, '');
+      target = `${cleanNum}@c.us`;
+    }
+    await client.sendMessage(target, message);
+    console.log(`[WA] Message Dashboard envoyé à ${target}: "${message}"`);
+    res.json({ success: true, message: "Message envoyé avec succès" });
+  } catch (err) {
+    console.error(`[WA] Erreur envoi message :`, err);
+    res.status(500).json({ error: err.message || "Erreur lors de l'envoi du message" });
+  }
+});
+
 // === 5. CONFIGURATION IA ===
 app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
     const { userId } = req.params;
