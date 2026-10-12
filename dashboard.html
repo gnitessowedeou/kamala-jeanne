@@ -1095,7 +1095,7 @@
               </div>
               <div style="display:flex; align-items:center; gap: 15px;">
                 <span id="wa-limit-status" style="font-size: 14px; font-weight: 600; color: var(--amber); background: rgba(245, 158, 11, 0.1); padding: 5px 10px; border-radius: 6px;">0 / 1 Numro</span>
-                <button class="btn-primary-glow" id="btn-add-whatsapp-num">
+                <button class="btn-primary-glow" id="btn-add-whatsapp-num" onclick="window.handleConnectClick(event);">
                   <i class="fa-solid fa-qrcode"></i>
                   <span>Connecter un Numro</span>
                 </button>
@@ -2459,8 +2459,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=2"></script>
-  <script src="js/dashboard.js?v=20261011_v12"></script>
+  <script src="js/auth.js?v=20261012_v2"></script>
+  <script src="js/dashboard.js?v=20261012_v2"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -2560,6 +2560,50 @@
       });
       if (typeof updatePlanModalSummary === "function") updatePlanModalSummary();
     };
+  </script>
+
+
+  <!-- INFAILLIBLE WHATSAPP MODAL CONTROLLER -->
+  <script>
+    window.handleConnectClick = function(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      const isConnected = (window.currentWhatsAppStatus === 'CONNECTED');
+      let u = {};
+      try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(err) {}
+      const plan = ((u && u.plan && u.plan.name) || (u && u.plan) || '').toLowerCase();
+      let maxWa = 1;
+      if (plan.includes('pro')) maxWa = 2;
+      if (plan.includes('business')) maxWa = 5;
+
+      if (isConnected) {
+        if (typeof showToast === 'function') {
+          showToast('⭐ Limite de ' + maxWa + ' numéro atteinte pour votre forfait. Passez au forfait Pro ou Business pour connecter d\'autres lignes.', 'info');
+        }
+        setTimeout(function() { if (typeof openPlanModal === 'function') openPlanModal('pro'); }, 300);
+        return;
+      }
+
+      const modal = document.getElementById('qr-modal');
+      if (modal) modal.classList.add('active');
+      if (typeof window.startWhatsApp === 'function') {
+        window.startWhatsApp();
+      }
+    };
+
+    // Déclencheur automatique dès que #qr-modal reçoit la classe 'active'
+    document.addEventListener('DOMContentLoaded', function() {
+      const qm = document.getElementById('qr-modal');
+      if (qm) {
+        const obs = new MutationObserver(function() {
+          if (qm.classList.contains('active')) {
+            if (typeof window.startWhatsApp === 'function') {
+              window.startWhatsApp();
+            }
+          }
+        });
+        obs.observe(qm, { attributes: true, attributeFilter: ['class'] });
+      }
+    });
   </script>
 
 </body>

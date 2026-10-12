@@ -3008,116 +3008,129 @@ function setupBillingAndAffiliate() {
         }
         window.syncWhatsAppStatus = syncWhatsAppStatus;
 
+        function getAppUserId() {
+            try {
+                const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+                if (u && u.id && u.id.length > 5 && !u.id.startsWith('usr_')) return u.id;
+            } catch(e) {}
+            return '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+        }
+
+        function renderQrImage(qrData) {
+            const qrBox = document.getElementById('qr-canvas-box') || (qrModal && qrModal.querySelector('.qr-code-box'));
+            if (!qrBox) return;
+            qrBox.innerHTML = '<img src="' + qrData + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
+        }
+
         async function startWhatsApp(forceRestart = false) {
             window.startWhatsApp = startWhatsApp;
             clearInterval(statusInterval);
             pollAttempts = 0;
 
-            if (!userId) {
-                try {
-                    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-                    userId = u.id || ('usr_' + Math.random().toString(36).substring(2, 9));
-                    if (!u.id) {
-                        u.id = userId;
-                        localStorage.setItem('vendia_current_user', JSON.stringify(u));
-                    }
-                } catch(e) {
-                    userId = 'client_' + Date.now();
-                }
+            const targetUserId = getAppUserId();
+            const qrBox = document.getElementById('qr-canvas-box') || (qrModal && qrModal.querySelector('.qr-code-box'));
+
+            if (qrBox) {
+                qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:25px; text-align:center;"><i class="fa-solid fa-spinner fa-spin" style="font-size:38px; color:#25D366; margin-bottom:12px;"></i><p style="color:#fbbf24; font-weight:600; font-size:13.5px; margin:0;">Génération du QR Code officiel WhatsApp...</p><span style="font-size:11px; color:#94a3b8; margin-top:5px;">Connexion au Cloud Railway en cours...</span></div>';
             }
 
-            // Affichage instantané si le QR Code officiel est déjà prêt sur Railway
+            // Vérification instantanée : le QR est-il déjà disponible ?
             if (!forceRestart) {
                 try {
-                    const quickRes = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
+                    const quickRes = await fetch(API_URL + '/api/whatsapp/status/' + targetUserId, { headers: getAuthHeaders() });
                     const quickData = await quickRes.json();
                     if (quickData.status === 'QR_READY' && quickData.qr) {
-                        qrBox.innerHTML = '<img src="' + quickData.qr + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
+                        renderQrImage(quickData.qr);
                         window.applyWhatsAppState('QR_READY', null);
                         statusInterval = setInterval(checkStatus, 2000);
                         return;
                     } else if (quickData.status === 'CONNECTED') {
-                        qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
+                        if (qrBox) qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
                         window.applyWhatsAppState('CONNECTED', quickData.phone);
-                        setTimeout(() => { qrModal.classList.remove('active'); }, 1500);
+                        setTimeout(() => { if (qrModal) qrModal.classList.remove('active'); }, 1200);
                         return;
                     }
                 } catch(e) {}
             }
 
-            qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">⚡ Démarrage du moteur WhatsApp...</p><span style="font-size:11px; color:#94a3b8; margin-top:4px;">Génération du QR Code en cours...</span></div>';
-
             try {
                 const res = await fetch(API_URL + '/api/whatsapp/start', {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ userId: userId, restart: forceRestart })
+                    body: JSON.stringify({ userId: targetUserId, restart: forceRestart })
                 });
                 
                 const data = await res.json().catch(() => ({}));
                 if (data.status === 'QR_READY' && data.qr) {
-                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
+                    renderQrImage(data.qr);
                     window.applyWhatsAppState('QR_READY', null);
                     statusInterval = setInterval(checkStatus, 2000);
                     return;
                 } else if (data.status === 'CONNECTED') {
-                    qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
+                    if (qrBox) qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
                     window.applyWhatsAppState('CONNECTED', data.phone);
-                    setTimeout(() => { qrModal.classList.remove('active'); }, 1500);
+                    setTimeout(() => { if (qrModal) qrModal.classList.remove('active'); }, 1200);
                     return;
                 }
                 
                 statusInterval = setInterval(checkStatus, 2000);
             } catch (error) {
                 console.error("Erreur connexion WhatsApp:", error);
-                qrBox.innerHTML = `
-                    <div style="padding: 14px; text-align: center;">
-                        <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⚠️ Serveur Cloud temporairement injoignable</p>
-                        <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                            Connexion à ${API_URL} en cours de synchronisation.<br>
-                            Veuillez patienter quelques secondes.
-                        </p>
-                        <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
-                            <i class="fa-solid fa-rotate-right"></i> Réessayer
-                        </button>
-                    </div>
-                `;
+                if (qrBox) {
+                    qrBox.innerHTML = `
+                        <div style="padding: 14px; text-align: center;">
+                            <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⚠️ Serveur Cloud temporairement injoignable</p>
+                            <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                                Connexion à ${API_URL} en cours.<br>
+                                Cliquez ci-dessous pour relancer.
+                            </p>
+                            <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
+                                <i class="fa-solid fa-rotate-right"></i> Réessayer
+                            </button>
+                        </div>
+                    `;
+                }
             }
         }
 
         async function checkStatus() {
             pollAttempts++;
+            const targetUserId = getAppUserId();
+            const qrBox = document.getElementById('qr-canvas-box') || (qrModal && qrModal.querySelector('.qr-code-box'));
+
             try {
-                const res = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
+                const res = await fetch(API_URL + '/api/whatsapp/status/' + targetUserId, { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 window.applyWhatsAppState(data.status, data.phone);
 
                 if (data.status === 'QR_READY' && data.qr) {
-                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                    renderQrImage(data.qr);
                 } 
                 else if (data.status === 'CONNECTED') {
                     clearInterval(statusInterval);
-                    const wasActive = qrModal.classList.contains('active');
-                    qrModal.classList.remove('active');
+                    const wasActive = qrModal && qrModal.classList.contains('active');
+                    if (qrModal) qrModal.classList.remove('active');
                     if (wasActive && typeof showToast === 'function') {
-                        showToast("✅ Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : ''), "success");
+                        showToast("🎉 WhatsApp connecté avec succès ! Numéro : " + (data.phone ? '+' + data.phone : ''), "success");
                     }
                 }
-                else if (data.status === 'ERROR' || pollAttempts > 35) {
+                else if (data.status === 'ERROR' || pollAttempts > 45) {
                     clearInterval(statusInterval);
-                    qrBox.innerHTML = `
-                        <div style="padding: 14px; text-align: center;">
-                            <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⏳ Initialisation prolongée</p>
-                            <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                                Le navigateur Cloud redémarre sa session WhatsApp Web.<br>
-                                Cliquez ci-dessous pour actualiser la session.
-                            </p>
-                            <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
-                                <i class="fa-solid fa-rotate-right"></i> Forcer la régénération du QR Code
-                            </button>
-                        </div>
-                    `;
+                    if (qrBox) {
+                        qrBox.innerHTML = `
+                            <div style="padding: 14px; text-align: center;">
+                                <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⏳ Initialisation prolongée</p>
+                                <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                                    Le navigateur Cloud redémarre sa session WhatsApp Web.<br>
+                                    Cliquez ci-dessous pour afficher le QR Code.
+                                </p>
+                                <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
+                                    <i class="fa-solid fa-rotate-right"></i> Forcer la régénération du QR Code
+                                </button>
+                            </div>
+                        `;
+                    }
                 }
             } catch (error) {}
         }

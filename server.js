@@ -223,20 +223,33 @@ const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
 const waNumbers = {};    // Stocke le numéro de téléphone connecté
 
 app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
-  const { userId } = req.body;
+  const { userId, restart } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
 
-  if (waStatuses[userId] === 'CONNECTED') return res.json({ status: 'CONNECTED', message: "Bot déjà actif" });
-  if (waClients[userId]) {
-    if (waStatuses[userId] === 'QR_READY') return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
-    return res.json({ status: waStatuses[userId] });
+  if (waStatuses[userId] === 'CONNECTED' && !restart) {
+    return res.json({ status: 'CONNECTED', message: "Bot déjà actif", phone: waNumbers[userId] || null });
+  }
+
+  // Nettoyage et réinitialisation si restart ou déconnecté
+  if (restart || waStatuses[userId] === 'DISCONNECTED' || waStatuses[userId] === 'ERROR' || !waClients[userId]) {
+    if (waClients[userId]) {
+      try { await waClients[userId].destroy(); } catch (e) {}
+      delete waClients[userId];
+    }
+    delete waSessionsQR[userId];
+    delete waNumbers[userId];
+  } else if (waClients[userId]) {
+    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
+      return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
+    }
+    return res.json({ status: waStatuses[userId] || 'STARTING' });
   }
 
   waStatuses[userId] = 'STARTING';
   
-  // Lancement d'un navigateur invisible pour le client
+  // Lancement du navigateur Chromium officiel
   const chromiumPath = getChromiumExecutablePath();
-  console.log(`[WA] Chemin Chromium dtect: ${chromiumPath || 'Puppeteer standard'}`);
+  console.log(`[WA] Chemin Chromium détecté: ${chromiumPath || 'Puppeteer standard'}`);
 
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: userId }),
@@ -248,11 +261,11 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
-        '--no-zygote',
         '--disable-gpu'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
-    }
+    },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
   });
 
   waClients[userId] = client;
