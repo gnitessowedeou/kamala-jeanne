@@ -1033,12 +1033,26 @@ function setupInboxInteraction() {
           if (authH && authH.Authorization) headers.Authorization = authH.Authorization;
         } catch(e) {}
 
-        const res = await fetch(API_URL + '/api/ai/chat-test', {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify({ userId: uId, message: messageText })
-        });
-        const data = await res.json();
+        let res = null;
+        try {
+          res = await fetch('/api/ai/chat-test', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ userId: uId, message: messageText })
+          });
+        } catch(e) {}
+
+        if (!res || !res.ok) {
+          try {
+            res = await fetch(API_URL + '/api/ai/chat-test', {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify({ userId: uId, message: messageText })
+            });
+          } catch(e) {}
+        }
+
+        const data = res ? await res.json().catch(() => ({})) : {};
         
         if (data && data.reply) {
           const now2 = new Date();

@@ -1,4 +1,4 @@
-// Anti-Crash Process Guards (empche le serveur de couper brutalement)
+﻿// Anti-Crash Process Guards (empche le serveur de couper brutalement)
 process.on('uncaughtException', (err) => {
   console.error('[SERVER] Exception non intercepte :', err);
 });
@@ -261,7 +261,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
       let profile = null;
       if (supabase && userId) {
         try {
-          const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at, plan').eq('id', userId).single();
+          const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
           profile = data;
         } catch (dbErr) {}
       }
