@@ -1,4 +1,4 @@
-﻿
+
 // Helper d'authentification s�curis� pour les requ�tes API
 function getAuthHeaders(extraHeaders = {}) {
   let token = null;

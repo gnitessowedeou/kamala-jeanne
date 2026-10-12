@@ -1,4 +1,4 @@
-﻿const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@supabase/supabase-js');
 const { OpenAI } = require('openai');
 
 module.exports = async (req, res) => {

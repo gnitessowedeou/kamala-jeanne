@@ -1,4 +1,4 @@
-﻿// Anti-Crash Process Guards (empche le serveur de couper brutalement)
+// Anti-Crash Process Guards (empche le serveur de couper brutalement)
 process.on('uncaughtException', (err) => {
   console.error('[SERVER] Exception non intercepte :', err);
 });
