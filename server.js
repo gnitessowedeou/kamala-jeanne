@@ -271,6 +271,18 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   waClients[userId] = client;
 
   // Quand WhatsApp génère le QR Code
+  // Scan validé : Authentification réussie
+  client.on('authenticated', () => {
+    console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (scan validé) !`);
+    waStatuses[userId] = 'AUTHENTICATED';
+    delete waSessionsQR[userId];
+  });
+
+  client.on('loading_screen', (percent, message) => {
+    console.log(`[WA] Client ${userId} synchronisation: ${percent}% - ${message}`);
+    waStatuses[userId] = 'AUTHENTICATED';
+  });
+
   client.on('qr', async (qr) => {
     const qrImage = await qrcode.toDataURL(qr); // Convertir en image affichable
     waSessionsQR[userId] = qrImage;
@@ -452,9 +464,49 @@ app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
   res.json({ success: true, message: "Session WhatsApp rinitialise avec succs" });
 });
 
+// Diagnostic en direct de l'état Puppeteer
+app.get('/api/whatsapp/debug/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const client = waClients[userId];
+  let pageUrl = 'no page';
+  let pageTitle = 'none';
+  if (client && client.pupPage) {
+    try {
+      pageUrl = client.pupPage.url();
+      pageTitle = await client.pupPage.title();
+    } catch(e) {
+      pageUrl = 'err: ' + e.message;
+    }
+  }
+  res.json({
+    status: waStatuses[userId],
+    hasClient: !!client,
+    hasQR: !!waSessionsQR[userId],
+    phone: waNumbers[userId] || null,
+    clientInfo: client && client.info ? client.info : null,
+    pageUrl,
+    pageTitle
+  });
+});
+
+app.get('/api/whatsapp/screenshot/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const client = waClients[userId];
+  if (!client || !client.pupPage) {
+    return res.status(404).json({ error: 'Pas de page active' });
+  }
+  try {
+    const buffer = await client.pupPage.screenshot({ type: 'png' });
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buffer);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
   const { userId } = req.params;
-  res.json({ status: waStatuses[userId] || 'DISCONNECTED', qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null, error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null });
+  const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED'); res.json({ status: st, qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null, error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null });
 });
 
 // === 5. CONFIGURATION IA ===
