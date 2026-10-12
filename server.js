@@ -286,21 +286,34 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   const handleIncomingMessage = async (msg, isSelfTest = false) => {
     try {
       const now = Math.floor(Date.now() / 1000);
-      if (msg.timestamp && msg.timestamp < now - 60) return; // Ignorer vieux messages
-      if (msg.isStatus || (msg.from && msg.from.includes('@g.us'))) return; // Ignorer statuts et groupes
-      if (msg.type !== 'chat' && msg.type !== 'location' && !msg.body) return;
+      // Ne pas ignorer les messages rcents (fentre de 5 minutes)
+      if (msg.timestamp && msg.timestamp < now - 300) {
+        console.log(`[WA] Message ignor car trop ancien (TS: ${msg.timestamp}, Now: ${now})`);
+        return;
+      }
+      
+      // Ignorer les statuts WhatsApp et les groupes de discussion
+      if (msg.isStatus || (msg.from && msg.from.includes('@g.us')) || (msg.to && msg.to.includes('@g.us'))) {
+        return;
+      }
+      
+      // Vrifier que le message contient du texte
       if (!msg.body || msg.body.trim() === '') return;
-      if (msg.body.startsWith('[IA VANDIA]')) return; // viter les boucles
+      
+      // viter les boucles infinies si l'IA s'crit
+      if (msg.body.startsWith('[IA') || msg.body.startsWith('?')) return;
 
-      console.log(`[WA] Message reu pour client ${userId} de ${msg.from}: "${msg.body}"`);
+      console.log(`[WA] Message reu pour client ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
 
-      // Rcuprer le profil Supabase
+      // Rcuprer le profil Supabase (sans la colonne inexistante plan)
       let profile = null;
       if (supabase && userId) {
         try {
           const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
           profile = data;
-        } catch (dbErr) {}
+        } catch (dbErr) {
+          console.warn('[WA] Notice Supabase profil:', dbErr.message);
+        }
       }
 
       // Crdits : Donner au moins 100 crdits de test si nouveau compte
@@ -310,19 +323,21 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         return;
       }
 
-      // Enregistrer le contact dans le CRM
+      // Enregistrer / Mettre  jour le contact dans le CRM (anciens comme nouveaux)
       try {
         if (supabase && userId) {
-          const phone = msg.from ? msg.from.split('@')[0] : 'Inconnu';
-          let cName = 'Prospect WhatsApp';
+          const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
+          let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
           try {
             const cInfo = await msg.getContact();
-            cName = cInfo.pushname || cInfo.name || phone;
+            if (cInfo && (cInfo.pushname || cInfo.name)) {
+              cName = cInfo.pushname || cInfo.name;
+            }
           } catch(e) {}
 
           await supabase.from('contacts').upsert({
             user_id: userId,
-            phone_number: phone,
+            phone_number: rawSender,
             name: cName,
             last_message: msg.body.substring(0, 255),
             updated_at: new Date().toISOString()
@@ -348,8 +363,13 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         aiResponse = completion.choices[0].message.content;
       }
 
-      console.log(`[WA] Envoi de la rponse IA  ${msg.from} :`, aiResponse);
-      const targetChat = isSelfTest ? msg.to : msg.from;
+      // Dterminer le destinataire exact
+      let targetChat = msg.from;
+      if (isSelfTest && client.info && client.info.wid) {
+        targetChat = client.info.wid._serialized;
+      }
+
+      console.log(`[WA] Envoi de la rponse IA  ${targetChat} :`, aiResponse);
       await client.sendMessage(targetChat, aiResponse);
 
       // Dduire 1 crdit
@@ -361,15 +381,29 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     }
   };
 
-  // 1. Message reu d'un contact externe
+  // 1. Message reu de n'importe quel contact externe (anciens clients et nouveaux prospects)
   client.on('message', async (msg) => {
+    console.log(`[WA] Incoming message event de ${msg.from}: "${msg.body}"`);
     await handleIncomingMessage(msg, false);
   });
 
-  // 2. Message envoy en auto-test (ex: message  soi-mme depuis le mme tlphone)
+  // 2. Message envoy en auto-test (ex: message  soi-mme dans la discussion "Vous")
   client.on('message_create', async (msg) => {
-    if (msg.fromMe && client.info && msg.to === client.info.wid._serialized && !msg.body.startsWith('[IA')) {
-      await handleIncomingMessage(msg, true);
+    try {
+      if (!msg.fromMe || !client.info || !client.info.wid) return;
+      if (!msg.body || msg.body.trim() === '') return;
+      if (msg.body.startsWith('[IA') || msg.body.startsWith('?')) return;
+
+      const myPhone = client.info.wid.user;
+      const targetPhone = msg.to ? msg.to.split('@')[0].split(':')[0] : null;
+
+      // Dtecter si le message est envoy  soi-mme
+      if (myPhone && targetPhone && myPhone === targetPhone) {
+        console.log(`[WA] Auto-test dtect sur le numro ${myPhone}: "${msg.body}"`);
+        await handleIncomingMessage(msg, true);
+      }
+    } catch (e) {
+      console.error("[WA] Erreur message_create:", e);
     }
   });
 
