@@ -454,7 +454,47 @@ async function generateSalesAgentResponse({
 - Reprends DIRECTEMENT et NATURELLEMENT le fil de la conversation.
 - Reponds precisement et directement au dernier message du client en tenant compte du contexte memorise ci-dessous.`;
 
-  const systemMessageContent = `${basePrompt || "Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp."}\n\n${commercialGuidelines}\n\n${sessionDirectives}`;
+  // Détection du pays du client par l'indicatif téléphonique
+  const cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
+  let detectedCountry = "Général / UEMOA";
+  let recommendedPaymentText = "";
+
+  if (cleanPhone.startsWith('226')) {
+    detectedCountry = "Burkina Faso (Indicatif +226)";
+    recommendedPaymentText = "👉 Pour le Burkina Faso, propose prioritairement :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('229')) {
+    detectedCountry = "Bénin (Indicatif +229)";
+    recommendedPaymentText = "👉 Pour le Bénin, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('225') || cleanPhone.startsWith('221') || cleanPhone.startsWith('228') || cleanPhone.startsWith('223')) {
+    detectedCountry = "Afrique de l'Ouest (Côte d'Ivoire, Sénégal, Togo, Mali)";
+    recommendedPaymentText = "👉 Propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else {
+    detectedCountry = "International / Tous pays";
+    recommendedPaymentText = "👉 Propose les options disponibles :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
+  }
+
+  const paymentRoutingGuidelines = `
+## COORDONNÉES DE PAIEMENT OFFICIELLES & ROUTAGE PAR PAYS (OBLIGATOIRE & IMMÉDIAT) :
+Tu as un accès DIRECT, PERMANENT et COMPLET aux numéros de paiement officiels ci-dessous.
+INTERDICTION FORMELLE ET ABSOLUE de dire que tu n'as pas accès aux numéros, que tu dois vérifier auprès du responsable ou de faire attendre le client !
+
+PAYS DÉTECTÉ DU CLIENT : ${detectedCountry} (Numéro client: ${phone})
+${recommendedPaymentText}
+
+TABLEAU COMPLET DES MOYENS DE PAIEMENT OFFICIELS :
+- WAVE (CI, Sénégal, Burkina, Bénin, etc.) : +226 05 15 84 94 | Titulaire officiel : Gnitou Essowedeou
+- ORANGE MONEY (Burkina Faso, Mali, etc.) : +226 05 15 84 94 | Titulaire officiel : Gnitou Essowedeou
+- MTN MOBILE MONEY (Bénin, Togo, etc.) : +229 01 62 63 95 93 | Titulaire officiel : Gnitou Essowedeou
+- MOOV MONEY / FLOOZ : +229 01 62 63 95 93 | Titulaire officiel : Gnitou Essowedeou
+
+RÈGLES D'EXÉCUTION LORSQUE LE CLIENT VEUT PAYER OU COMMANDE :
+1. Dès que le client demande à payer, confirme sa commande ou demande le numéro, donne-lui IMMÉDIATEMENT le numéro adapté à son pays avec le nom du titulaire officiel : Gnitou Essowedeou.
+2. Si le client demande un moyen spécifique (ex: "Donne-moi Wave", "Je veux Orange Money", "As-tu MTN ?"), donne-lui IMMÉDIATEMENT le numéro correspondant à ce moyen.
+3. Rappelle toujours le montant exact (Canva Pro : 1 300 FCFA, CapCut Pro : 1 600 FCFA).
+4. Demande-lui d'envoyer la capture d'écran du transfert dès que le paiement est fait pour activer immédiatement son produit !
+`;
+
+  const systemMessageContent = `${basePrompt || "Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp."}\n\n${commercialGuidelines}\n\n${paymentRoutingGuidelines}\n\n${sessionDirectives}`;
 
   const openAiMessages = [
     { role: 'system', content: systemMessageContent },
