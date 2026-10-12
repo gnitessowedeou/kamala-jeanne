@@ -2459,8 +2459,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261012_v2"></script>
-  <script src="js/dashboard.js?v=20261012_v2"></script>
+  <script src="js/auth.js?v=20261012_v5"></script>
+  <script src="js/dashboard.js?v=20261012_v5"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -2565,6 +2565,23 @@
 
   <!-- INFAILLIBLE WHATSAPP MODAL CONTROLLER -->
   <script>
+    if (typeof window.startWhatsApp !== 'function') {
+      window.startWhatsApp = function(forceRestart) {
+        if (typeof window._realStartWhatsApp === 'function') {
+          return window._realStartWhatsApp(forceRestart);
+        }
+        var attempts = 0;
+        var checkInt = setInterval(function() {
+          attempts++;
+          if (typeof window._realStartWhatsApp === 'function') {
+            clearInterval(checkInt);
+            window._realStartWhatsApp(forceRestart);
+          } else if (attempts > 50) {
+            clearInterval(checkInt);
+          }
+        }, 50);
+      };
+    }
     window.handleConnectClick = function(e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
       const isConnected = (window.currentWhatsAppStatus === 'CONNECTED');
