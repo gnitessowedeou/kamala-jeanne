@@ -280,13 +280,206 @@ function getChromiumExecutablePath() {
   return undefined;
 }
 
-// === 3. GESTIONNAIRE WHATSAPP MULTI-CLIENTS ===
+// === 3. GESTIONNAIRE WHATSAPP MULTI-CLIENTS & MEMOIRE CONVERSATIONNELLE DURABLE ===
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
-const waSessionsQR = {}; // Stocke les QR codes générés
+const waSessionsQR = {}; // Stocke les QR codes generes
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
-const waNumbers = {};
-const waChatHistories = new Map(); // Memoire contextuelle IA des conversations
-    // Stocke le numéro de téléphone connecté
+const waNumbers = {};    // Stocke le numero de telephone connecte
+
+// Memoire contextuelle persistante & fenetre de session de 24h
+const SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 heures d'inactivite
+const MAX_HISTORY_MESSAGES = 10;                // Maintient au minimum les 8 a 10 derniers echanges
+const waChatHistories = new Map();              // Cache memoire haute vitesse: ${userId}:${phone} -> { history, lastActivity, sessionStart, name }
+
+/**
+ * Recupere la session et l'historique d'un client.
+ * Recharge automatiquement depuis Supabase en cas de redemarrage serveur.
+ * Verifie si la session active a expire (> 24h d'inactivite).
+ */
+async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
+  const historyKey = `${userId}:${phone}`;
+  const now = Date.now();
+  let sessionData = waChatHistories.get(historyKey);
+  let contactRow = null;
+
+  // Si non present dans le cache memoire (ex: reboot Railway / redeploiement), recharger depuis Supabase
+  if (!sessionData && supabase && userId) {
+    try {
+      const { data } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('phone_number', phone)
+        .maybeSingle();
+
+      contactRow = data;
+      if (contactRow) {
+        let history = [];
+        let sessionStart = contactRow.created_at || new Date(now).toISOString();
+        let lastActivity = contactRow.updated_at ? new Date(contactRow.updated_at).getTime() : 0;
+
+        if (contactRow.last_message) {
+          try {
+            if (typeof contactRow.last_message === 'string' && contactRow.last_message.startsWith('{')) {
+              const parsed = JSON.parse(contactRow.last_message);
+              if (Array.isArray(parsed.history)) history = parsed.history;
+              if (parsed.session_start) sessionStart = parsed.session_start;
+              if (parsed.last_activity) lastActivity = new Date(parsed.last_activity).getTime();
+            }
+          } catch (e) {}
+        }
+
+        sessionData = {
+          name: contactRow.name || fallbackName,
+          history: history.slice(-MAX_HISTORY_MESSAGES),
+          lastActivity,
+          sessionStart
+        };
+        waChatHistories.set(historyKey, sessionData);
+        console.log(`[WA/REBOOT] Memoire restauree depuis Supabase pour ${phone} (${sessionData.history.length} msgs)`);
+      }
+    } catch (dbErr) {
+      console.warn(`[WA/SESSION] Notice lecture Supabase pour ${phone}:`, dbErr.message);
+    }
+  }
+
+  // Verification de la fenetre des 24h
+  const isFirstContact = !sessionData || !sessionData.lastActivity || sessionData.lastActivity === 0;
+  const elapsed = sessionData && sessionData.lastActivity ? (now - sessionData.lastActivity) : 0;
+  const isExpired = elapsed > SESSION_TIMEOUT_MS;
+  const isNewSession = isFirstContact || isExpired;
+
+  let activeHistory = [];
+  let sessionStart = sessionData ? sessionData.sessionStart : new Date(now).toISOString();
+  let contactName = sessionData ? (sessionData.name || fallbackName) : fallbackName;
+
+  if (isNewSession) {
+    activeHistory = [];
+    sessionStart = new Date(now).toISOString();
+    console.log(`[WA/SESSION] NOUVELLE SESSION pour ${phone} (${isFirstContact ? 'Premier contact' : 'Inactivite > 24h (' + Math.round(elapsed / 3600000) + 'h)'}). Salutation activee.`);
+  } else {
+    activeHistory = (sessionData.history || []).slice(-MAX_HISTORY_MESSAGES);
+    console.log(`[WA/SESSION] SESSION ACTIVE pour ${phone} (Derniere activite il y a ${Math.round(elapsed / 60000)} min, ${activeHistory.length} msgs). Pas de salutation.`);
+  }
+
+  return {
+    isNewSession,
+    history: activeHistory,
+    sessionStart,
+    contactName,
+    lastActivity: now
+  };
+}
+
+/**
+ * Sauvegarde de maniere securisee et persistante la session et l'historique dans Supabase et en cache.
+ */
+async function saveCustomerSession(userId, phone, contactName, userText, assistantText, currentHistory, sessionStart) {
+  const historyKey = `${userId}:${phone}`;
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+
+  // Maintient au minimum 8 a 10 echanges dans l'historique
+  const updatedHistory = [
+    ...currentHistory,
+    { role: 'user', content: userText },
+    { role: 'assistant', content: assistantText }
+  ].slice(-MAX_HISTORY_MESSAGES);
+
+  // 1. Mise a jour du cache memoire
+  waChatHistories.set(historyKey, {
+    name: contactName,
+    history: updatedHistory,
+    lastActivity: now,
+    sessionStart: sessionStart
+  });
+
+  // 2. Persistance securisee dans Supabase (table contacts)
+  if (supabase && userId) {
+    try {
+      const payload = JSON.stringify({
+        text: userText.substring(0, 255),
+        session_start: sessionStart,
+        last_activity: nowIso,
+        history: updatedHistory
+      });
+
+      await supabase.from('contacts').upsert({
+        user_id: userId,
+        phone_number: phone,
+        name: contactName,
+        last_message: payload,
+        updated_at: nowIso
+      }, { onConflict: 'user_id, phone_number' });
+
+      console.log(`[WA/PERSISTENCE] Session & historique sauvegardes dans Supabase pour ${phone}`);
+    } catch (err) {
+      console.warn(`[WA/PERSISTENCE] Notice sauvegarde Supabase pour ${phone}:`, err.message);
+    }
+  }
+}
+
+/**
+ * Moteur de reponse commerciale d'elite VANDIYA IA
+ */
+async function generateSalesAgentResponse({
+  userId,
+  phone,
+  contactName,
+  userMessage,
+  isNewSession,
+  history,
+  basePrompt
+}) {
+  const commercialGuidelines = `
+## POSTURE COMMERCIALE D'ELITE (VANDIYA IA) :
+- Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp.
+- Tu incarnes un excellent commercial : poli, patient, naturel, attentif et convaincant.
+- Reponds UNIQUEMENT des qu'un client t'ecrit. N'initie jamais de conversation et n'envoie aucun message spontanement.
+- Ecoute attentivement : pose des questions pertinentes et courtes pour comprendre les besoins specifiques du client.
+- Presentation adaptee : presente les solutions selon ses besoins avec clarte, enthousiasme et transparence sur les tarifs (ex: Canva Pro 1 300 FCFA, CapCut Pro 1 600 FCFA).
+- Traitement des objections : reponds calmement, poliment et honnetement aux doutes, inquietudes ou remarques sur le prix ou la fiabilite.
+- Concretisation de commande : guide progressivement le client vers la validation de sa commande et le reglement, sans pression agressive ni fausses promesses.
+- Format WhatsApp : reponses concises, aerees, vivantes et faciles a lire sur mobile avec des emojis bien doses. Pas de longs blocs de texte indigestes.`;
+
+  const sessionDirectives = isNewSession
+    ? `
+[REGLE DE SESSION - PREMIER CONTACT OU RETOUR APRES PLUS DE 24H D'INACTIVITE] :
+- Salue chaleureusement et poliment le client UNE SEULE FOIS (ex: "Bonjour ${contactName} ! Bienvenue chez nous 😊").
+- Ecoute son besoin ou presente brievement les produits selon sa demande.
+- Ne repete JAMAIS cette formule d'accueil aux messages suivants.`
+    : `
+[REGLE DE FLUIDITE STRICTE - CONVERSATION EN COURS DANS LA SESSION ACTIVE (< 24H)] :
+- INTERDICTION FORMELLE ET ABSOLUE de redire "Bonjour", "Bonsoir", "Bienvenue chez nous" ou de te representer.
+- Reprends DIRECTEMENT et NATURELLEMENT le fil de la conversation.
+- Reponds precisement et directement au dernier message du client en tenant compte du contexte memorise ci-dessous.`;
+
+  const systemMessageContent = `${basePrompt || "Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp."}\n\n${commercialGuidelines}\n\n${sessionDirectives}`;
+
+  const openAiMessages = [
+    { role: 'system', content: systemMessageContent },
+    ...history,
+    { role: 'user', content: userMessage }
+  ];
+
+  if (!openai) {
+    return isNewSession
+      ? `Bonjour ${contactName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui avec nos outils et formations ?`
+      : `Je note votre demande. Souhaitez-vous des details complementaires pour finaliser votre commande ?`;
+  }
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: openAiMessages,
+    max_tokens: 350,
+    temperature: 0.7
+  });
+
+  return (completion.choices && completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content)
+    ? completion.choices[0].message.content
+    : "Je reste a votre entiere disposition pour vous accompagner dans votre commande !";
+}
+
 
 app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   const { userId, restart } = req.body;
@@ -432,82 +625,58 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         return;
       }
 
-      // Enregistrer / Mettre a jour le contact dans le CRM en arriere-plan
-      (async () => {
-        try {
-          if (supabase && userId) {
-            const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
-            let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
-            try {
-              const cInfo = await msg.getContact();
-              if (cInfo && (cInfo.pushname || cInfo.name)) {
-                cName = cInfo.pushname || cInfo.name;
-              }
-            } catch(e) {}
-
-            await supabase.from('contacts').upsert({
-              user_id: userId,
-              phone_number: rawSender,
-              name: cName,
-              last_message: msg.body.substring(0, 255),
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id, phone_number' });
-          }
-        } catch (crmErr) {
-          console.warn('[WA] Erreur CRM non bloquante:', crmErr.message);
-        }
-      })();
-
-      // Determiner le destinataire exact
+      // Determiner le destinataire exact et les identifiants client
+      const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
       let targetChat = msg.from;
       if (isSelfTest && client.info && client.info.wid) {
         targetChat = client.info.wid._serialized;
       }
 
-      // Prompt IA personnalise
-      const systemPrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
-        ? profile.ai_prompt 
-        : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIA AI. Reponds de maniere concise, polie et engageante avec des emojis adaptes.";
-
-      // Gestion de la memoire conversationnelle (les 8 derniers echanges)
-      const historyKey = `${userId}:${targetChat}`;
-      const history = waChatHistories.get(historyKey) || [];
-
-      // Règle de fluidité : ne saluer que si premier message, répondre directement ensuite
-      const isFirstMessage = history.length === 0;
-      const conversationalInstruction = isFirstMessage
-        ? "\n\n[REGLE DE SALUTATION : C'est le tout premier message du client. Accueille-le poliment et chaleureusement.]"
-        : "\n\n[REGLE DE FLUIDITE : La conversation est DEJA engagee. Ne redis JAMAIS 'Bonjour', 'Bonsoir' ou 'Bienvenue'. Réponds DIRECTEMENT, naturellement et precisement a sa question ou remarque sans repeter de salutations.]";
-
-      const finalSystemPrompt = systemPrompt + conversationalInstruction;
-      const userMsgObj = { role: "user", content: msg.body };
-      const openAiMessages = [
-        { role: "system", content: finalSystemPrompt },
-        ...history,
-        userMsgObj
-      ];
-
-      let aiResponse = "Bonjour ! Je suis l'assistant IA de la boutique. Comment puis-je vous aider aujourd'hui ?";
-      if (openai) {
-        try {
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: openAiMessages,
-            max_tokens: 300
-          });
-          if (completion.choices && completion.choices[0] && completion.choices[0].message) {
-            aiResponse = completion.choices[0].message.content;
-          }
-        } catch (openAiErr) {
-          console.error("[WA/IA] Erreur OpenAI :", openAiErr.message);
+      let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
+      try {
+        const cInfo = await msg.getContact();
+        if (cInfo && (cInfo.pushname || cInfo.name)) {
+          cName = cInfo.pushname || cInfo.name;
         }
+      } catch (e) {}
+
+      // Prompt de base du compte
+      const basePrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
+        ? profile.ai_prompt 
+        : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIYA IA. Reponds de maniere concise, polie et engageante avec des emojis adaptes.";
+
+      // Recuperer ou restaurer la session et l'historique conversationnel (Supabase + cache, 24h timeout)
+      const session = await getCustomerSession(userId, rawSender, cName);
+
+      // Generer la reponse de l'agent commercial d'elite VANDIYA IA
+      let aiResponse = "";
+      try {
+        aiResponse = await generateSalesAgentResponse({
+          userId,
+          phone: rawSender,
+          contactName: session.contactName || cName,
+          userMessage: msg.body,
+          isNewSession: session.isNewSession,
+          history: session.history,
+          basePrompt
+        });
+      } catch (aiErr) {
+        console.error("[WA/IA] Erreur generation IA :", aiErr.message);
+        aiResponse = session.isNewSession
+          ? `Bonjour ${session.contactName || cName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui ?`
+          : `Je vous ecoute, comment puis-je vous renseigner sur nos produits et commandes ?`;
       }
 
-      // Enregistrer dans la memoire conversationnelle
-      history.push(userMsgObj);
-      history.push({ role: "assistant", content: aiResponse });
-      if (history.length > 8) history.splice(0, history.length - 8);
-      waChatHistories.set(historyKey, history);
+      // Sauvegarder durablement la session et l'historique dans Supabase et dans le cache
+      await saveCustomerSession(
+        userId,
+        rawSender,
+        session.contactName || cName,
+        msg.body,
+        aiResponse,
+        session.history,
+        session.sessionStart
+      );
 
       console.log(`[WA] Envoi de la reponse IA a ${targetChat} : "${aiResponse}"`);
       
@@ -757,11 +926,11 @@ app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
 
 app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
   try {
-    const { userId, message } = req.body;
+    const { userId, message, phone = 'test_simulation', simulateInactivityHours = 0 } = req.body;
     if (!message || typeof message !== 'string') return res.status(400).json({ error: "Message requis" });
     if (message.length > 1000) return res.status(400).json({ error: "Message trop long (max 1000 caractères)" });
 
-    let systemPrompt = "Tu es Sarah, conseillre commerciale IA d'lite pour VANDIA AI sur WhatsApp. Sois chaleureuse, persuasive, trs polie et rponds en 2 ou 3 phrases percutantes avec des emojis adapts.";
+    let systemPrompt = "Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp. Sois chaleureux, persuasif, très poli, attentif et guide le client avec bienveillance.";
     if (userId && supabase) {
       try {
         const { data: profile } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
@@ -769,24 +938,45 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
       } catch (pErr) {}
     }
 
-    if (!openai) {
-      return res.json({ success: true, reply: "Bonjour ! Je suis votre Agent Commercial IA VANDIA. Mon intelligence est active et prte  rpondre  vos clients !" });
+    // Gestion de session
+    const session = await getCustomerSession(userId || 'test_user', phone, 'Client Test');
+    if (simulateInactivityHours >= 24) {
+      session.isNewSession = true;
+      session.history = [];
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: message }
-      ],
-      max_tokens: 200
+    const reply = await generateSalesAgentResponse({
+      userId: userId || 'test_user',
+      phone,
+      contactName: session.contactName,
+      userMessage: message,
+      isNewSession: session.isNewSession,
+      history: session.history,
+      basePrompt: systemPrompt
     });
 
-    const reply = completion.choices[0].message.content;
-    res.json({ success: true, reply });
+    await saveCustomerSession(
+      userId || 'test_user',
+      phone,
+      session.contactName,
+      message,
+      reply,
+      session.history,
+      session.sessionStart
+    );
+
+    res.json({
+      success: true,
+      reply,
+      session: {
+        isNewSession: session.isNewSession,
+        historyCount: session.history.length + 2,
+        phone
+      }
+    });
   } catch (err) {
     console.error("Erreur chat test IA:", err);
-    res.status(500).json({ error: "Erreur lors de la gnration de la rponse IA" });
+    res.status(500).json({ error: "Erreur lors de la génération de la réponse IA" });
   }
 });
 
@@ -1211,7 +1401,26 @@ app.get('/api/contacts/:userId', authMiddleware, async (req, res) => {
     try {
         const { data, error } = await supabase.from('contacts').select('*').eq('user_id', userId).order('updated_at', { ascending: false });
         if (error) throw error;
-        res.json({ success: true, contacts: data });
+
+        // Assainir last_message pour affichage fluide et compatibilite CRM
+        const sanitizedContacts = (data || []).map(c => {
+          let displayMessage = c.last_message;
+          let history = [];
+          if (typeof c.last_message === 'string' && c.last_message.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(c.last_message);
+              displayMessage = parsed.text || displayMessage;
+              history = parsed.history || [];
+            } catch (e) {}
+          }
+          return {
+            ...c,
+            last_message: displayMessage,
+            history
+          };
+        });
+
+        res.json({ success: true, contacts: sanitizedContacts });
     } catch (err) {
         console.error('Erreur fetch contacts:', err);
         res.status(500).json({ error: 'Erreur lors de la recuperation des contacts' });
