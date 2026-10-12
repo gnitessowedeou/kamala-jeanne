@@ -16,7 +16,7 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v11">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v13">
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -1167,8 +1167,59 @@
         <section class="view-section" id="view-integrations">
           <div class="section-header-bar">
             <div class="section-title-wrap">
-              <h2>Intégrations &amp; Passerelles de Paiement</h2>
-              <p class="section-desc">Connectez vos comptes Wave, Mobile Money, boutiques e-commerce et CRM externes.</p>
+              <h2>Intégrations &amp; Moyens de Paiement</h2>
+              <p class="section-desc">Paiements automatisés par WhatsApp : encaissez vos ventes directement sur Wave, Orange Money, MTN MoMo, Moov Flooz et Cartes Bancaires.</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span class="badge badge-green" style="font-size: 12px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+                <span class="pulse-dot-green"></span>
+                <span>Routage Automatique IA Actif</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- FinTech Quick Metrics / Routing Bar -->
+          <div class="glass-panel" style="padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-radius: 14px; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(37, 211, 102, 0.12); border: 1px solid rgba(37, 211, 102, 0.25); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
+                  <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Détection Préfixe</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #ffffff;">+226 · +229 · +225 · +221 · +228 · +223</div>
+                </div>
+              </div>
+
+              <div style="width: 1px; height: 28px; background: rgba(255, 255, 255, 0.08);"></div>
+
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; color: #38bdf8; font-size: 16px;">
+                  <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Commission VANDIA</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #38bdf8;">0% Frais (100% sur vos comptes)</div>
+                </div>
+              </div>
+
+              <div style="width: 1px; height: 28px; background: rgba(255, 255, 255, 0.08);"></div>
+
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.25); display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 16px;">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Sécurité Validation</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #ffffff;">Anti-fraude &amp; Rapprochement IA</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn-secondary-glass" onclick="renderIntegrations(); showToast('Passerelles rafraîchies !', 'info');" style="padding: 7px 14px; font-size: 12px;">
+                <i class="fa-solid fa-arrows-rotate"></i> Actualiser
+              </button>
             </div>
           </div>
 
@@ -2685,7 +2736,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v12"></script>
+  <script src="js/dashboard.js?v=20261012_v13"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>

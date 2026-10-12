@@ -2602,68 +2602,213 @@ function saveIntegrationsList(list) {
   MOCK_DATA.integrations = list;
 }
 
+function getOperatorBrandColor(key) {
+  switch (key) {
+    case 'wave': return '#1DC4E9';
+    case 'orange_money': return '#FF6600';
+    case 'mtn_momo': return '#FFCC00';
+    case 'moov_money': return '#005CA9';
+    case 'saspay': return '#10B981';
+    case 'meta_api': return '#25D366';
+    default: return '#10B981';
+  }
+}
+
+function getOperatorCountryTags(key) {
+  switch (key) {
+    case 'wave':
+      return '<span class="integ-country-pill">🇸🇳 Sénégal</span><span class="integ-country-pill">🇨🇮 Côte d\'Ivoire</span>';
+    case 'orange_money':
+      return '<span class="integ-country-pill">🇧🇫 Burkina</span><span class="integ-country-pill">🇲🇱 Mali</span><span class="integ-country-pill">🇸🇳 SN</span><span class="integ-country-pill">🇨🇮 CI</span>';
+    case 'mtn_momo':
+      return '<span class="integ-country-pill">🇧🇯 Bénin</span><span class="integ-country-pill">🇨🇮 Côte d\'Ivoire</span>';
+    case 'moov_money':
+      return '<span class="integ-country-pill">🇧🇯 Bénin</span><span class="integ-country-pill">🇹🇬 Togo</span><span class="integ-country-pill">🇨🇮 CI</span>';
+    case 'saspay':
+      return '<span class="integ-country-pill">🌍 Diaspora</span><span class="integ-country-pill">💳 VISA / MC</span>';
+    case 'meta_api':
+      return '<span class="integ-country-pill">⚡ WhatsApp Cloud</span><span class="integ-country-pill">✓ Meta Verified</span>';
+    default:
+      return '';
+  }
+}
+
+function getOperatorLogo(key, size = 48) {
+  const s = size;
+  const iconS = Math.round(s * 0.72);
+  switch (key) {
+    case 'wave':
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: #1DC4E9; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(29, 196, 233, 0.35); flex-shrink: 0;">
+          <svg width="${iconS}" height="${iconS}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M47 22C39 22 33 28 33 36C33 40.5 35 44 38 46.5L34 68C33.6 70 35.5 71.5 37.5 70.8L47 67.5C48 67.8 49 68 50 68C60 68 67 61 67 51C67 41 57 22 47 22Z" fill="#FFFFFF"/>
+            <ellipse cx="43" cy="34" rx="3.5" ry="4.5" fill="#0F172A"/>
+            <ellipse cx="44.2" cy="33" rx="1.2" ry="1.5" fill="#FFFFFF"/>
+            <path d="M46 39L54 42.5L46 46V39Z" fill="#F59E0B"/>
+            <path d="M39 52C42 56 47 57 52 56C57 55 60 51 60 51" stroke="#1DC4E9" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M37 73C34 75 32 78 35 79C38 80 43 76 43 76" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+            <path d="M50 71C53 74 57 76 59 74C61 72 58 68 58 68" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>`;
+    case 'orange_money':
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: #000000; border: 1px solid rgba(255,102,0,0.35); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(255, 102, 0, 0.25); flex-shrink: 0;">
+          <svg width="${iconS}" height="${iconS}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="14" y="14" width="72" height="72" rx="14" fill="#FF6600"/>
+            <circle cx="50" cy="50" r="24" fill="#000000" fill-opacity="0.2"/>
+            <text x="50" y="45" font-family="'Inter', sans-serif" font-weight="900" font-size="13" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">ORANGE</text>
+            <text x="50" y="63" font-family="'Inter', sans-serif" font-weight="800" font-size="12" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">MONEY</text>
+          </svg>
+        </div>`;
+    case 'mtn_momo':
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: #FFCC00; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(255, 204, 0, 0.35); flex-shrink: 0;">
+          <svg width="${iconS}" height="${iconS}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="50" cy="36" rx="30" ry="17" fill="#002B49"/>
+            <text x="50" y="42" font-family="'Inter', sans-serif" font-weight="900" font-size="15" fill="#FFCC00" text-anchor="middle" letter-spacing="1.5">MTN</text>
+            <rect x="20" y="57" width="60" height="26" rx="13" fill="#002B49"/>
+            <text x="50" y="75" font-family="'Inter', sans-serif" font-weight="900" font-size="14" fill="#FFFFFF" text-anchor="middle">MoMo</text>
+          </svg>
+        </div>`;
+    case 'moov_money':
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: #005CA9; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 92, 169, 0.35); flex-shrink: 0;">
+          <svg width="${iconS}" height="${iconS}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 70C30 52 46 36 78 30" stroke="#FF7900" stroke-width="7" stroke-linecap="round"/>
+            <path d="M20 78C34 62 50 48 80 44" stroke="#00A3E0" stroke-width="4" stroke-linecap="round"/>
+            <text x="50" y="32" font-family="'Inter', sans-serif" font-weight="900" font-size="13" fill="#FFFFFF" text-anchor="middle">moov</text>
+            <rect x="22" y="55" width="56" height="24" rx="12" fill="#FF7900"/>
+            <text x="50" y="71.5" font-family="'Inter', sans-serif" font-weight="900" font-size="13" fill="#FFFFFF" text-anchor="middle">flooz</text>
+          </svg>
+        </div>`;
+    case 'saspay':
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: linear-gradient(135deg, #0F172A, #1E293B); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25); flex-shrink: 0;">
+          <svg width="${iconS}" height="${iconS}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="15" y="20" width="70" height="46" rx="8" fill="#1E293B" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+            <rect x="23" y="30" width="14" height="10" rx="3" fill="#F59E0B"/>
+            <circle cx="62" cy="52" r="8" fill="#EB001B" fill-opacity="0.9"/>
+            <circle cx="71" cy="52" r="8" fill="#F79E1B" fill-opacity="0.9"/>
+            <text x="24" y="58" font-family="'Inter', sans-serif" font-weight="900" font-size="10" fill="#FFFFFF" font-style="italic">VISA</text>
+            <rect x="18" y="72" width="64" height="18" rx="9" fill="#10B981"/>
+            <text x="50" y="84.5" font-family="'Inter', sans-serif" font-weight="800" font-size="10" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">SasPay</text>
+          </svg>
+        </div>`;
+    case 'meta_api':
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: #128C7E; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); flex-shrink: 0;">
+          <svg width="${iconS}" height="${iconS}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="38" fill="#25D366"/>
+            <path d="M50 25C36.2 25 25 36.2 25 50C25 54.8 26.4 59.3 28.8 63.2L26 74L37.1 71.6C40.8 73.8 45.2 75 50 75C63.8 75 75 63.8 75 50C75 36.2 63.8 25 50 25Z" fill="#FFFFFF"/>
+            <path d="M42 38C41.4 36.5 40.6 36.5 40 36.5C39.3 36.5 38.6 36.5 38 37.3C37.3 38 35.3 40 35.3 43.8C35.3 47.6 38.1 51.1 38.5 51.7C38.9 52.2 43.9 60 51.7 63.3C58.2 66.1 59.5 65.5 61 65.4C62.4 65.3 65.5 63.5 66.1 61.6C66.8 59.7 66.8 58.2 66.6 57.8C66.4 57.5 65.8 57.2 65.1 56.8C64.3 56.4 60.7 54.5 60 54.2C59.3 54 58.8 53.9 58.3 54.6C57.8 55.4 56.3 57.2 55.8 57.7C55.4 58.3 54.9 58.3 54.2 58C53.4 57.6 51 56.9 48.1 54.2C45.9 52.2 44.4 49.7 44 49C43.5 48.3 43.9 48 44.3 47.6C44.7 47.2 45.1 46.7 45.5 46.2C45.9 45.7 46.1 45.3 46.4 44.7C46.6 44.2 46.5 43.7 46.3 43.3C46 43 44.5 39.3 43.8 37.7C43.2 36.2 42.6 36.4 42 38Z" fill="#25D366"/>
+          </svg>
+        </div>`;
+    default:
+      return `
+        <div class="integ-logo-brand" style="width:${s}px; height:${s}px; border-radius: 13px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--whatsapp-green); flex-shrink: 0;">
+          <i class="fa-solid fa-credit-card"></i>
+        </div>`;
+  }
+}
+
 function renderIntegrations() {
   const container = document.getElementById("integrations-grid-container");
   if (!container) return;
 
   const items = getSavedIntegrations();
 
-  container.innerHTML = items.map(integ => `
-    <div class="glass-panel integ-card" style="padding: 22px 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
-      <div>
-        <div class="integ-top" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <div class="integ-logo" style="width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; font-size: 22px; color: ${integ.color || 'var(--whatsapp-green)'};">
-              <i class="${integ.icon}"></i>
+  container.innerHTML = items.map(integ => {
+    const brandColor = getOperatorBrandColor(integ.key);
+    const logoHtml = getOperatorLogo(integ.key, 48);
+    const countryTags = getOperatorCountryTags(integ.key);
+    const isLink = integ.key === 'saspay' || integ.key === 'meta_api';
+
+    return `
+      <div class="glass-panel integ-card" data-key="${integ.key}">
+        <div class="integ-card-accent" style="background: linear-gradient(90deg, ${brandColor}, transparent);"></div>
+        <div>
+          <div class="integ-top">
+            <div class="integ-brand-wrap">
+              ${logoHtml}
+              <div class="integ-info-col">
+                <h3 class="integ-name" title="${escapeHtml(integ.name)}">${escapeHtml(integ.name)}</h3>
+                <div class="integ-country-tags">
+                  ${countryTags}
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">${integ.name}</h3>
-              <span class="badge ${integ.active ? (integ.badgeClass || 'badge-green') : 'badge-gray'}" style="font-size: 11px;">
-                ${integ.active ? '<i class="fa-solid fa-circle-check"></i> ' + (integ.status || 'Actif') : '<i class="fa-solid fa-pause"></i> Désactivé'}
-              </span>
-            </div>
+            <label class="switch-control" title="Activer / Désactiver">
+              <input type="checkbox" ${integ.active ? 'checked' : ''} onchange="toggleIntegrationActive('${integ.key}', this.checked)">
+              <span class="switch-slider"></span>
+            </label>
           </div>
-          <label class="switch-control" title="Activer / Désactiver">
-            <input type="checkbox" ${integ.active ? 'checked' : ''} onchange="toggleIntegrationActive('${integ.key}', this.checked)">
-            <span class="switch-slider"></span>
-          </label>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span class="integ-status-badge ${integ.active ? 'active' : 'inactive'}">
+              ${integ.active ? '<span class="pulse-dot-green"></span> Connecté & Actif' : '<span class="gray-dot"></span> En pause'}
+            </span>
+            <span style="font-size: 11px; color: #64748b; font-weight: 500;">
+              ${integ.active ? 'Routage automatique' : 'Désactivé'}
+            </span>
+          </div>
+
+          <p class="integ-desc">
+            ${integ.desc}
+          </p>
+
+          ${integ.phone ? `
+            <div class="integ-credentials-box">
+              <div class="integ-cred-label">
+                <span>${isLink ? 'Canal officiel' : 'Coordonnées communiquées aux clients'}</span>
+                <span class="integ-cred-beneficiary"><i class="fa-solid fa-circle-check" style="color: #38bdf8; font-size: 10px;"></i> ${escapeHtml(integ.beneficiary || 'Vérifié')}</span>
+              </div>
+              <div class="integ-cred-val-row">
+                <span class="integ-cred-number">
+                  <i class="fa-solid ${isLink ? 'fa-shield-halved' : 'fa-mobile-screen'}" style="color: ${brandColor}; font-size: 12px;"></i>
+                  ${escapeHtml(integ.phone)}
+                </span>
+                <button type="button" class="btn-copy-quick" title="Copier les coordonnées" onclick="copyIntegrationPhone('${escapeHtml(integ.phone)}')">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>Copier</span>
+                </button>
+              </div>
+            </div>
+          ` : ''}
         </div>
 
-        <p class="integ-desc" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
-          ${integ.desc}
-        </p>
-
-        ${integ.phone ? `
-          <div style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
-            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Coordonnées communiquées aux clients :</div>
-            <div style="font-size: 13px; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center;">
-              <span><i class="fa-solid fa-phone" style="color: var(--whatsapp-green); font-size: 11px; margin-right: 6px;"></i>${escapeHtml(integ.phone)}</span>
-              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">${escapeHtml(integ.beneficiary || '')}</span>
-            </div>
-          </div>
-        ` : ''}
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
-        <span style="font-size: 12px; color: var(--text-muted);">
-          ${integ.active ? '<span style="color: var(--whatsapp-green); font-weight: 600;">Connecté au bot IA</span>' : 'Non proposé aux clients'}
-        </span>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn-secondary-glass" onclick="openPaymentConfigModal('${integ.key}')" style="padding: 6px 14px; font-size: 12px;">
-            <i class="fa-solid fa-gear"></i> Configurer
+        <div class="integ-card-footer">
+          <span class="${integ.active ? 'integ-ai-active-pill' : 'integ-ai-paused-pill'}">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: ${integ.active ? 'var(--whatsapp-green)' : '#64748b'};"></i>
+            <span>${integ.active ? 'Connecté au bot IA' : 'Non proposé aux clients'}</span>
+          </span>
+          <button type="button" class="btn-config-integ" onclick="openPaymentConfigModal('${integ.key}')">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Configurer</span>
           </button>
         </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
+
+window.copyIntegrationPhone = function(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("Coordonnées copiées avec succès !", "success");
+    }).catch(() => {
+      showToast("Coordonnées : " + text, "info");
+    });
+  } else {
+    showToast("Coordonnées : " + text, "info");
+  }
+};
 
 window.toggleIntegrationActive = function(key, isActive) {
   const items = getSavedIntegrations();
   const updated = items.map(x => x.key === key ? { ...x, active: isActive } : x);
   saveIntegrationsList(updated);
   renderIntegrations();
-  showToast(isActive ? "Moyen de paiement activé sur WhatsApp !" : "Moyen de paiement mis en pause.", "info");
+  showToast(isActive ? "Passerelle activée avec succès !" : "Passerelle mise en pause.", "info");
 };
 
 window.openPaymentConfigModal = function(key) {
@@ -2687,7 +2832,7 @@ window.openPaymentConfigModal = function(key) {
   if (noteInput) noteInput.value = item.note || "";
   if (activeToggle) activeToggle.checked = Boolean(item.active);
   if (titleEl) titleEl.textContent = "Configurer " + item.name;
-  if (iconBox) iconBox.innerHTML = `<i class="${item.icon}" style="color: ${item.color}"></i>`;
+  if (iconBox) iconBox.innerHTML = getOperatorLogo(item.key, 42);
 
   modal.classList.add("active");
   modal.style.display = "flex";
