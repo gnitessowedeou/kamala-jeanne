@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Installer Chromium et toutes les librairies systeme Linux (libglib, libnss, etc.)
+# Installer Chromium, git et toutes les librairies systeme Linux (libglib, libnss, etc.)
 RUN apt-get update && apt-get install -y \
     git \
     chromium \
@@ -38,7 +38,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    PORT=8080
 
 WORKDIR /app
 
@@ -47,5 +48,6 @@ RUN npm install
 
 COPY . .
 
+EXPOSE 8080
 
 CMD ["node", "server.js"]
