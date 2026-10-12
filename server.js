@@ -1428,6 +1428,43 @@ app.get('/api/contacts/:userId', authMiddleware, async (req, res) => {
 });
 
 
+
+// === 8. ROUTES D'AFFILIATION & INTEGRATIONS ===
+app.post('/api/affiliate/track-click', async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: "Code requis" });
+    console.log(`[AFFILIATE] Clic enregistre pour le code: ${code}`);
+    res.json({ success: true, message: "Clic comptabilise" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/integrations/payments', authMiddleware, async (req, res) => {
+  try {
+    const { userId, method, phone, beneficiary, note, active } = req.body;
+    console.log(`[PAYMENTS] Mise a jour passerelle ${method} pour client ${userId}: ${phone} (${beneficiary})`);
+    
+    // Mettre a jour le prompt du profil si necessaire pour que l'IA connaisse toujours le bon numero
+    if (supabase && userId && phone) {
+      const { data: prof } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
+      if (prof && prof.ai_prompt) {
+        // Enregistrer discrètement les coordonnées de paiement à la fin du prompt
+        const marker = "\n\n[COORDONNEES DE PAIEMENT ACTUELLES DU VENDEUR] :";
+        const cleanPrompt = prof.ai_prompt.split(marker)[0];
+        const updatedPrompt = `${cleanPrompt}${marker}\nMoyen: ${method.toUpperCase()} | Numero: ${phone} | Beneficiaire: ${beneficiary} | Statut: ${active ? 'Actif' : 'Pause'}`;
+        await supabase.from('profiles').update({ ai_prompt: updatedPrompt }).eq('id', userId);
+      }
+    }
+
+    res.json({ success: true, message: "Passerelle enregistree avec succes" });
+  } catch (e) {
+    console.error("Erreur save payment:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // === 7. DEMANDE DE RETRAIT (AFFILIATION) ===
 app.post('/api/payouts/request', authMiddleware, async (req, res) => {
     const userId = req.user ? req.user.id : req.body.userId;

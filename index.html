@@ -2244,5 +2244,25 @@
   <!-- Supabase & Auth Engine (100% Natif REST - Zéro dépendance CDN externe) -->
   <script src="js/auth.js?v=2"></script>
   <script src="js/script.js"></script>
+
+  <!-- VANDIA Referral & Affiliate Tracker -->
+  <script>
+    (function() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var refCode = params.get('ref') || params.get('referral');
+        if (refCode) {
+          localStorage.setItem('vandia_referral_code', refCode);
+          console.log('[AFFILIATE] Code de parrainage capture :', refCode);
+          fetch('/api/affiliate/track-click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: refCode })
+          }).catch(function() {});
+        }
+      } catch (e) {}
+    })();
+  </script>
+
 </body>
 </html>

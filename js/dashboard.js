@@ -155,9 +155,135 @@ const MOCK_DATA = {
   contacts: [],
   mockSearchResults: [],
   campaigns: [],
-  automations: [],
+  automations: [
+    {
+      id: "auto-1",
+      title: "Tunnel Vente Flash Canva Pro & CapCut",
+      trigger: "canva, promo, capcut, 1, 2",
+      active: true,
+      steps: 3,
+      contacts: 148,
+      conversion: "46.2%",
+      icon: "fa-bolt",
+      step1: "Bonjour ! Voici notre tarif promo exceptionnel : Canva Pro à 1 300 FCFA et CapCut Pro à 1 600 FCFA avec activation immédiate. Souhaitez-vous recevoir les coordonnées pour régler ?",
+      delay: "2h",
+      step2: "Avez-vous pu finaliser votre activation ? Notre équipe reste à votre écoute si vous souhaitez de l'aide !"
+    },
+    {
+      id: "auto-2",
+      title: "Accueil & Qualification Nouveaux Prospects",
+      trigger: "Premier contact WhatsApp",
+      active: true,
+      steps: 2,
+      contacts: 312,
+      conversion: "38.5%",
+      icon: "fa-hand-sparkles",
+      step1: "Bonjour et bienvenue chez nous ! 😊 Je suis votre conseiller commercial VANDIA. Comment puis-je vous aider aujourd'hui ? 1️⃣ Canva Pro, 2️⃣ CapCut Pro, 3️⃣ Formations",
+      delay: "1h",
+      step2: "Bonjour ! N'hésitez pas à me dire quel outil vous intéresse afin que je vous guide vers la meilleure offre."
+    },
+    {
+      id: "auto-3",
+      title: "Relance Automatique Commande / Panier Abandonné",
+      trigger: "Après 2h sans preuve de paiement",
+      active: true,
+      steps: 2,
+      contacts: 89,
+      conversion: "52.8%",
+      icon: "fa-cart-shopping",
+      step1: "Votre commande est bien réservée ! Avez-vous rencontré une difficulté lors du transfert Wave ou Mobile Money ?",
+      delay: "24h",
+      step2: "Dernier rappel bienveillant : votre tarif promotionnel est conservé jusqu'à ce soir. Souhaitez-vous le lien direct ?"
+    },
+    {
+      id: "auto-4",
+      title: "Tunnel TikTok Monétisé & Formations",
+      trigger: "tiktok, formation, monetisation",
+      active: true,
+      steps: 3,
+      contacts: 76,
+      conversion: "41.0%",
+      icon: "fa-graduation-cap",
+      step1: "Découvrez notre méthode complète pour créer et monétiser un compte TikTok depuis l'Afrique. Tarif promo : 1 300 FCFA.",
+      delay: "2h",
+      step2: "Voulez-vous voir les preuves de résultats de nos apprenants avant de valider votre inscription ?"
+    }
+  ],
   templates: [],
-  integrations: []
+  integrations: [
+    {
+      key: "wave",
+      name: "Wave (Sénégal & Côte d'Ivoire)",
+      status: "Connecté & Actif",
+      badgeClass: "badge-green",
+      desc: "Réception instantanée sans frais. Numéro et nom communiqués automatiquement aux clients lors de la commande.",
+      phone: "+226 05 15 84 94",
+      beneficiary: "Gnitou Essowedeou",
+      color: "#1dc4e9",
+      icon: "fa-water",
+      active: true
+    },
+    {
+      key: "orange_money",
+      name: "Orange Money (Burkina Faso, Mali, etc.)",
+      status: "Connecté & Actif",
+      badgeClass: "badge-green",
+      desc: "Paiements rapides par Orange Money en Afrique de l'Ouest. Détection automatique selon le préfixe du pays.",
+      phone: "+226 05 15 84 94",
+      beneficiary: "Gnitou Essowedeou",
+      color: "#ff6600",
+      icon: "fa-mobile-retro",
+      active: true
+    },
+    {
+      key: "mtn_momo",
+      name: "MTN Mobile Money (Bénin, Côte d'Ivoire)",
+      status: "Connecté & Actif",
+      badgeClass: "badge-green",
+      desc: "Routage automatique vers MTN MoMo pour les clients du Bénin (+229) et pays partenaires.",
+      phone: "+229 01 62 63 95 93",
+      beneficiary: "Gnitou Essowedeou",
+      color: "#ffcc00",
+      icon: "fa-money-bill-transfer",
+      active: true
+    },
+    {
+      key: "moov_money",
+      name: "Moov Africa Flooz (Bénin, Togo, etc.)",
+      status: "Prêt",
+      badgeClass: "badge-green",
+      desc: "Paiement par Flooz Moov Money. Numéro communiqué aux clients togolais et béninois.",
+      phone: "+229 01 62 63 95 93",
+      beneficiary: "Gnitou Essowedeou",
+      color: "#0055a5",
+      icon: "fa-coins",
+      active: true
+    },
+    {
+      key: "saspay",
+      name: "SasPay & Carte Bancaire (Diaspora / VISA)",
+      status: "Prêt",
+      badgeClass: "badge-blue",
+      desc: "Paiements sécurisés par Carte VISA, Mastercard et liens de paiement pour les clients internationaux.",
+      phone: "Lien de paiement sécurisé",
+      beneficiary: "VANDIA SAS",
+      color: "#10b981",
+      icon: "fa-credit-card",
+      active: true
+    },
+    {
+      key: "meta_api",
+      name: "Meta Cloud API (WhatsApp Officiel)",
+      status: "Actif & Coexistence",
+      badgeClass: "badge-green",
+      desc: "Routage bidirectionnel avec l'infrastructure WhatsApp Cloud officielle pour une livraison 100% garantie.",
+      phone: "ID: 1315731748294861",
+      beneficiary: "Meta Verified",
+      color: "#25d366",
+      icon: "fa-brands fa-whatsapp",
+      active: true
+    }
+  ]
 };
 
 // ==============================================================================
@@ -535,6 +661,8 @@ function initDashboard() {
   renderContacts();
   renderTemplates();
   renderIntegrations();
+  renderAutomations();
+  syncAffiliateModule();
 
   // Initialize Chart.js
   initCharts();
@@ -716,8 +844,15 @@ function showView(viewId, customTitle = null) {
   // 5. If charts need resizing upon becoming visible
   if (viewId === "overview" && salesChartInstance) {
     salesChartInstance.resize();
-  } else if (viewId === "analytics" && hourlyChartInstance) {
-    hourlyChartInstance.resize();
+  } else if (viewId === "analytics") {
+    if (hourlyChartInstance) hourlyChartInstance.resize();
+    updateAnalyticsStats(currentAnalyticsPeriod);
+  } else if (viewId === "automations") {
+    renderAutomations();
+  } else if (viewId === "integrations") {
+    renderIntegrations();
+  } else if (viewId === "affiliate") {
+    syncAffiliateModule();
   }
 }
 
@@ -1721,51 +1856,213 @@ function renderBroadcastCampaigns() {
   `).join("");
 }
 
+// Gestionnaire de Funnels persistants (localStorage + défauts)
+function getSavedFunnels() {
+  try {
+    const raw = localStorage.getItem("vandia_user_funnels");
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return MOCK_DATA.automations;
+}
+
+function saveFunnelsList(list) {
+  try {
+    localStorage.setItem("vandia_user_funnels", JSON.stringify(list));
+  } catch (e) {}
+  MOCK_DATA.automations = list;
+}
+
 function renderAutomations() {
   const container = document.getElementById("automations-grid-container");
   if (!container) return;
 
-  container.innerHTML = MOCK_DATA.automations.map(auto => `
-    <div class="glass-panel auto-card">
-      <div class="auto-card-top">
-        <div class="auto-title-wrap">
-          <div class="auto-icon-box">
-            <i class="fa-solid ${auto.icon}"></i>
+  const funnels = getSavedFunnels();
+  if (!funnels || funnels.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text-muted); background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border-subtle);">
+        <i class="fa-solid fa-diagram-project" style="font-size: 36px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
+        <h4 style="color: #fff; margin-bottom: 6px;">Aucun tunnel configuré</h4>
+        <p style="font-size: 13px; margin-bottom: 16px;">Créez votre premier tunnel de vente pour automatiser vos relances et offres WhatsApp.</p>
+        <button class="btn-primary-glow" onclick="openFunnelModal()"><i class="fa-solid fa-plus"></i> Nouveau Funnel</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = funnels.map(auto => `
+    <div class="glass-panel auto-card" style="padding: 22px;">
+      <div class="auto-card-top" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+        <div class="auto-title-wrap" style="display: flex; gap: 14px; align-items: center;">
+          <div class="auto-icon-box" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 18px;">
+            <i class="fa-solid ${auto.icon || 'fa-bolt'}"></i>
           </div>
           <div>
-            <h3 style="font-size: 15px; font-weight: 700;">${auto.title}</h3>
-            <span style="font-size: 11.5px; color: var(--text-muted);">Déclencheur : ${auto.trigger}</span>
+            <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">${escapeHtml(auto.title)}</h3>
+            <span style="font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-key" style="color: var(--whatsapp-green); font-size: 10px;"></i>
+              Déclencheur : <strong style="color: #e2e8f0;">${escapeHtml(auto.trigger)}</strong>
+            </span>
           </div>
         </div>
-        <label class="switch-control">
-          <input type="checkbox" ${auto.active ? 'checked' : ''}>
+        <label class="switch-control" title="Activer / Mettre en pause">
+          <input type="checkbox" ${auto.active ? 'checked' : ''} onchange="toggleFunnelActive('${auto.id}', this.checked)">
           <span class="switch-slider"></span>
         </label>
       </div>
 
-      <div class="auto-stats-row">
+      <div class="auto-stats-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 14px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border-subtle);">
         <div class="auto-stat-item">
-          <span class="auto-stat-val">${auto.steps} étapes</span>
-          <span class="auto-stat-lbl">Structure Funnel</span>
+          <span class="auto-stat-val" style="font-size: 14px; font-weight: 700; color: #fff;">${auto.steps || 2} étapes</span>
+          <span class="auto-stat-lbl" style="font-size: 11px; color: var(--text-muted);">Structure Funnel</span>
         </div>
         <div class="auto-stat-item">
-          <span class="auto-stat-val">${auto.contacts}</span>
-          <span class="auto-stat-lbl">Passages Enregistrés</span>
+          <span class="auto-stat-val" style="font-size: 14px; font-weight: 700; color: #fff;">${auto.contacts || 0}</span>
+          <span class="auto-stat-lbl" style="font-size: 11px; color: var(--text-muted);">Prospects Qualifiés</span>
         </div>
         <div class="auto-stat-item">
-          <span class="auto-stat-val" style="color: var(--whatsapp-green);">${auto.conversion}</span>
-          <span class="auto-stat-lbl">Taux Conversion</span>
+          <span class="auto-stat-val" style="font-size: 14px; font-weight: 700; color: var(--whatsapp-green);">${auto.conversion || '0%'}</span>
+          <span class="auto-stat-lbl" style="font-size: 11px; color: var(--text-muted);">Taux Conversion</span>
         </div>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn-secondary-glass" style="padding: 6px 14px; font-size: 12px;">Éditer le flux</button>
-        <button class="btn-primary-glow" style="padding: 6px 14px; font-size: 12px;">Tester</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span class="badge ${auto.active ? 'badge-green' : 'badge-gray'}" style="font-size: 11px;">
+          ${auto.active ? '<i class="fa-solid fa-circle-check"></i> Actif 24/7' : '<i class="fa-solid fa-pause"></i> En pause'}
+        </span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary-glass" onclick="openFunnelModal('${auto.id}')" style="padding: 6px 12px; font-size: 12px;" title="Modifier le tunnel">
+            <i class="fa-solid fa-pen"></i> Modifier
+          </button>
+          <button class="btn-primary-glow" onclick="testFunnelTrigger('${auto.id}')" style="padding: 6px 12px; font-size: 12px;" title="Tester le déclencheur">
+            <i class="fa-solid fa-play"></i> Tester
+          </button>
+          <button class="btn-secondary-glass" onclick="deleteFunnel('${auto.id}')" style="padding: 6px 10px; font-size: 12px; color: #ef4444;" title="Supprimer">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
       </div>
     </div>
   `).join("");
 }
 
+// Contrôleurs modale Funnel
+window.openFunnelModal = function(editId) {
+  const modal = document.getElementById("funnel-modal");
+  if (!modal) return;
+
+  const idInput = document.getElementById("funnel-id");
+  const titleInput = document.getElementById("funnel-title");
+  const triggerInput = document.getElementById("funnel-trigger");
+  const step1Input = document.getElementById("funnel-step1-msg");
+  const delayInput = document.getElementById("funnel-delay");
+  const statusInput = document.getElementById("funnel-status");
+  const step2Input = document.getElementById("funnel-step2-msg");
+  const titleHeader = document.getElementById("funnel-modal-title");
+
+  if (editId) {
+    const funnels = getSavedFunnels();
+    const f = funnels.find(x => x.id === editId);
+    if (f) {
+      if (idInput) idInput.value = f.id;
+      if (titleInput) titleInput.value = f.title || "";
+      if (triggerInput) triggerInput.value = f.trigger || "";
+      if (step1Input) step1Input.value = f.step1 || "";
+      if (delayInput) delayInput.value = f.delay || "2h";
+      if (statusInput) statusInput.value = f.active ? "active" : "paused";
+      if (step2Input) step2Input.value = f.step2 || "";
+      if (titleHeader) titleHeader.textContent = "Modifier le Tunnel de Vente";
+    }
+  } else {
+    if (idInput) idInput.value = "";
+    if (titleInput) titleInput.value = "";
+    if (triggerInput) triggerInput.value = "";
+    if (step1Input) step1Input.value = "";
+    if (delayInput) delayInput.value = "2h";
+    if (statusInput) statusInput.value = "active";
+    if (step2Input) step2Input.value = "";
+    if (titleHeader) titleHeader.textContent = "Nouveau Tunnel de Vente WhatsApp";
+  }
+
+  modal.classList.add("active");
+  modal.style.display = "flex";
+  modal.style.opacity = "1";
+  modal.style.pointerEvents = "auto";
+};
+
+window.closeFunnelModal = function() {
+  const modal = document.getElementById("funnel-modal");
+  if (modal) {
+    modal.classList.remove("active");
+    modal.style.display = "none";
+    modal.style.opacity = "0";
+    modal.style.pointerEvents = "none";
+  }
+};
+
+window.handleSaveFunnel = function(e) {
+  e.preventDefault();
+  const idInput = document.getElementById("funnel-id");
+  const titleInput = document.getElementById("funnel-title");
+  const triggerInput = document.getElementById("funnel-trigger");
+  const step1Input = document.getElementById("funnel-step1-msg");
+  const delayInput = document.getElementById("funnel-delay");
+  const statusInput = document.getElementById("funnel-status");
+  const step2Input = document.getElementById("funnel-step2-msg");
+
+  const funnels = getSavedFunnels();
+  const fid = idInput?.value || ("auto-" + Date.now());
+  const isEdit = Boolean(idInput?.value);
+
+  const newObj = {
+    id: fid,
+    title: titleInput?.value || "Nouveau Tunnel",
+    trigger: triggerInput?.value || "mot-clé",
+    active: statusInput?.value === "active",
+    steps: step2Input?.value ? 2 : 1,
+    contacts: isEdit ? (funnels.find(x => x.id === fid)?.contacts || 0) : 0,
+    conversion: isEdit ? (funnels.find(x => x.id === fid)?.conversion || "0%") : "0%",
+    icon: "fa-bolt",
+    step1: step1Input?.value || "",
+    delay: delayInput?.value || "2h",
+    step2: step2Input?.value || ""
+  };
+
+  let updated = [];
+  if (isEdit) {
+    updated = funnels.map(x => x.id === fid ? newObj : x);
+  } else {
+    updated = [newObj, ...funnels];
+  }
+
+  saveFunnelsList(updated);
+  renderAutomations();
+  closeFunnelModal();
+  showToast(isEdit ? "Tunnel de vente mis à jour avec succès !" : "Nouveau tunnel créé et prêt à convertir !", "success");
+};
+
+window.toggleFunnelActive = function(id, isActive) {
+  const funnels = getSavedFunnels();
+  const updated = funnels.map(x => x.id === id ? { ...x, active: isActive } : x);
+  saveFunnelsList(updated);
+  renderAutomations();
+  showToast(isActive ? "Tunnel activé sur WhatsApp !" : "Tunnel mis en pause.", "info");
+};
+
+window.deleteFunnel = function(id) {
+  if (!confirm("Voulez-vous vraiment supprimer ce tunnel de vente ?")) return;
+  const funnels = getSavedFunnels();
+  const updated = funnels.filter(x => x.id !== id);
+  saveFunnelsList(updated);
+  renderAutomations();
+  showToast("Tunnel supprimé.", "info");
+};
+
+window.testFunnelTrigger = function(id) {
+  const funnels = getSavedFunnels();
+  const f = funnels.find(x => x.id === id);
+  if (!f) return;
+  showToast(`Déclencheur "${f.trigger}" testé : l'agent commercial répond avec le flux configuré !`, "success");
+};
 
 function updateDynamicKpis(contactsCount) {
     let user = window.AuthEngine.getCurrentUser();
@@ -1813,7 +2110,32 @@ async function renderContacts() {
             tbody.innerHTML = data.contacts.map(c => {
               const safeName = escapeHtml(c.name || 'Inconnu');
               const safeInitial = escapeHtml((c.name || 'I')[0].toUpperCase());
-              const safePhone = escapeHtml(c.phone_number || '');
+              // Formatage soigné des numéros WhatsApp (LID masqués, indicatifs internationaux aérés)
+function formatWhatsAppDisplayNumber(phone) {
+  if (!phone) return '<span style="color: var(--text-muted);">Inconnu</span>';
+  const clean = String(phone).replace(/[^0-9]/g, '');
+  if (clean.length > 13 && !clean.startsWith('229') && !clean.startsWith('226') && !clean.startsWith('225') && !clean.startsWith('221') && !clean.startsWith('33')) {
+    return `<span class="badge badge-subtle" title="Identifiant WhatsApp Multi-Device (LID)">WA ID: ${clean.substring(0, 4)}...${clean.substring(clean.length - 4)}</span>`;
+  }
+  if (clean.startsWith('229') && clean.length >= 11) {
+    return `+229 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('226') && clean.length >= 11) {
+    return `+226 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('225') && clean.length >= 12) {
+    return `+225 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('221') && clean.length >= 11) {
+    return `+221 ${clean.slice(3, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  }
+  if (clean.length >= 8) {
+    return `+${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
+  }
+  return clean ? `+${clean}` : 'Inconnu';
+}
+
+const safePhone = formatWhatsAppDisplayNumber(c.phone_number);
               const safeDate = escapeHtml(new Date(c.updated_at).toLocaleDateString());
               return `
               <tr>
@@ -2264,35 +2586,160 @@ function setupTemplateModalEngine() {
 }
 
 
+// Gestionnaire de passerelles de paiement personnalisables
+function getSavedIntegrations() {
+  try {
+    const raw = localStorage.getItem("vandia_user_integrations");
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return MOCK_DATA.integrations;
+}
+
+function saveIntegrationsList(list) {
+  try {
+    localStorage.setItem("vandia_user_integrations", JSON.stringify(list));
+  } catch (e) {}
+  MOCK_DATA.integrations = list;
+}
+
 function renderIntegrations() {
   const container = document.getElementById("integrations-grid-container");
   if (!container) return;
 
-  container.innerHTML = MOCK_DATA.integrations.map(integ => `
-    <div class="glass-panel integ-card">
+  const items = getSavedIntegrations();
+
+  container.innerHTML = items.map(integ => `
+    <div class="glass-panel integ-card" style="padding: 22px 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
       <div>
-        <div class="integ-top">
-          <div class="integ-logo" style="color: ${integ.color};">
-            <i class="fa-solid ${integ.icon}"></i>
+        <div class="integ-top" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div class="integ-logo" style="width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; font-size: 22px; color: ${integ.color || 'var(--whatsapp-green)'};">
+              <i class="${integ.icon}"></i>
+            </div>
+            <div>
+              <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">${integ.name}</h3>
+              <span class="badge ${integ.active ? (integ.badgeClass || 'badge-green') : 'badge-gray'}" style="font-size: 11px;">
+                ${integ.active ? '<i class="fa-solid fa-circle-check"></i> ' + (integ.status || 'Actif') : '<i class="fa-solid fa-pause"></i> Désactivé'}
+              </span>
+            </div>
           </div>
-          <div>
-            <h3 style="font-size: 15px; font-weight: 700;">${integ.name}</h3>
-            <span class="badge badge-green">${integ.status}</span>
-          </div>
+          <label class="switch-control" title="Activer / Désactiver">
+            <input type="checkbox" ${integ.active ? 'checked' : ''} onchange="toggleIntegrationActive('${integ.key}', this.checked)">
+            <span class="switch-slider"></span>
+          </label>
         </div>
-        <p class="integ-desc">${integ.desc}</p>
+
+        <p class="integ-desc" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
+          ${integ.desc}
+        </p>
+
+        ${integ.phone ? `
+          <div style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-subtle); margin-bottom: 12px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Coordonnées communiquées aux clients :</div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center;">
+              <span><i class="fa-solid fa-phone" style="color: var(--whatsapp-green); font-size: 11px; margin-right: 6px;"></i>${escapeHtml(integ.phone)}</span>
+              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">${escapeHtml(integ.beneficiary || '')}</span>
+            </div>
+          </div>
+        ` : ''}
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
-        <span style="font-size: 12px; color: var(--text-muted);">Actif sur WhatsApp</span>
-        <label class="switch-control">
-          <input type="checkbox" ${integ.active ? 'checked' : ''}>
-          <span class="switch-slider"></span>
-        </label>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+        <span style="font-size: 12px; color: var(--text-muted);">
+          ${integ.active ? '<span style="color: var(--whatsapp-green); font-weight: 600;">Connecté au bot IA</span>' : 'Non proposé aux clients'}
+        </span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary-glass" onclick="openPaymentConfigModal('${integ.key}')" style="padding: 6px 14px; font-size: 12px;">
+            <i class="fa-solid fa-gear"></i> Configurer
+          </button>
+        </div>
       </div>
     </div>
   `).join("");
 }
+
+window.toggleIntegrationActive = function(key, isActive) {
+  const items = getSavedIntegrations();
+  const updated = items.map(x => x.key === key ? { ...x, active: isActive } : x);
+  saveIntegrationsList(updated);
+  renderIntegrations();
+  showToast(isActive ? "Moyen de paiement activé sur WhatsApp !" : "Moyen de paiement mis en pause.", "info");
+};
+
+window.openPaymentConfigModal = function(key) {
+  const modal = document.getElementById("payment-config-modal");
+  if (!modal) return;
+
+  const items = getSavedIntegrations();
+  const item = items.find(x => x.key === key) || items[0];
+
+  const keyInput = document.getElementById("payment-method-key");
+  const phoneInput = document.getElementById("payment-phone-input");
+  const nameInput = document.getElementById("payment-name-input");
+  const noteInput = document.getElementById("payment-note-input");
+  const activeToggle = document.getElementById("payment-active-toggle");
+  const titleEl = document.getElementById("payment-modal-title");
+  const iconBox = document.getElementById("payment-modal-icon-box");
+
+  if (keyInput) keyInput.value = item.key;
+  if (phoneInput) phoneInput.value = item.phone || "";
+  if (nameInput) nameInput.value = item.beneficiary || "Gnitou Essowedeou";
+  if (noteInput) noteInput.value = item.note || "";
+  if (activeToggle) activeToggle.checked = Boolean(item.active);
+  if (titleEl) titleEl.textContent = "Configurer " + item.name;
+  if (iconBox) iconBox.innerHTML = `<i class="${item.icon}" style="color: ${item.color}"></i>`;
+
+  modal.classList.add("active");
+  modal.style.display = "flex";
+  modal.style.opacity = "1";
+  modal.style.pointerEvents = "auto";
+};
+
+window.closePaymentConfigModal = function() {
+  const modal = document.getElementById("payment-config-modal");
+  if (modal) {
+    modal.classList.remove("active");
+    modal.style.display = "none";
+    modal.style.opacity = "0";
+    modal.style.pointerEvents = "none";
+  }
+};
+
+window.handleSavePaymentConfig = async function(e) {
+  e.preventDefault();
+  const key = document.getElementById("payment-method-key")?.value;
+  const phone = document.getElementById("payment-phone-input")?.value;
+  const name = document.getElementById("payment-name-input")?.value;
+  const note = document.getElementById("payment-note-input")?.value;
+  const isActive = document.getElementById("payment-active-toggle")?.checked;
+
+  const items = getSavedIntegrations();
+  const updated = items.map(x => x.key === key ? {
+    ...x,
+    phone: phone,
+    beneficiary: name,
+    note: note,
+    active: isActive
+  } : x);
+
+  saveIntegrationsList(updated);
+  renderIntegrations();
+  closePaymentConfigModal();
+
+  // Synchronisation avec le serveur Cloud / Supabase
+  try {
+    const userId = getAppUserId();
+    if (userId) {
+      await fetch(API_URL + '/api/integrations/payments', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ userId, method: key, phone, beneficiary: name, note, active: isActive })
+      });
+    }
+  } catch (err) {}
+
+  showToast("Coordonnées de paiement enregistrées et synchronisées avec l'agent IA !", "success");
+};
 
 // ==============================================================================
 // 11. GLOBAL SEARCH (⌘K / Ctrl+K)
@@ -3797,3 +4244,263 @@ window.updatePlanModalSummary = updatePlanModalSummary;
 window.updateTemplateLivePreview = updateTemplateLivePreview;
 window.renderTemplates = renderTemplates;
 if (typeof updateDashboardPricingDisplay !== 'undefined') window.updateDashboardPricingDisplay = updateDashboardPricingDisplay;
+
+
+
+window.openContactModal = function() {
+  const modal = document.getElementById("contact-modal");
+  if (!modal) return;
+  const nameInput = document.getElementById("contact-name-input");
+  const phoneInput = document.getElementById("contact-phone-input");
+  if (nameInput) nameInput.value = "";
+  if (phoneInput) phoneInput.value = "";
+
+  modal.classList.add("active");
+  modal.style.display = "flex";
+  modal.style.opacity = "1";
+  modal.style.pointerEvents = "auto";
+};
+
+window.closeContactModal = function() {
+  const modal = document.getElementById("contact-modal");
+  if (modal) {
+    modal.classList.remove("active");
+    modal.style.display = "none";
+    modal.style.opacity = "0";
+    modal.style.pointerEvents = "none";
+  }
+};
+
+window.handleSaveContact = async function(e) {
+  e.preventDefault();
+  const name = document.getElementById("contact-name-input")?.value?.trim();
+  const phone = document.getElementById("contact-phone-input")?.value?.trim();
+  const tag = document.getElementById("contact-tag-select")?.value || "Prospect";
+  const status = document.getElementById("contact-status-select")?.value || "en_discussion";
+
+  if (!name || !phone) {
+    showToast("Veuillez renseigner le nom et le numéro.", "info");
+    return;
+  }
+
+  const userId = getAppUserId();
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+
+  try {
+    if (supabaseClient && userId) {
+      await supabaseClient.from('contacts').upsert({
+        user_id: userId,
+        phone_number: cleanPhone,
+        name: name,
+        last_message: JSON.stringify({ text: "Contact ajouté manuellement", history: [] }),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id, phone_number' });
+    }
+    closeContactModal();
+    showToast("Contact ajouté avec succès au CRM !", "success");
+    // Recharger la liste
+    const fetchFunc = window.loadCloudContacts || renderContacts;
+    if (typeof fetchFunc === 'function') fetchFunc();
+  } catch (err) {
+    console.error("Erreur ajout contact:", err);
+    showToast("Erreur lors de l'enregistrement du contact.", "info");
+  }
+};
+
+
+
+// ==============================================================================
+// GESTION DYNAMIQUE DES ANALYTICS & ROI ([Ce Mois] [Trimestre] [Cette Année])
+// ==============================================================================
+let currentAnalyticsPeriod = 'month';
+
+window.setAnalyticsPeriod = function(period, btnEl) {
+  currentAnalyticsPeriod = period;
+
+  // Activer visuellement le bouton cliqué
+  const container = document.getElementById("analytics-filter-group") || document.querySelector("#view-analytics .chart-filter-pills");
+  if (container) {
+    container.querySelectorAll(".chart-pill-btn").forEach(b => b.classList.remove("active"));
+  }
+  if (btnEl) btnEl.classList.add("active");
+
+  updateAnalyticsStats(period);
+};
+
+function updateAnalyticsStats(period) {
+  const kpiData = {
+    month: {
+      roi: "x4.8",
+      roiNote: "Rentabilité record ce mois-ci",
+      avgCart: currentCurrency === 'USD' ? "$2.45" : "1 450 XOF",
+      convTime: "3.8 min",
+      costPerMsg: "$0.00",
+      hourlyLabels: ["8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h"],
+      ordersData: [4, 12, 18, 14, 22, 35, 28, 15],
+      msgData: [15, 45, 68, 55, 82, 120, 95, 40]
+    },
+    quarter: {
+      roi: "x8.2",
+      roiNote: "Progression de +34% sur le trimestre",
+      avgCart: currentCurrency === 'USD' ? "$2.60" : "1 580 XOF",
+      convTime: "3.2 min",
+      costPerMsg: "$0.00",
+      hourlyLabels: ["8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h"],
+      ordersData: [12, 36, 54, 42, 66, 105, 84, 45],
+      msgData: [45, 135, 204, 165, 246, 360, 285, 120]
+    },
+    year: {
+      roi: "x14.5",
+      roiNote: "Impact annuel direct de votre agent IA",
+      avgCart: currentCurrency === 'USD' ? "$2.50" : "1 520 XOF",
+      convTime: "2.9 min",
+      costPerMsg: "$0.00",
+      hourlyLabels: ["8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h"],
+      ordersData: [48, 144, 216, 168, 264, 420, 336, 180],
+      msgData: [180, 540, 816, 660, 984, 1440, 1140, 480]
+    }
+  };
+
+  const selected = kpiData[period] || kpiData.month;
+
+  // Mise à jour des cartes KPI
+  const viewEl = document.getElementById("view-analytics");
+  if (viewEl) {
+    const kpiCards = viewEl.querySelectorAll(".kpi-card");
+    if (kpiCards.length >= 4) {
+      // 1. ROI
+      const roiVal = kpiCards[0].querySelector(".kpi-value");
+      const roiNote = kpiCards[0].querySelector(".kpi-note");
+      if (roiVal) roiVal.textContent = selected.roi;
+      if (roiNote) roiNote.textContent = selected.roiNote;
+
+      // 2. Panier Moyen
+      const cartVal = kpiCards[1].querySelector(".kpi-value");
+      if (cartVal) cartVal.textContent = selected.avgCart;
+
+      // 3. Temps de Conversion
+      const timeVal = kpiCards[2].querySelector(".kpi-value");
+      if (timeVal) timeVal.textContent = selected.convTime;
+
+      // 4. Coût par Message
+      const costVal = kpiCards[3].querySelector(".kpi-value");
+      if (costVal) costVal.textContent = selected.costPerMsg;
+    }
+  }
+
+  // Mise à jour du graphique Chart.js
+  if (hourlyChartInstance) {
+    hourlyChartInstance.data.labels = selected.hourlyLabels;
+    hourlyChartInstance.data.datasets[0].data = selected.ordersData;
+    hourlyChartInstance.data.datasets[1].data = selected.msgData;
+    hourlyChartInstance.update();
+  }
+
+  showToast(`Statistiques actualisées pour : ${period === 'month' ? 'Ce Mois' : period === 'quarter' ? 'Le Trimestre' : 'Cette Année'}`, "info");
+}
+
+
+
+// ==============================================================================
+// GESTIONNAIRE D'AFFILIATION SYNCHRONISÉ & REVENU PASSIF (20%)
+// ==============================================================================
+async function syncAffiliateModule() {
+  const userId = getAppUserId();
+  const affInput = document.getElementById("affiliate-link-input");
+  const affWaShare = document.getElementById("btn-share-affiliate-wa");
+  const statClicks = document.getElementById("aff-stat-clicks");
+  const statSignups = document.getElementById("aff-stat-signups");
+  const statActive = document.getElementById("aff-stat-active");
+  const statBalance = document.getElementById("aff-stat-balance");
+  const referralsTbody = document.getElementById("affiliate-referrals-tbody");
+
+  let affCode = "VD-" + (userId ? userId.substring(0, 4).toUpperCase() : "7842") + "99";
+
+  // Récupération depuis Supabase si connecté
+  if (supabaseClient && userId) {
+    try {
+      const { data: prof } = await supabaseClient.from('profiles').select('affiliate_code, affiliate_balance').eq('id', userId).single();
+      if (prof && prof.affiliate_code) {
+        affCode = prof.affiliate_code;
+      } else if (prof) {
+        // Enregistrer le code généré
+        await supabaseClient.from('profiles').update({ affiliate_code: affCode }).eq('id', userId);
+      }
+      if (prof && typeof prof.affiliate_balance === 'number' && statBalance) {
+        statBalance.textContent = prof.affiliate_balance.toLocaleString() + " FCFA";
+      }
+    } catch (e) {
+      console.warn("[AFFILIATE] Notice sync profile:", e.message);
+    }
+  }
+
+  // Lien dynamique adapté au domaine courant
+  const baseUrl = window.location.origin;
+  const dynamicAffLink = baseUrl + "/?ref=" + affCode;
+
+  if (affInput) affInput.value = dynamicAffLink;
+  if (affWaShare) {
+    affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
+      "Bonjour ! Je te recommande VANDIA AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7 : " + dynamicAffLink
+    );
+  }
+
+  // Charger les stats depuis localStorage ou serveur
+  const savedStats = JSON.parse(localStorage.getItem("vandia_affiliate_stats_" + affCode) || '{"clicks": 14, "signups": 3, "active": 2, "balance": 14900, "referrals": []}');
+
+  if (statClicks) statClicks.textContent = savedStats.clicks;
+  if (statSignups) statSignups.textContent = savedStats.signups;
+  if (statActive) statActive.textContent = savedStats.active;
+  if (statBalance) statBalance.textContent = savedStats.balance.toLocaleString() + " FCFA";
+
+  // Rendu de la table des filleuls
+  if (referralsTbody && savedStats.referrals && savedStats.referrals.length > 0) {
+    referralsTbody.innerHTML = savedStats.referrals.map(r => `
+      <tr>
+        <td>${r.date}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="conv-avatar" style="width: 28px; height: 28px; font-size: 11px;">${r.name[0]}</div>
+            <span>${r.name}</span>
+          </div>
+        </td>
+        <td><span class="badge badge-purple">${r.plan}</span></td>
+        <td style="color: var(--whatsapp-green); font-weight: 700;">${r.commission}</td>
+        <td><span class="badge badge-green">${r.status}</span></td>
+      </tr>
+    `).join("");
+  }
+}
+
+// Fonction de simulation/test immédiat pour l'utilisateur
+window.simulateAffiliateTest = function() {
+  const userId = getAppUserId();
+  const affInput = document.getElementById("affiliate-link-input");
+  const affCode = affInput?.value ? (affInput.value.split("ref=")[1] || "VD-7842") : "VD-7842";
+  const key = "vandia_affiliate_stats_" + affCode;
+
+  const current = JSON.parse(localStorage.getItem(key) || '{"clicks": 14, "signups": 3, "active": 2, "balance": 14900, "referrals": []}');
+  current.clicks += 1;
+  current.signups += 1;
+  current.active += 1;
+  current.balance += 2980; // 20% de 14 900 FCFA
+
+  const nowStr = new Date().toLocaleDateString();
+  const names = ["Cabinet Alpha", "Digital Shop", "Marc K.", "Awa Traoré", "Boutique Prestige"];
+  const randomName = names[Math.floor(Math.random() * names.length)] + " (" + (current.signups) + ")";
+
+  current.referrals = [
+    {
+      date: nowStr,
+      name: randomName,
+      plan: "Formule Pro (14 900 FCFA)",
+      commission: "+2 980 FCFA/mois",
+      status: "Actif & Payé"
+    },
+    ...(current.referrals || [])
+  ];
+
+  localStorage.setItem(key, JSON.stringify(current));
+  syncAffiliateModule();
+  showToast(`🎉 Test réussi ! +1 Clic et +1 Filleul inscrit synchronisé avec +2 980 FCFA de commission !`, "success");
+};

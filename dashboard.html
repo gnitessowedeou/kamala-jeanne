@@ -1010,7 +1010,7 @@
               <h2>Flow Builder &amp; Automatisations</h2>
               <p class="section-desc">Gérez vos tunnels de vente, arbres décisionnels et relances programmées WhatsApp.</p>
             </div>
-            <button class="btn-primary-glow" id="btn-create-funnel">
+            <button class="btn-primary-glow" id="btn-create-funnel" onclick="openFunnelModal()">
               <i class="fa-solid fa-plus"></i>
               <span>Nouveau Funnel</span>
             </button>
@@ -1035,7 +1035,7 @@
                 <i class="fa-solid fa-download"></i>
                 <span>Exporter CSV</span>
               </button>
-              <button class="btn-primary-glow" id="btn-add-contact">
+              <button class="btn-primary-glow" id="btn-add-contact" onclick="openContactModal()">
                 <i class="fa-solid fa-user-plus"></i>
                 <span>Ajouter un Contact</span>
               </button>
@@ -1186,10 +1186,10 @@
               <h2>Statistiques Avancées &amp; ROI Commercial</h2>
               <p class="section-desc">Mesurez l'impact direct de votre agent WhatsApp IA sur votre chiffre d'affaires.</p>
             </div>
-            <div class="chart-filter-pills">
-              <button class="chart-pill-btn active">Ce Mois</button>
-              <button class="chart-pill-btn">Trimestre</button>
-              <button class="chart-pill-btn">Cette Année</button>
+            <div class="chart-filter-pills" id="analytics-filter-group">
+              <button class="chart-pill-btn active" data-period="month" onclick="setAnalyticsPeriod('month', this)">Ce Mois</button>
+              <button class="chart-pill-btn" data-period="quarter" onclick="setAnalyticsPeriod('quarter', this)">Trimestre</button>
+              <button class="chart-pill-btn" data-period="year" onclick="setAnalyticsPeriod('year', this)">Cette Année</button>
             </div>
           </div>
 
@@ -1628,10 +1628,14 @@
                 <i class="fa-regular fa-copy"></i>
                 <span>Copier mon lien</span>
               </button>
-              <a href="https://wa.me/?text=Bonjour%20!%20Je%20te%20recommande%20VANDIA%20AI%20pour%20automatiser%20tes%20ventes%20sur%20WhatsApp%2024%2F7%20avec%20paiements%20Wave%20%3A%20https%3A%2F%2Fvandia.ai%2F%3Fref%3DVD-7842" target="_blank" rel="noopener noreferrer" class="btn-secondary-glass btn-share-whatsapp" title="Partager directement sur WhatsApp">
+              <a href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary-glass btn-share-whatsapp" id="btn-share-affiliate-wa" title="Partager directement sur WhatsApp">
                 <i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green);"></i>
                 <span>Partager sur WhatsApp</span>
               </a>
+              <button type="button" class="btn-secondary-glass" onclick="simulateAffiliateTest()" title="Tester le lien d'affiliation" style="font-size: 12px; gap: 6px;">
+                <i class="fa-solid fa-flask" style="color: var(--whatsapp-green);"></i>
+                <span>Tester le lien</span>
+              </button>
             </div>
           </div>
 
@@ -2467,6 +2471,211 @@
     </div>
   </div>
 
+
+  
+  <!-- ==========================================================================
+       MODAL 8: CRÉER / ÉDITER UN TUNNEL DE VENTE (#funnel-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="funnel-modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 650px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
+            <i class="fa-solid fa-diagram-project"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="funnel-modal-title">Nouveau Tunnel de Vente WhatsApp</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Définissez les mots-clés déclencheurs, messages IA et relances automatiques.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeFunnelModal()" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-create-funnel" onsubmit="handleSaveFunnel(event)">
+        <div class="modal-body" style="padding: 24px;">
+          <input type="hidden" id="funnel-id">
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nom du Tunnel <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="funnel-title" class="form-control" required placeholder="Ex: Tunnel Vente Promo Canva Pro" style="width: 100%;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Mot-Clé Déclencheur WhatsApp <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="funnel-trigger" class="form-control" required placeholder="Ex: canva, promo, prix, 1" style="width: 100%;">
+            <small style="color: var(--text-muted); font-size: 11px;">Dès qu'un prospect écrit ce mot-clé, le tunnel se déclenche instantanément.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Message Étape 1 (Présentation & Offre)</label>
+            <textarea id="funnel-step1-msg" class="form-control" rows="3" placeholder="Ex: Bonjour ! Voici notre offre spéciale Canva Pro à 1 300 FCFA. Souhaitez-vous recevoir les coordonnées pour l'activer ?" style="width: 100%; resize: vertical;"></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Délai de Relance Automatique</label>
+              <select id="funnel-delay" class="form-control" style="width: 100%;">
+                <option value="1h">Après 1 Heure sans réponse</option>
+                <option value="2h" selected>Après 2 Heures sans réponse</option>
+                <option value="24h">Après 24 Heures sans réponse</option>
+                <option value="0">Aucune relance</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Statut du Tunnel</label>
+              <select id="funnel-status" class="form-control" style="width: 100%;">
+                <option value="active" selected>Actif (Opérationnel 24/7)</option>
+                <option value="paused">En pause</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Message de Relance (Étape 2)</label>
+            <textarea id="funnel-step2-msg" class="form-control" rows="2" placeholder="Ex: Avez-vous pu finaliser votre activation ? Notre conseiller reste disponible si vous avez une question !" style="width: 100%; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-secondary-glass" onclick="closeFunnelModal()">Annuler</button>
+          <button type="submit" class="btn-primary-glow">
+            <i class="fa-solid fa-check"></i>
+            <span>Enregistrer le Tunnel</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 9: CONFIGURATION DES MOYENS DE PAIEMENT (#payment-config-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="payment-config-modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div id="payment-modal-icon-box" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);">
+            <i class="fa-solid fa-wallet" id="payment-modal-icon"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="payment-modal-title">Configurer la Passerelle de Paiement</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Ce numéro sera automatiquement transmis à vos clients pour régler leurs commandes.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closePaymentConfigModal()" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-config-payment" onsubmit="handleSavePaymentConfig(event)">
+        <div class="modal-body" style="padding: 24px;">
+          <input type="hidden" id="payment-method-key">
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Numéro de Réception Mobile Money / Marchand <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="payment-phone-input" class="form-control" required placeholder="Ex: +226 05 15 84 94 ou +229 01 62 63 95 93" style="width: 100%;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nom du Bénéficiaire / Titulaire officiel <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="payment-name-input" class="form-control" required placeholder="Ex: Gnitou Essowedeou" style="width: 100%;">
+            <small style="color: var(--text-muted); font-size: 11px;">Le nom officiel affiché au client pour qu'il vérifie avant d'envoyer les fonds.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Consigne pour le client (Optionnel)</label>
+            <input type="text" id="payment-note-input" class="form-control" placeholder="Ex: Envoyer la capture d'écran après le transfert pour livraison immédiate" style="width: 100%;">
+          </div>
+
+          <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-subtle);">
+            <div>
+              <div style="font-size: 13px; font-weight: 600;">Activer cette passerelle sur WhatsApp</div>
+              <div style="font-size: 11px; color: var(--text-muted);">L'IA proposera ce moyen dès qu'un client du pays correspondant commande.</div>
+            </div>
+            <label class="switch-control">
+              <input type="checkbox" id="payment-active-toggle" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-secondary-glass" onclick="closePaymentConfigModal()">Annuler</button>
+          <button type="submit" class="btn-primary-glow">
+            <i class="fa-solid fa-save"></i>
+            <span>Enregistrer la Passerelle</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 10: AJOUTER UN CONTACT DANS LE CRM (#contact-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="contact-modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 550px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <div>
+            <h3 class="modal-title">Ajouter un Prospect dans le CRM</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Enregistrez manuellement un contact ou synchronisez un numéro WhatsApp.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeContactModal()" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-create-contact" onsubmit="handleSaveContact(event)">
+        <div class="modal-body" style="padding: 24px;">
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nom complet ou Profil <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="contact-name-input" class="form-control" required placeholder="Ex: Jeff Digital" style="width: 100%;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Numéro WhatsApp (avec indicatif) <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="contact-phone-input" class="form-control" required placeholder="Ex: +229 01 62 63 95 93 ou +226 05 15 84 94" style="width: 100%;">
+            <small style="color: var(--text-muted); font-size: 11px;">Renseignez le numéro avec l'indicatif sans espaces ni symboles superflus.</small>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Segment / Tag</label>
+              <select id="contact-tag-select" class="form-control" style="width: 100%;">
+                <option value="Prospect" selected>Prospect</option>
+                <option value="VIP">Client VIP</option>
+                <option value="Chaud">Prospect Chaud</option>
+                <option value="Panier">Panier Récupéré</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Statut Commercial</label>
+              <select id="contact-status-select" class="form-control" style="width: 100%;">
+                <option value="en_discussion" selected>En discussion</option>
+                <option value="commande_en_cours">Commande en cours</option>
+                <option value="payé">Payé / Livré</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-secondary-glass" onclick="closeContactModal()">Annuler</button>
+          <button type="submit" class="btn-primary-glow">
+            <i class="fa-solid fa-check"></i>
+            <span>Enregistrer dans le CRM</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Supabase JS Client via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
