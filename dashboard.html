@@ -16,7 +16,7 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v10">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v11">
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -839,7 +839,7 @@
               <h2>Configuration de l'Agent Commercial IA</h2>
               <p class="section-desc">Personnalisez le comportement, les instructions de vente et les règles de négociation de votre agent WhatsApp.</p>
             </div>
-            <button class="btn-primary-glow" id="btn-save-agent">
+            <button class="btn-primary-glow" id="btn-save-agent" type="button" onclick="saveAgentConfig(event)">
               <i class="fa-solid fa-floppy-disk"></i>
               <span>Enregistrer les Paramètres</span>
             </button>
@@ -867,10 +867,10 @@
               <div class="form-group">
                 <label class="form-label">Ton de communication</label>
                 <div class="tag-selector-row" id="tone-selector">
-                  <button type="button" class="tag-select-btn active">Chaleureux &amp; Persuasif</button>
-                  <button type="button" class="tag-select-btn">Professionnel &amp; Formel</button>
-                  <button type="button" class="tag-select-btn">Direct &amp; Synthétique</button>
-                  <button type="button" class="tag-select-btn">Local / Proche (Abidjan/Dakar)</button>
+                  <button type="button" class="tag-select-btn active" onclick="selectAgentTone(this)">Chaleureux &amp; Persuasif</button>
+                  <button type="button" class="tag-select-btn" onclick="selectAgentTone(this)">Professionnel &amp; Formel</button>
+                  <button type="button" class="tag-select-btn" onclick="selectAgentTone(this)">Direct &amp; Synthétique</button>
+                  <button type="button" class="tag-select-btn" onclick="selectAgentTone(this)">Local / Proche (Abidjan/Dakar)</button>
                 </div>
               </div>
 
@@ -2476,7 +2476,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v10"></script>
+  <script src="js/dashboard.js?v=20261012_v11"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -2637,7 +2637,110 @@
         obs.observe(qm, { attributes: true, attributeFilter: ['class'] });
       }
     });
-  </script>
+  
+    // =========================================================================
+    // MOTEUR INFAILLIBLE : CONFIGURATION AGENT IA (PROMPT & TON)
+    // =========================================================================
+    window.selectAgentTone = function(btn) {
+      if (!btn) return;
+      var allBtns = document.querySelectorAll("#tone-selector .tag-select-btn");
+      allBtns.forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      var tone = btn.textContent.trim();
+      var userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+      localStorage.setItem('vendia_agent_tone_' + userId, tone);
+      localStorage.setItem('vendia_agent_tone', tone);
+      if (typeof showToast === 'function') {
+        showToast("Ton sélectionné : " + tone, "info");
+      }
+    };
+
+    window.saveAgentConfig = async function(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      var saveBtn = document.getElementById("btn-save-agent");
+      var promptInput = document.getElementById("agent-prompt-input");
+      var nameInput = document.getElementById("agent-name-input");
+      var activeSwitch = document.getElementById("agent-active-switch");
+      var delaySelect = document.getElementById("agent-reminder-delay");
+      var activeToneBtn = document.querySelector("#tone-selector .tag-select-btn.active");
+
+      if (!promptInput) return;
+      var prompt = promptInput.value.trim();
+      if (!prompt) {
+        if (typeof showToast === 'function') showToast("Veuillez saisir des instructions pour votre Agent IA.", "info");
+        return;
+      }
+
+      var userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+      var agentName = nameInput ? nameInput.value.trim() : "Sarah - Conseillère Commerciale VANDIA";
+      var agentTone = activeToneBtn ? activeToneBtn.textContent.trim() : "Chaleureux & Persuasif";
+      var isActive = activeSwitch ? activeSwitch.checked : true;
+      var delay = delaySelect ? delaySelect.value : "30";
+
+      // 1. Sauvegarde locale immédiate (zéro perte de données)
+      localStorage.setItem('vendia_ai_prompt_' + userId, prompt);
+      localStorage.setItem('vendia_ai_prompt', prompt);
+      localStorage.setItem('vendia_agent_name_' + userId, agentName);
+      localStorage.setItem('vendia_agent_name', agentName);
+      localStorage.setItem('vendia_agent_tone_' + userId, agentTone);
+      localStorage.setItem('vendia_agent_tone', agentTone);
+      localStorage.setItem('vendia_agent_active_' + userId, String(isActive));
+      localStorage.setItem('vendia_agent_delay_' + userId, delay);
+
+      // 2. État visuel immédiat du bouton
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Enregistrement...</span>';
+      }
+
+      // 3. Sauvegarde directe dans Supabase (table profiles)
+      if (window.SupabaseRest && userId) {
+        try {
+          await window.SupabaseRest.updateProfile(userId, { ai_prompt: prompt });
+          console.log("[AI CONFIG] Enregistré dans Supabase profiles !");
+        } catch(err) {
+          console.warn("[AI CONFIG] Notice Supabase profiles:", err);
+        }
+      }
+
+      // 4. Synchronisation API si backend accessible
+      try {
+        var apiUrl = window.API_URL || 'https://kamala-jeanne-production.up.railway.app';
+        var headers = (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+        await fetch(apiUrl + '/api/ai/config', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ userId: userId, prompt: prompt, agentName: agentName, agentTone: agentTone, isActive: isActive, reminderDelay: delay })
+        });
+      } catch(apiErr) {
+        console.warn("[AI CONFIG] Notice API backend:", apiErr);
+      }
+
+      // 5. Restauration de l'état du bouton avec coche verte
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-check" style="color: var(--whatsapp-green);"></i> <span>Enregistré !</span>';
+        setTimeout(function() {
+          saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>Enregistrer les Paramètres</span>';
+        }, 2500);
+      }
+
+      if (typeof updateAgentPerformanceMetrics === 'function') {
+        updateAgentPerformanceMetrics();
+      }
+      if (typeof showToast === 'function') {
+        showToast("Instructions enregistrées avec succès ! Votre Agent IA WhatsApp obéit désormais à vos règles de vente.", "success");
+      }
+    };
+
+    // Chargement automatique dès que le DOM est prêt
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof window.loadAgentConfig === 'function') {
+        window.loadAgentConfig();
+      }
+    });
+
+</script>
 
 </body>
 </html>

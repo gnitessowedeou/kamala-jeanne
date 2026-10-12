@@ -22,6 +22,21 @@ function getAuthHeaders(extraHeaders = {}) {
 
 // D�tection dynamique et r�siliente de l'URL API Backend
 let API_URL = 'https://kamala-jeanne-production.up.railway.app';
+
+// Identifiant utilisateur infaillible (Global)
+function getAppUserId() {
+  try {
+    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+    if (u && u.id && u.id.length > 5 && !u.id.startsWith('usr_')) return u.id;
+  } catch(e) {}
+  try {
+    const su = JSON.parse(localStorage.getItem('sb-bbubzckxoxkscuzvhhiv-auth-token') || '{}');
+    if (su && su.user && su.user.id) return su.user.id;
+  } catch(e) {}
+  return '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+}
+window.getAppUserId = getAppUserId;
+
 try {
   const custom = localStorage.getItem('vandia_api_url') || localStorage.getItem('vandia_backend_url');
   if (custom) {
@@ -3766,6 +3781,10 @@ function setupBillingAndAffiliate() {
 })();
 
 // Export global helper functions to window for zero-latency direct invocation
+window.loadAgentConfig = typeof loadAgentConfig !== 'undefined' ? loadAgentConfig : null;
+window.saveAgentConfig = typeof saveAgentConfig !== 'undefined' ? saveAgentConfig : null;
+window.setupToneSelector = typeof setupToneSelector !== 'undefined' ? setupToneSelector : null;
+window.updateAgentPerformanceMetrics = typeof updateAgentPerformanceMetrics !== 'undefined' ? updateAgentPerformanceMetrics : null;
 window.openTemplateModal = openTemplateModal;
 window.closeTemplateModal = closeTemplateModal;
 window.openPlanModal = openPlanModal;
