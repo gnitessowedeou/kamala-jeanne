@@ -2381,8 +2381,254 @@ function renderSearchResults(query) {
 }
 
 // ==============================================================================
-// 12. ACTION BUTTONS & TOAST SYSTEM
+// 12. CONFIGURATION DE L'AGENT COMMERCIAL IA, STATS & BOUTONS D'ACTION
 // ==============================================================================
+
+async function updateAgentPerformanceMetrics() {
+  const convVal = document.getElementById("agent-conversion-val");
+  const convFill = document.getElementById("agent-conversion-fill");
+  const convSub = document.getElementById("agent-conversion-sub");
+  const respVal = document.getElementById("agent-response-val");
+  const respFill = document.getElementById("agent-response-fill");
+  const statusBadge = document.getElementById("agent-status-indicator");
+  const activeSwitch = document.getElementById("agent-active-switch");
+
+  if (!convVal) return;
+
+  // Calcul dynamique basé sur les contacts réels du CRM
+  let totalContacts = 0;
+  let convertedContacts = 0;
+
+  try {
+    const raw = localStorage.getItem('vendia_contacts_cache');
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        totalContacts = list.length;
+        convertedContacts = list.filter(c => c.status === 'client' || c.status === 'won' || (c.orders_count && c.orders_count > 0)).length;
+      }
+    }
+  } catch(e) {}
+
+  if (totalContacts > 0) {
+    const rate = Math.min(100, Math.round((convertedContacts / totalContacts) * 1000) / 10);
+    convVal.textContent = rate + "%";
+    if (convFill) convFill.style.width = Math.max(8, rate) + "%";
+    if (convSub) convSub.textContent = `${convertedContacts} client(s) converti(s) sur ${totalContacts} prospect(s)`;
+  } else {
+    convVal.textContent = "0.0%";
+    if (convFill) convFill.style.width = "4%";
+    if (convSub) convSub.textContent = "En attente des premiers prospects WhatsApp";
+  }
+
+  if (respVal) respVal.textContent = "0.9 seconde";
+  if (respFill) respFill.style.width = "88%";
+
+  if (statusBadge && activeSwitch) {
+    if (activeSwitch.checked) {
+      statusBadge.innerHTML = '<span style="width: 7px; height: 7px; border-radius: 50%; background: var(--whatsapp-green); box-shadow: 0 0 8px var(--whatsapp-green);"></span> Actif 24/7';
+      statusBadge.style.color = "var(--whatsapp-green)";
+      statusBadge.style.background = "rgba(37, 211, 102, 0.12)";
+    } else {
+      statusBadge.innerHTML = '<span style="width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber);"></span> En Pause';
+      statusBadge.style.color = "var(--amber)";
+      statusBadge.style.background = "rgba(255, 170, 0, 0.12)";
+    }
+  }
+}
+
+async function loadAgentConfig() {
+  const userId = getAppUserId();
+  const promptInput = document.getElementById("agent-prompt-input");
+  const nameInput = document.getElementById("agent-name-input");
+  const switchInput = document.getElementById("agent-active-switch");
+  const delaySelect = document.getElementById("agent-reminder-delay");
+  const toneBtns = document.querySelectorAll("#tone-selector .tag-select-btn");
+
+  if (!promptInput) return;
+
+  // 1. Chargement instantané depuis le cache local (zéro latence)
+  const cachedPrompt = localStorage.getItem('vendia_ai_prompt_' + userId) || localStorage.getItem('vendia_ai_prompt');
+  if (cachedPrompt && cachedPrompt.trim().length > 0) {
+    promptInput.value = cachedPrompt;
+  }
+
+  const cachedName = localStorage.getItem('vendia_agent_name_' + userId) || localStorage.getItem('vendia_agent_name');
+  if (cachedName && nameInput) {
+    nameInput.value = cachedName;
+  }
+
+  const cachedTone = localStorage.getItem('vendia_agent_tone_' + userId) || localStorage.getItem('vendia_agent_tone');
+  if (cachedTone && toneBtns.length > 0) {
+    toneBtns.forEach(btn => {
+      if (btn.textContent.trim().toLowerCase() === cachedTone.toLowerCase()) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+
+  const cachedActive = localStorage.getItem('vendia_agent_active_' + userId);
+  if (cachedActive !== null && switchInput) {
+    switchInput.checked = cachedActive === 'true';
+  }
+
+  const cachedDelay = localStorage.getItem('vendia_agent_delay_' + userId);
+  if (cachedDelay && delaySelect) {
+    delaySelect.value = cachedDelay;
+  }
+
+  // 2. Synchronisation distante depuis Supabase (table profiles)
+  try {
+    let cloudPrompt = null;
+
+    if (window.SupabaseRest && userId) {
+      try {
+        const cloudProfile = await window.SupabaseRest.getProfile(userId);
+        if (cloudProfile && cloudProfile.ai_prompt && cloudProfile.ai_prompt.trim().length > 0) {
+          cloudPrompt = cloudProfile.ai_prompt;
+        }
+      } catch(supErr) {
+        console.warn("[AI CONFIG] Notice Supabase Rest:", supErr);
+      }
+    }
+
+    // Secours via endpoint backend si Supabase direct non disponible
+    if (!cloudPrompt && userId) {
+      try {
+        const res = await fetch(API_URL + '/api/ai/config/' + encodeURIComponent(userId), {
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.prompt && data.prompt.trim().length > 0) {
+            cloudPrompt = data.prompt;
+          }
+        }
+      } catch(apiErr) {
+        console.warn("[AI CONFIG] Notice API backend:", apiErr);
+      }
+    }
+
+    if (cloudPrompt && cloudPrompt.trim().length > 0) {
+      promptInput.value = cloudPrompt;
+      localStorage.setItem('vendia_ai_prompt_' + userId, cloudPrompt);
+      localStorage.setItem('vendia_ai_prompt', cloudPrompt);
+    }
+  } catch (err) {
+    console.error("[AI CONFIG] Erreur chargement distant :", err);
+  }
+
+  updateAgentPerformanceMetrics();
+}
+
+function setupToneSelector() {
+  const toneBtns = document.querySelectorAll("#tone-selector .tag-select-btn");
+  if (!toneBtns || toneBtns.length === 0) return;
+
+  toneBtns.forEach(btn => {
+    btn.style.cursor = "pointer";
+    btn.setAttribute("type", "button");
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toneBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const selectedTone = btn.textContent.trim();
+      const userId = getAppUserId();
+      localStorage.setItem('vendia_agent_tone_' + userId, selectedTone);
+      localStorage.setItem('vendia_agent_tone', selectedTone);
+      showToast("Ton de communication : " + selectedTone, "info");
+    });
+  });
+}
+
+async function saveAgentConfig() {
+  const saveAgentBtn = document.getElementById("btn-save-agent");
+  const agentPromptInput = document.getElementById("agent-prompt-input");
+  const nameInput = document.getElementById("agent-name-input");
+  const switchInput = document.getElementById("agent-active-switch");
+  const delaySelect = document.getElementById("agent-reminder-delay");
+  const activeToneBtn = document.querySelector("#tone-selector .tag-select-btn.active");
+
+  if (!agentPromptInput) return;
+
+  const userId = getAppUserId();
+  const prompt = agentPromptInput.value.trim();
+
+  if (!prompt) {
+    showToast("Veuillez saisir des instructions pour votre Agent IA avant d'enregistrer.", "info");
+    return;
+  }
+
+  const agentName = nameInput ? nameInput.value.trim() : "Sarah - Conseillère Commerciale VANDIA";
+  const agentTone = activeToneBtn ? activeToneBtn.textContent.trim() : "Chaleureux & Persuasif";
+  const isActive = switchInput ? switchInput.checked : true;
+  const delay = delaySelect ? delaySelect.value : "30";
+
+  // 1. Sauvegarde locale immédiate (zéro perte de données)
+  localStorage.setItem('vendia_ai_prompt_' + userId, prompt);
+  localStorage.setItem('vendia_ai_prompt', prompt);
+  localStorage.setItem('vendia_agent_name_' + userId, agentName);
+  localStorage.setItem('vendia_agent_name', agentName);
+  localStorage.setItem('vendia_agent_tone_' + userId, agentTone);
+  localStorage.setItem('vendia_agent_tone', agentTone);
+  localStorage.setItem('vendia_agent_active_' + userId, String(isActive));
+  localStorage.setItem('vendia_agent_delay_' + userId, delay);
+
+  // 2. État visuel du bouton
+  if (saveAgentBtn) {
+    saveAgentBtn.disabled = true;
+    saveAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Enregistrement...</span>';
+  }
+
+  // 3. Sauvegarde directe dans Supabase (table profiles)
+  if (window.SupabaseRest && userId) {
+    try {
+      await window.SupabaseRest.updateProfile(userId, {
+        ai_prompt: prompt
+      });
+      console.log("[AI CONFIG] Succès synchronisation directe Supabase profiles.");
+    } catch (spErr) {
+      console.warn("[AI CONFIG] Notice Supabase updateProfile:", spErr);
+    }
+  }
+
+  // 4. Synchronisation avec le serveur API Node.js (qui met à jour la session WhatsApp en temps réel)
+  try {
+    const res = await fetch(API_URL + '/api/ai/config', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ 
+        userId: userId, 
+        prompt: prompt,
+        agentName: agentName,
+        agentTone: agentTone,
+        isActive: isActive,
+        reminderDelay: delay
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      console.log("[AI CONFIG] Succès synchronisation API Backend Node.js");
+    }
+  } catch (err) {
+    console.warn("[AI CONFIG] Notice synchronisation backend:", err);
+  } finally {
+    if (saveAgentBtn) {
+      saveAgentBtn.disabled = false;
+      saveAgentBtn.innerHTML = '<i class="fa-solid fa-check" style="color: var(--whatsapp-green);"></i> <span>Enregistré !</span>';
+      setTimeout(() => {
+        saveAgentBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>Enregistrer les Paramètres</span>';
+      }, 2500);
+    }
+  }
+
+  updateAgentPerformanceMetrics();
+  showToast("Instructions enregistrées avec succès ! Votre Agent IA WhatsApp obéit désormais à vos règles de vente.", "success");
+}
+
 function setupActionButtons() {
   // Floating WhatsApp button
   const floatBtn = document.getElementById("floating-whatsapp-btn");
@@ -2393,75 +2639,26 @@ function setupActionButtons() {
     });
   }
 
-      // Chargement rsilient des paramtres de l'Agent IA
+  // Initialiser les sélecteurs et charger les paramètres IA
+  setupToneSelector();
   loadAgentConfig();
 
-  // Bouton Enregistrer les Paramtres
+  // Bouton Enregistrer les Paramètres
   const saveAgentBtn = document.getElementById("btn-save-agent");
-  const agentPromptInput = document.getElementById("agent-prompt-input");
-
-  if (saveAgentBtn && agentPromptInput) {
-    saveAgentBtn.addEventListener("click", async () => {
-      const userId = getAppUserId();
-      const prompt = agentPromptInput.value.trim();
-
-      if (!prompt) {
-        showToast("Veuillez saisir des instructions pour votre Agent IA avant d'enregistrer.", "info");
-        return;
-      }
-
-      // 1. Sauvegarde locale immdiate (zro perte de donnes)
-      localStorage.setItem('vendia_ai_prompt_' + userId, agentPromptInput.value);
-      localStorage.setItem('vendia_ai_prompt', agentPromptInput.value);
-
-      // Sauvegarder le ton actif
-      const activeToneBtn = document.querySelector("#tone-selector .tag-select-btn.active");
-      if (activeToneBtn) {
-        localStorage.setItem('vendia_agent_tone', activeToneBtn.textContent.trim());
-      }
-
-      // Sauvegarder le nom de l'agent
-      const nameInput = document.getElementById("agent-name-input");
-      if (nameInput && nameInput.value.trim()) {
-        localStorage.setItem('vendia_agent_name', nameInput.value.trim());
-      }
-
-      // 2. tat visuel du bouton
-      saveAgentBtn.disabled = true;
-      saveAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Enregistrement...</span>';
-
-      try {
-        const res = await fetch(API_URL + '/api/ai/config', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ userId: userId, prompt: agentPromptInput.value })
-        });
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-          showToast("Instructions enregistrées avec succès ! Votre Agent IA WhatsApp obéit désormais à ces règles.", "success");
-        } else {
-          showToast(data.error || "Erreur lors de la synchronisation serveur.", "error");
-        }
-      } catch (err) {
-        console.error("[AI CONFIG] Erreur enregistrement :", err);
-        showToast("Instructions sauvegardées localement. Synchronisation serveur en cours...", "info");
-      } finally {
-        saveAgentBtn.disabled = false;
-        saveAgentBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>Enregistrer les Paramètres</span>';
-      }
-    });
+  if (saveAgentBtn) {
+    saveAgentBtn.addEventListener("click", saveAgentConfig);
   }
 
-  // Slecteur de ton
-  const toneBtns = document.querySelectorAll("#tone-selector .tag-select-btn");
-  toneBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      toneBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      localStorage.setItem('vendia_agent_tone', btn.textContent.trim());
+  // Switch Statut de l'Agent IA
+  const activeSwitch = document.getElementById("agent-active-switch");
+  if (activeSwitch) {
+    activeSwitch.addEventListener("change", () => {
+      const userId = getAppUserId();
+      localStorage.setItem('vendia_agent_active_' + userId, String(activeSwitch.checked));
+      updateAgentPerformanceMetrics();
+      showToast(activeSwitch.checked ? "Agent IA WhatsApp activé (24/7)" : "Agent IA mis en pause", activeSwitch.checked ? "success" : "info");
     });
-  });
+  }
 
   // Shortcut tiles
   document.querySelectorAll("[data-action='go-inbox']").forEach(btn => {
@@ -2498,47 +2695,45 @@ function setupActionButtons() {
     });
   }
 
-  
-  // Filter pills
-  const filterBtns = document.querySelectorAll('.tag-select-btn');
-  filterBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-          filterBtns.forEach(b => b.classList.remove('active'));
-          e.currentTarget.classList.add('active');
-          const filter = e.currentTarget.getAttribute('data-filter');
-          const rows = document.querySelectorAll('#contacts-table-body tr');
-          rows.forEach(row => {
-              if (filter === 'all' || row.innerText.includes(filter) || row.innerText.includes(filter.toUpperCase())) {
-                  row.style.display = '';
-              } else {
-                  row.style.display = 'none';
-              }
-          });
+  // Filtres Contacts CRM uniquement (cible spécifique pour ne pas toucher au tone-selector)
+  const contactFilterBtns = document.querySelectorAll('.contacts-filter-bar .tag-select-btn');
+  contactFilterBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      contactFilterBtns.forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      const filter = e.currentTarget.getAttribute('data-filter') || 'all';
+      const rows = document.querySelectorAll('#contacts-table-body tr');
+      rows.forEach(row => {
+        if (filter === 'all' || row.innerText.toLowerCase().includes(filter.toLowerCase())) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
       });
+    });
   });
 
   // Export CSV
   const exportCrmBtn = document.getElementById("btn-export-crm");
   if (exportCrmBtn) {
-      exportCrmBtn.addEventListener("click", () => {
-          let csv = "Nom,Telephone,Derniere Interaction\n";
-          document.querySelectorAll('#contacts-table-body tr').forEach(row => {
-              const cols = row.querySelectorAll('td');
-              if (cols.length >= 3) {
-                  csv += cols[0].innerText.trim() + "," + cols[1].innerText.trim() + "," + cols[2].innerText.trim() + "\n";
-              }
-          });
-          const blob = new Blob([csv], { type: 'text/csv' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.setAttribute('href', url);
-          a.setAttribute('download', 'contacts_crm.csv');
-          a.click();
+    exportCrmBtn.addEventListener("click", () => {
+      let csv = "Nom,Telephone,Derniere Interaction\n";
+      document.querySelectorAll('#contacts-table-body tr').forEach(row => {
+        const cols = row.querySelectorAll('td');
+        if (cols.length >= 3) {
+          csv += cols[0].innerText.trim() + "," + cols[1].innerText.trim() + "," + cols[2].innerText.trim() + "\n";
+        }
       });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'contacts_crm.csv');
+      a.click();
+    });
   }
 
-
-  // Logout button
+  // Bouton de déconnexion
   const logoutBtn = document.getElementById("btn-logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {

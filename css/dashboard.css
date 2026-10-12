@@ -1772,6 +1772,22 @@
   font-weight: 500;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tag-select-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+
+.tag-select-btn.active {
+  background: rgba(37, 211, 102, 0.15) !important;
+  border-color: var(--whatsapp-green) !important;
+  color: var(--whatsapp-green) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 10px rgba(37, 211, 102, 0.25);
 }
 
 .tag-select-btn.active {
