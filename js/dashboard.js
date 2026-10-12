@@ -574,6 +574,9 @@ function closeBroadcastModal() {
 function openQrModal() {
   const modal = document.getElementById("qr-modal");
   if (modal) modal.classList.add("active");
+  if (typeof window.startWhatsApp === "function") {
+    window.startWhatsApp();
+  }
 }
 
 function closeQrModal() {
@@ -2992,7 +2995,7 @@ function setupBillingAndAffiliate() {
 
                 if (qrModal.classList.contains('active')) {
                     if (data.status === 'QR_READY' && data.qr) {
-                        qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                        qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
                     } else if (data.status === 'CONNECTED') {
                         clearInterval(statusInterval);
                         qrModal.classList.remove('active');
@@ -3023,6 +3026,25 @@ function setupBillingAndAffiliate() {
                 }
             }
 
+            // Affichage instantané si le QR Code officiel est déjà prêt sur Railway
+            if (!forceRestart) {
+                try {
+                    const quickRes = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
+                    const quickData = await quickRes.json();
+                    if (quickData.status === 'QR_READY' && quickData.qr) {
+                        qrBox.innerHTML = '<img src="' + quickData.qr + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
+                        window.applyWhatsAppState('QR_READY', null);
+                        statusInterval = setInterval(checkStatus, 2000);
+                        return;
+                    } else if (quickData.status === 'CONNECTED') {
+                        qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
+                        window.applyWhatsAppState('CONNECTED', quickData.phone);
+                        setTimeout(() => { qrModal.classList.remove('active'); }, 1500);
+                        return;
+                    }
+                } catch(e) {}
+            }
+
             qrBox.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #25D366; margin-bottom:15px;"></i><p style="color:#fbbf24; font-weight:bold;">⚡ Démarrage du moteur WhatsApp...</p><span style="font-size:11px; color:#94a3b8; margin-top:4px;">Génération du QR Code en cours...</span></div>';
 
             try {
@@ -3034,7 +3056,7 @@ function setupBillingAndAffiliate() {
                 
                 const data = await res.json().catch(() => ({}));
                 if (data.status === 'QR_READY' && data.qr) {
-                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                    qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
                     window.applyWhatsAppState('QR_READY', null);
                     statusInterval = setInterval(checkStatus, 2000);
                     return;
