@@ -2727,17 +2727,20 @@ function renderIntegrations() {
             <div class="integ-credentials-box">
               <div class="integ-cred-label">
                 <span>${isLink ? 'Canal officiel' : 'Coordonnées communiquées aux clients'}</span>
-                <span class="integ-cred-beneficiary"><i class="fa-solid fa-circle-check" style="color: #38bdf8; font-size: 10px;"></i> ${escapeHtml(integ.beneficiary || 'Vérifié')}</span>
+                <button type="button" class="btn-copy-quick" title="Copier les coordonnées" onclick="copyIntegrationPhone('${escapeHtml(integ.phone)}')">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>Copier</span>
+                </button>
               </div>
               <div class="integ-cred-val-row">
                 <span class="integ-cred-number">
                   <i class="fa-solid ${isLink ? 'fa-shield-halved' : 'fa-mobile-screen'}" style="color: ${brandColor}; font-size: 12px;"></i>
                   ${escapeHtml(integ.phone)}
                 </span>
-                <button type="button" class="btn-copy-quick" title="Copier les coordonnées" onclick="copyIntegrationPhone('${escapeHtml(integ.phone)}')">
-                  <i class="fa-regular fa-copy"></i>
-                  <span>Copier</span>
-                </button>
+                <span class="integ-cred-beneficiary">
+                  <i class="fa-solid fa-circle-check" style="color: #38bdf8; font-size: 10px;"></i>
+                  ${escapeHtml(integ.beneficiary || 'Vérifié')}
+                </span>
               </div>
             </div>
           ` : ''}

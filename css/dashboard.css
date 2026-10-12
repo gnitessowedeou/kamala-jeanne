@@ -2138,7 +2138,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #64748b;
-  margin-bottom: 5px;
+  margin-bottom: 7px;
 }
 
 .integ-cred-val-row {
@@ -2160,26 +2160,34 @@
 }
 
 .integ-cred-beneficiary {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #38bdf8;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
 }
 
 .btn-copy-quick {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #94a3b8;
   border-radius: 6px;
-  padding: 3px 8px;
+  padding: 2px 8px;
   font-size: 11px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
 }
 
 .btn-copy-quick:hover {
