@@ -779,6 +779,115 @@ app.post('/api/ai/config', authMiddleware, async (req, res) => {
 
 
 // ============================================================================
+// GESTION DU STATUT D'ABONNEMENT & ESSAI GRATUIT 7 JOURS
+// ============================================================================
+app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+
+    let profile = null;
+    let authUser = null;
+
+    if (supabase) {
+      try {
+        const { data: pData } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        profile = pData;
+      } catch (err) {}
+
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(userId);
+        authUser = uData?.user;
+      } catch (err) {}
+    }
+
+    // Date d'inscription persistante et inaltérable
+    const createdAtStr = profile?.created_at || authUser?.created_at || '2026-10-10T08:51:50.749Z';
+    const createdAtTime = new Date(createdAtStr).getTime();
+    const nowTime = Date.now();
+
+    // Période exacte de 7 jours (7 * 24h * 3600s * 1000ms)
+    const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+    const trialEndTime = createdAtTime + TRIAL_DURATION_MS;
+    const msLeft = trialEndTime - nowTime;
+    const isExpired = msLeft <= 0;
+
+    const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+    const totalSecondsLeft = Math.max(0, Math.floor(msLeft / 1000));
+
+    const days = Math.max(0, Math.floor(msLeft / (24 * 60 * 60 * 1000)));
+    const hours = Math.max(0, Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+    const minutes = Math.max(0, Math.floor((msLeft % (60 * 60 * 1000)) / (60 * 1000)));
+    const seconds = Math.max(0, Math.floor((msLeft % (60 * 1000)) / 1000));
+
+    const appMeta = authUser?.app_metadata || {};
+    const paidPlan = (appMeta.plan && appMeta.plan !== 'trial') ? appMeta.plan : null;
+    const isPaidActive = paidPlan && appMeta.plan_status === 'active';
+
+    const credits = typeof profile?.credits === 'number' ? profile.credits : 100;
+
+    res.json({
+      success: true,
+      userId,
+      createdAt: createdAtStr,
+      trialStart: createdAtStr,
+      trialEnd: new Date(trialEndTime).toISOString(),
+      isExpired: isPaidActive ? false : isExpired,
+      daysLeft,
+      totalSecondsLeft,
+      countdown: {
+        days,
+        hours,
+        minutes,
+        seconds
+      },
+      plan: isPaidActive ? paidPlan : (isExpired ? 'expired' : 'trial'),
+      planStatus: isPaidActive ? 'active' : (isExpired ? 'expired' : 'trial'),
+      planCycle: appMeta.plan_cycle || 'monthly',
+      credits,
+      serverTime: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[SUBSCRIPTION STATUS] Erreur:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/payments/confirm', authMiddleware, async (req, res) => {
+  try {
+    const { userId, planTier, cycle } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+
+    const validPlans = {
+      basic: { credits: 1000 },
+      pro: { credits: 3000 },
+      business: { credits: 10000 }
+    };
+
+    const targetTier = validPlans[planTier] ? planTier : 'pro';
+    const credits = validPlans[targetTier].credits;
+
+    if (supabase) {
+      await supabase.from('profiles').update({ credits }).eq('id', userId);
+      try {
+        await supabase.auth.admin.updateUserById(userId, {
+          app_metadata: {
+            plan: targetTier,
+            plan_status: 'active',
+            plan_cycle: cycle || 'monthly',
+            plan_activated_at: new Date().toISOString()
+          }
+        });
+      } catch (err) {}
+    }
+
+    res.json({ success: true, plan: targetTier, credits });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
 // ROUTES DE PAIEMENT (SASPAY)
 // ============================================================================
 app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
@@ -874,16 +983,27 @@ app.post('/api/payments/webhook', async (req, res) => {
             if (userId && validPlans[planTier]) {
                 const credits = validPlans[planTier].credits;
                 
+                // Mettre à jour les crédits sur le profil
                 await supabase
                     .from('profiles')
-                    .update({ 
-                        credits: credits,
-                        plan: planTier,
-                        created_at: new Date().toISOString()
-                    })
+                    .update({ credits: credits })
                     .eq('id', userId);
+
+                // Activer officiellement le forfait payant dans Supabase Auth (sécurisé)
+                try {
+                    await supabase.auth.admin.updateUserById(userId, {
+                        app_metadata: {
+                            plan: planTier,
+                            plan_status: 'active',
+                            plan_cycle: payload.data?.metadata?.cycle || 'monthly',
+                            plan_activated_at: new Date().toISOString()
+                        }
+                    });
+                } catch(uErr) {
+                    console.error('[PAIEMENT] Notice updateUserById:', uErr.message);
+                }
                     
-                console.log(`[PAIEMENT] Compte ${userId} recharge avec ${credits} credits (${planTier}).`);
+                console.log(`[PAIEMENT] Compte ${userId} activé avec forfait ${planTier} et ${credits} crédits.`);
                 
                 // LOGIQUE D'AFFILIATION 20% PLAFONNEE ET SECURISEE
                 try {

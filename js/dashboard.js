@@ -171,6 +171,311 @@ document.addEventListener("DOMContentLoaded", () => {
   initDashboard();
 });
 
+
+// ==============================================================================
+// MOTEUR UNIFIÉ DU SYSTÈME D'ESSAI GRATUIT (7 JOURS) & ABONNEMENTS VANDIA IA
+// ==============================================================================
+let trialCountdownTimer = null;
+let currentSubscriptionState = {
+  createdAt: '2026-10-10T08:51:50.749Z',
+  trialDurationMs: 7 * 24 * 60 * 60 * 1000,
+  plan: 'trial',
+  planStatus: 'active',
+  credits: 88,
+  maxCredits: 100,
+  isExpired: false
+};
+
+function getStoredUserCreatedAt() {
+  try {
+    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+    if (u && (u.createdAt || u.created_at)) return u.createdAt || u.created_at;
+  } catch(e) {}
+  return '2026-10-10T08:51:50.749Z';
+}
+
+function updateTrialAndSubscriptionUI() {
+  const createdAtStr = currentSubscriptionState.createdAt || getStoredUserCreatedAt();
+  const createdTime = new Date(createdAtStr).getTime();
+  const now = Date.now();
+  const trialEndTime = createdTime + currentSubscriptionState.trialDurationMs;
+  const msLeft = trialEndTime - now;
+  const isPaid = (currentSubscriptionState.plan && currentSubscriptionState.plan !== 'trial' && currentSubscriptionState.plan !== 'expired');
+  const isExpired = !isPaid && (msLeft <= 0);
+
+  currentSubscriptionState.isExpired = isExpired;
+
+  // Calculs précis du temps restant
+  const totalSeconds = Math.max(0, Math.floor(msLeft / 1000));
+  const days = Math.max(0, Math.floor(msLeft / (24 * 60 * 60 * 1000)));
+  const hours = Math.max(0, Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+  const minutes = Math.max(0, Math.floor((msLeft % (60 * 60 * 1000)) / (60 * 1000)));
+  const seconds = Math.max(0, Math.floor((msLeft % (60 * 1000)) / 1000));
+  
+  // Nombre de jours restants (arrondi supérieur)
+  const daysCeil = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const countdownFormatted = `${pad(days)} j ${pad(hours)} h ${pad(minutes)} min ${pad(seconds)} s`;
+  const tooltipFormatted = `Temps restant : ${pad(days)} j ${pad(hours)} h ${pad(minutes)} min • Cliquez pour choisir un forfait`;
+
+  // 1. BARRE SUPÉRIEURE (Header)
+  const headerBadge = document.getElementById("header-trial-badge");
+  const headerBtn = document.getElementById("btn-header-upgrade");
+  if (headerBtn) {
+    if (isPaid) {
+      headerBtn.title = `Forfait ${currentSubscriptionState.plan.toUpperCase()} Actif • Gérer mon abonnement`;
+    } else if (isExpired) {
+      headerBtn.title = "Votre période d'essai de 7 jours est expirée. Cliquez pour activer un forfait.";
+    } else {
+      headerBtn.title = tooltipFormatted;
+    }
+  }
+
+  if (headerBadge) {
+    if (isPaid) {
+      headerBadge.textContent = `Forfait ${currentSubscriptionState.plan.toUpperCase()} · Actif`;
+      headerBadge.style.color = "var(--whatsapp-green)";
+      headerBadge.style.borderColor = "var(--whatsapp-green)";
+    } else if (isExpired) {
+      headerBadge.textContent = "Essai expiré";
+      headerBadge.style.color = "#f43f5e";
+      headerBadge.style.borderColor = "rgba(244, 63, 94, 0.4)";
+      headerBadge.style.background = "rgba(244, 63, 94, 0.15)";
+    } else {
+      if (daysCeil > 1) {
+        headerBadge.textContent = `Essai gratuit · ${daysCeil}j restants`;
+      } else if (daysCeil === 1 && days > 0) {
+        headerBadge.textContent = "Essai gratuit · 1j restant";
+      } else if (hours > 0) {
+        headerBadge.textContent = `Essai gratuit · ${hours}h restantes`;
+      } else {
+        headerBadge.textContent = "Essai gratuit · Expire aujourd'hui";
+      }
+      headerBadge.style.color = "#f59e0b";
+      headerBadge.style.borderColor = "rgba(245, 158, 11, 0.4)";
+      headerBadge.style.background = "rgba(245, 158, 11, 0.2)";
+    }
+  }
+
+  // 2. BARRE LATÉRALE GAUCHE (Menu Forfaits & Abonnement)
+  const navBadge = document.getElementById("nav-badge-plan");
+  if (navBadge) {
+    if (isPaid) {
+      navBadge.textContent = "Actif";
+      navBadge.className = "badge badge-green";
+    } else if (isExpired) {
+      navBadge.textContent = "Expiré";
+      navBadge.className = "badge badge-rose";
+      navBadge.style.background = "rgba(244, 63, 94, 0.15)";
+      navBadge.style.color = "#f43f5e";
+    } else {
+      if (daysCeil > 1) {
+        navBadge.textContent = `Essai ${daysCeil}j`;
+      } else if (daysCeil === 1) {
+        navBadge.textContent = "Essai 1j";
+      } else {
+        navBadge.textContent = "< 24h";
+      }
+      navBadge.className = "badge badge-amber";
+      navBadge.style.background = "rgba(245, 158, 11, 0.2)";
+      navBadge.style.color = "#f59e0b";
+    }
+  }
+
+  // 3. BARRE LATÉRALE GAUCHE (Carte du bas de la sidebar)
+  const sidebarPlanTitle = document.getElementById("sidebar-plan-name");
+  if (sidebarPlanTitle) {
+    if (isPaid) {
+      sidebarPlanTitle.textContent = `Formule ${currentSubscriptionState.plan.toUpperCase()} 👑`;
+    } else if (isExpired) {
+      sidebarPlanTitle.textContent = "Essai Expiré ⚠️";
+    } else {
+      sidebarPlanTitle.textContent = `Essai Gratuit (${daysCeil}j restants) 🦾`;
+    }
+  }
+
+  // Crédits dans la sidebar
+  const credits = currentSubscriptionState.credits;
+  const maxCredits = isPaid ? (currentSubscriptionState.plan === 'basic' ? 1000 : currentSubscriptionState.plan === 'pro' ? 3000 : 10000) : 100;
+  const usedCredits = Math.max(0, maxCredits - credits);
+  const pct = maxCredits > 0 ? ((usedCredits / maxCredits) * 100).toFixed(1) : "0.0";
+
+  const subTokenPct = document.getElementById("sub-token-pct");
+  const subTokenFill = document.getElementById("sub-token-fill");
+  const subTokensUsed = document.getElementById("sub-tokens-used");
+  const subTokensMax = document.getElementById("sub-tokens-max");
+  if (subTokenPct) subTokenPct.textContent = `${pct}%`;
+  if (subTokenFill) subTokenFill.style.width = `${pct}%`;
+  if (subTokensUsed) subTokensUsed.textContent = `${usedCredits} crédit${usedCredits > 1 ? 's' : ''}`;
+  if (subTokensMax) subTokensMax.textContent = `Max ${maxCredits.toLocaleString('fr-FR')} crédits`;
+
+  // 4. GRANDE CARTE VERTE DANS LA VUE FORFAITS (#view-billing)
+  const billingStatusBadge = document.getElementById("billing-status-badge");
+  const billingTitleDisplay = document.getElementById("billing-title-display");
+  const billingSubtitleDisplay = document.getElementById("billing-subtitle-display");
+  const billingDaysLeft = document.getElementById("billing-days-left");
+  const billingCountdownTimer = document.getElementById("billing-countdown-timer");
+  const billingCreditsDisplay = document.getElementById("billing-credits-display");
+
+  if (billingStatusBadge) {
+    if (isPaid) {
+      billingStatusBadge.textContent = `Formule ${currentSubscriptionState.plan.toUpperCase()} Active`;
+      billingStatusBadge.style.background = "rgba(37, 211, 102, 0.2)";
+      billingStatusBadge.style.color = "var(--whatsapp-green)";
+    } else if (isExpired) {
+      billingStatusBadge.textContent = "Essai Gratuit Expiré";
+      billingStatusBadge.style.background = "rgba(244, 63, 94, 0.2)";
+      billingStatusBadge.style.color = "#f43f5e";
+    } else {
+      billingStatusBadge.textContent = `Essai Gratuit Actif (${daysCeil} Jours restants)`;
+      billingStatusBadge.style.background = "rgba(37, 211, 102, 0.15)";
+      billingStatusBadge.style.color = "var(--whatsapp-green)";
+    }
+  }
+
+  if (billingTitleDisplay) {
+    if (isPaid) {
+      billingTitleDisplay.textContent = `Votre formule ${currentSubscriptionState.plan.toUpperCase()} est active et opérationnelle`;
+    } else if (isExpired) {
+      billingTitleDisplay.textContent = "Votre période d'essai de 7 jours est expirée";
+    } else {
+      billingTitleDisplay.textContent = "Votre période d'essai de 7 jours est en cours";
+    }
+  }
+
+  if (billingSubtitleDisplay) {
+    if (isPaid) {
+      billingSubtitleDisplay.textContent = "Vos agents commerciaux IA WhatsApp et tous vos tunnels de vente sont actifs sans aucune interruption.";
+    } else if (isExpired) {
+      billingSubtitleDisplay.textContent = "Votre période gratuite est terminée. Choisissez un forfait permanent ci-dessous pour réactiver vos agents IA et continuer à encaisser des ventes 24h/24.";
+    }
+  }
+
+  if (billingDaysLeft) {
+    if (isPaid) {
+      billingDaysLeft.textContent = "Abonnement actif";
+    } else if (isExpired) {
+      billingDaysLeft.textContent = "Essai gratuit expiré";
+    } else {
+      if (daysCeil > 1) {
+        billingDaysLeft.textContent = `${daysCeil} jours restants`;
+      } else if (daysCeil === 1 && days > 0) {
+        billingDaysLeft.textContent = "1 jour restant";
+      } else {
+        billingDaysLeft.textContent = "Expire aujourd'hui";
+      }
+    }
+  }
+
+  if (billingCountdownTimer) {
+    if (isPaid) {
+      billingCountdownTimer.textContent = "Illimité • Actif 24/7";
+    } else if (isExpired) {
+      billingCountdownTimer.textContent = "00 j 00 h 00 min 00 s (Expiré)";
+    } else {
+      billingCountdownTimer.textContent = countdownFormatted;
+    }
+  }
+
+  if (billingCreditsDisplay) {
+    billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} restants sur ${maxCredits} inclus</strong>`;
+  }
+}
+
+async function syncSubscriptionStatusFromServer() {
+  const userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+  if (!userId) return;
+
+  try {
+    const res = await fetch(API_URL + '/api/user/subscription/' + encodeURIComponent(userId), {
+      headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success) {
+        if (data.createdAt) currentSubscriptionState.createdAt = data.createdAt;
+        if (data.plan) currentSubscriptionState.plan = data.plan;
+        if (data.planStatus) currentSubscriptionState.planStatus = data.planStatus;
+        if (typeof data.credits === 'number') currentSubscriptionState.credits = data.credits;
+        currentSubscriptionState.isExpired = !!data.isExpired;
+
+        try {
+          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          u.createdAt = data.createdAt;
+          u.plan = {
+            ...(u.plan || {}),
+            name: data.plan === 'pro' ? 'Formule Pro 👑' : data.plan === 'business' ? 'Formule Business 💎' : data.plan === 'basic' ? 'Formule Basic ⚡' : 'Essai Gratuit 7j 🦾',
+            daysLeft: data.daysLeft,
+            tokensMax: (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100),
+            tokensUsed: Math.max(0, (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100) - data.credits)
+          };
+          localStorage.setItem('vendia_current_user', JSON.stringify(u));
+        } catch(e) {}
+
+        updateTrialAndSubscriptionUI();
+      }
+    }
+  } catch (err) {
+    console.warn("[SUBSCRIPTION] Synchronisation serveur différée:", err);
+  }
+}
+
+function initTrialCountdownEngine() {
+  updateTrialAndSubscriptionUI();
+
+  if (trialCountdownTimer) clearInterval(trialCountdownTimer);
+  trialCountdownTimer = setInterval(updateTrialAndSubscriptionUI, 1000);
+
+  syncSubscriptionStatusFromServer();
+
+  setInterval(() => {
+    if (!document.hidden) syncSubscriptionStatusFromServer();
+  }, 30000);
+
+  handlePaymentReturnCallback();
+}
+
+async function handlePaymentReturnCallback() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      const tier = params.get('tier') || 'pro';
+      const userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+      
+      showToast("🎉 Félicitations ! Votre paiement a été validé avec succès. Activation de votre formule...", "success");
+
+      try {
+        const res = await fetch(API_URL + '/api/payments/confirm', {
+          method: 'POST',
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {},
+          body: JSON.stringify({ userId, planTier: tier, cycle: 'monthly' })
+        });
+        const d = await res.json();
+        if (d && d.success) {
+          currentSubscriptionState.plan = tier;
+          currentSubscriptionState.planStatus = 'active';
+          if (typeof d.credits === 'number') currentSubscriptionState.credits = d.credits;
+          updateTrialAndSubscriptionUI();
+          showToast(`👑 Forfait ${tier.toUpperCase()} activé avec succès ! Merci de votre confiance.`, "success");
+        }
+      } catch(err) {
+        console.error("Erreur confirmation paiement:", err);
+      }
+
+      if (window.history && window.history.replaceState) {
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  } catch(e) {}
+}
+
+window.updateTrialAndSubscriptionUI = updateTrialAndSubscriptionUI;
+window.syncSubscriptionStatusFromServer = syncSubscriptionStatusFromServer;
+window.initTrialCountdownEngine = initTrialCountdownEngine;
+
+
 function initDashboard() {
   setupNavigation();
   setupMobileSidebar();
@@ -2559,24 +2864,38 @@ function setupBillingAndAffiliate() {
     document.body.classList.remove("modal-open-lock");
   }
 
-  // 1. Upgrade Trigger Buttons (Header and Sidebar open the Plan Modal as requested)
+  // 1. Tous les boutons de souscription ouvrent le modal de souscription (#plan-modal)
+  // Bouton 1: En-tête supérieur
   const headerUpgradeBtn = document.getElementById("btn-header-upgrade");
   if (headerUpgradeBtn) {
-    headerUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
+    headerUpgradeBtn.onclick = (e) => { e.preventDefault(); openPlanModal("pro"); };
   }
 
+  // Bouton 2: En-tête de la vue forfaits (Passer à la Formule Pro)
+  const billingProHeaderBtn = document.getElementById("btn-upgrade-pro-header");
+  if (billingProHeaderBtn) {
+    billingProHeaderBtn.onclick = (e) => { e.preventDefault(); openPlanModal("pro"); };
+  }
+
+  // Bouton 3: Carte d'essai gratuit (Activer mon Forfait Permanent)
+  const activatePermanentBtn = document.getElementById("btn-activate-permanent-plan");
+  if (activatePermanentBtn) {
+    activatePermanentBtn.onclick = (e) => { e.preventDefault(); openPlanModal("pro"); };
+  }
+
+  // Bouton 4: Barre latérale gauche (Choisir un Forfait)
   const sidebarUpgradeBtn = document.getElementById("btn-sidebar-upgrade");
   if (sidebarUpgradeBtn) {
-    sidebarUpgradeBtn.addEventListener("click", () => openPlanModal("pro"));
+    sidebarUpgradeBtn.onclick = (e) => { e.preventDefault(); openPlanModal("pro"); };
   }
 
-  // In billing view cards: clicking selects plan and opens modal with that plan
+  // Tous les autres boutons déclencheurs de plan (.btn-trigger-plan-modal)
   document.querySelectorAll(".btn-trigger-plan-modal").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+    btn.onclick = (e) => {
       e.preventDefault();
       const planTier = btn.getAttribute("data-plan") || "pro";
       openPlanModal(planTier);
-    });
+    };
   });
 
   // 2. Close Modal Buttons & Backdrop

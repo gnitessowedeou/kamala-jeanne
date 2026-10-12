@@ -318,10 +318,10 @@
           </div>
 
           <!-- Upgrade Plan Button (Desktop & Mobile) -->
-          <button class="header-plan-badge" id="btn-header-upgrade" type="button" title="Gérer mon abonnement">
+          <button class="header-plan-badge" id="btn-header-upgrade" type="button" title="Gérer mon abonnement" onclick="openPlanModal('pro')">
             <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
             <span>Prendre un Forfait</span>
-            <span class="plan-badge-mini">Essai 7j</span>
+            <span class="plan-badge-mini" id="header-trial-badge">Essai gratuit · 5j restants</span>
           </button>
 
           <!-- Currency Switcher Toggle (Desktop) -->
@@ -1355,7 +1355,7 @@
               <p class="section-desc">Gérez votre formule, activez un abonnement ou débloquez les fonctionnalités Pro sans engagement.</p>
             </div>
             <div class="section-actions-wrap">
-              <button class="btn-primary-glow btn-trigger-plan-modal" data-plan="pro">
+              <button class="btn-primary-glow btn-trigger-plan-modal" id="btn-upgrade-pro-header" data-plan="pro" onclick="openPlanModal('pro')">
                 <i class="fa-solid fa-bolt"></i>
                 <span>Passer à la Formule Pro 🚀</span>
               </button>
@@ -1377,7 +1377,11 @@
               <div class="billing-stats-pills">
                 <div class="billing-pill">
                   <i class="fa-solid fa-calendar-check"></i>
-                  <span>Validité : <strong id="billing-days-left">7 jours restants</strong></span>
+                  <span>Validité : <strong id="billing-days-left">5 jours restants</strong></span>
+                </div>
+                <div class="billing-pill" id="billing-countdown-pill" title="Compte à rebours précis en direct">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                  <span>Temps restant : <strong id="billing-countdown-timer">-- j -- h -- min -- s</strong></span>
                 </div>
                 <div class="billing-pill">
                   <i class="fa-solid fa-bolt"></i>
@@ -1390,7 +1394,7 @@
               </div>
             </div>
             <div class="billing-current-right">
-              <button class="btn-primary-glow btn-trigger-plan-modal" data-plan="pro" style="padding: 14px 24px; font-size: 14px;">
+              <button class="btn-primary-glow btn-trigger-plan-modal" id="btn-activate-permanent-plan" data-plan="pro" onclick="openPlanModal('pro')" style="padding: 14px 24px; font-size: 14px;">
                 <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
                 <span>Activer mon Forfait Permanent</span>
               </button>
@@ -2464,7 +2468,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v7"></script>
+  <script src="js/dashboard.js?v=20261012_v8"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
