@@ -331,7 +331,8 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     const qrImage = await qrcode.toDataURL(qr); // Convertir en image affichable
     waSessionsQR[userId] = qrImage;
     waStatuses[userId] = 'QR_READY';
-    console.log(`[WA] QR Code généré pour le client ${userId}`);
+    console.log(`\n📱 [WA] SCANNEZ CE QR CODE AVEC VOTRE SMARTPHONE :`);
+    try { require('qrcode-terminal').generate(qr, { small: true }); } catch(e) {}
   });
 
   // Quand le client a scanné et est connecté
