@@ -439,28 +439,48 @@ function initTrialCountdownEngine() {
 async function handlePaymentReturnCallback() {
   try {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      const tier = params.get('tier') || 'pro';
+    const paymentAction = params.get('payment');
+    if (paymentAction === 'return' || paymentAction === 'success') {
+      const tier = params.get('tier') || localStorage.getItem('vendia_pending_tier') || 'pro';
+      const sessionId = params.get('session_id') || params.get('sessionId') || params.get('id') || params.get('reference') || localStorage.getItem('vendia_pending_session');
       const userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
       
-      showToast("🎉 Félicitations ! Votre paiement a été validé avec succès. Activation de votre formule...", "success");
+      if (!sessionId) {
+        console.warn("[PAYMENT CALLBACK] Aucun identifiant de session trouvé.");
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+        }
+        return;
+      }
+
+      showToast("⏳ Vérification sécurisée du paiement auprès de SaaSPay...", "info");
 
       try {
-        const res = await fetch(API_URL + '/api/payments/confirm', {
+        const res = await fetch(API_URL + '/api/payments/verify-session', {
           method: 'POST',
-          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {},
-          body: JSON.stringify({ userId, planTier: tier, cycle: 'monthly' })
+          headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, userId })
         });
         const d = await res.json();
-        if (d && d.success) {
-          currentSubscriptionState.plan = tier;
+        
+        if (d && d.verified && d.success) {
+          currentSubscriptionState.plan = d.plan || tier;
           currentSubscriptionState.planStatus = 'active';
           if (typeof d.credits === 'number') currentSubscriptionState.credits = d.credits;
+          
+          localStorage.removeItem('vendia_pending_session');
+          localStorage.removeItem('vendia_pending_tier');
+          localStorage.removeItem('vendia_pending_cycle');
+          
           updateTrialAndSubscriptionUI();
-          showToast(`👑 Forfait ${tier.toUpperCase()} activé avec succès ! Merci de votre confiance.`, "success");
+          syncSubscriptionStatusFromServer();
+          showToast(`👑 Forfait ${(d.plan || tier).toUpperCase()} activé avec succès ! Merci pour votre confiance.`, "success");
+        } else {
+          showToast(d.message || "Paiement en attente de confirmation opérateur ou non validé.", "warning");
         }
       } catch(err) {
-        console.error("Erreur confirmation paiement:", err);
+        console.error("[PAYMENT CALLBACK] Erreur:", err);
+        showToast("Erreur lors de la vérification du paiement auprès du serveur.", "info");
       }
 
       if (window.history && window.history.replaceState) {
@@ -468,7 +488,9 @@ async function handlePaymentReturnCallback() {
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }
-  } catch(e) {}
+  } catch(e) {
+    console.error("[PAYMENT CALLBACK] Fatal:", e);
+  }
 }
 
 window.updateTrialAndSubscriptionUI = updateTrialAndSubscriptionUI;
@@ -3114,6 +3136,13 @@ function setupBillingAndAffiliate() {
         const checkoutUrl = data.checkout_url || data.paymentUrl;
         
         if (checkoutUrl) {
+          if (data.sessionId) {
+            try {
+              localStorage.setItem('vendia_pending_session', data.sessionId);
+              localStorage.setItem('vendia_pending_tier', selectedTier);
+              localStorage.setItem('vendia_pending_cycle', isAnnual ? 'annual' : 'monthly');
+            } catch(e) {}
+          }
           if (submitText) submitText.textContent = "Ouverture du paiement SasPay...";
           window.location.href = checkoutUrl;
         } else {

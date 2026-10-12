@@ -853,36 +853,126 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/payments/confirm', authMiddleware, async (req, res) => {
+app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
   try {
-    const { userId, planTier, cycle } = req.body;
-    if (!userId) return res.status(400).json({ error: "userId requis" });
+    const { sessionId, userId } = req.body;
+    if (!sessionId) return res.status(400).json({ error: "sessionId requis" });
 
-    const validPlans = {
-      basic: { credits: 1000 },
-      pro: { credits: 3000 },
-      business: { credits: 10000 }
-    };
+    const fetch = (await import('node-fetch')).default;
+    const saspayRes = await fetch(`https://api.saspay.me/api/v1/checkout-sessions/${encodeURIComponent(sessionId)}/`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.SASPAY_SECRET_KEY}`
+      }
+    });
 
-    const targetTier = validPlans[planTier] ? planTier : 'pro';
-    const credits = validPlans[targetTier].credits;
-
-    if (supabase) {
-      await supabase.from('profiles').update({ credits }).eq('id', userId);
-      try {
-        await supabase.auth.admin.updateUserById(userId, {
-          app_metadata: {
-            plan: targetTier,
-            plan_status: 'active',
-            plan_cycle: cycle || 'monthly',
-            plan_activated_at: new Date().toISOString()
-          }
-        });
-      } catch (err) {}
+    if (!saspayRes.ok) {
+      console.warn(`[VERIFY SESSION] SaaSPay renvoie HTTP ${saspayRes.status}`);
+      return res.status(saspayRes.status).json({ error: "Impossible de vérifier la session auprès de SaaSPay." });
     }
 
-    res.json({ success: true, plan: targetTier, credits });
+    const sasData = await saspayRes.json();
+    const session = sasData?.data;
+
+    if (!session) {
+      return res.status(404).json({ error: "Session SaaSPay introuvable." });
+    }
+
+    console.log(`[VERIFY SESSION] Session ${sessionId} statut SaaSPay: ${session.status}`);
+
+    const isPaid = (session.status === 'SUCCESS' || session.status === 'PAID' || !!session.paid_at);
+    const targetUserId = userId || session.metadata?.userId;
+    const planTier = session.metadata?.planTier || 'pro';
+    const cycle = session.metadata?.cycle || 'monthly';
+
+    if (!isPaid) {
+      return res.json({
+        success: false,
+        verified: false,
+        status: session.status || 'PENDING',
+        message: "Paiement en attente de validation ou non complété auprès de votre opérateur."
+      });
+    }
+
+    // Le paiement est RÉELLEMENT validé par SaaSPay !
+    const validPlans = {
+      basic: { credits: 1000, maxPrice: 7900 },
+      pro: { credits: 3000, maxPrice: 14900 },
+      business: { credits: 10000, maxPrice: 30000 }
+    };
+    const credits = validPlans[planTier]?.credits || 3000;
+
+    if (supabase && targetUserId) {
+      // 1. Récupérer l'historique des commandes pour déduplication
+      let existingOrders = [];
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(targetUserId);
+        existingOrders = uData?.user?.app_metadata?.orders || [];
+      } catch (err) {}
+
+      const alreadyProcessed = existingOrders.some(o => o.sessionId === sessionId);
+
+      if (!alreadyProcessed) {
+        existingOrders.push({
+          sessionId,
+          transactionId: session.transaction || null,
+          amount: session.amount,
+          currency: session.currency || 'XOF',
+          planTier,
+          cycle,
+          status: 'PAID',
+          paidAt: session.paid_at || new Date().toISOString()
+        });
+
+        // 2. Recharger les crédits
+        await supabase.from('profiles').update({ credits }).eq('id', targetUserId);
+
+        // 3. Activer l'abonnement et persister la commande dans Supabase Auth (sécurisé)
+        try {
+          await supabase.auth.admin.updateUserById(targetUserId, {
+            app_metadata: {
+              plan: planTier,
+              plan_status: 'active',
+              plan_cycle: cycle,
+              plan_activated_at: new Date().toISOString(),
+              orders: existingOrders
+            }
+          });
+        } catch (err) {
+          console.error('[VERIFY SESSION] Notice updateUserById:', err.message);
+        }
+
+        // 4. Commission d'affiliation 20%
+        try {
+          const rawAmount = parseFloat(session.amount || "0");
+          const amountPaid = Math.min(Math.max(0, rawAmount), validPlans[planTier]?.maxPrice || 30000);
+          const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', targetUserId).single();
+          if (payer && payer.referred_by && amountPaid > 0) {
+            const commission = Math.floor(amountPaid * 0.20);
+            const { data: sponsor } = await supabase.from('profiles').select('id, affiliate_balance').eq('affiliate_code', payer.referred_by).single();
+            if (sponsor) {
+              const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
+              await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
+              console.log(`[AFFILIATION] Commission de ${commission} FCFA créditée au parrain ${payer.referred_by}`);
+            }
+          }
+        } catch (affErr) {
+          console.error('[AFFILIATION] Erreur verify-session:', affErr.message);
+        }
+      }
+    }
+
+    console.log(`✅ [VERIFY SESSION] Forfait ${planTier} activé avec succès pour ${targetUserId} suite à confirmation SaaSPay.`);
+
+    return res.json({
+      success: true,
+      verified: true,
+      status: 'PAID',
+      plan: planTier,
+      credits,
+      message: "Paiement vérifié avec succès auprès de SaaSPay ! Forfait activé."
+    });
   } catch (err) {
+    console.error('[VERIFY SESSION] Erreur:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -918,7 +1008,8 @@ app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
             currency: "XOF",
             customer_email: customerEmail,
             customer_name: customerName,
-            return_url: "https://kamala-jeanne.vercel.app/dashboard.html?payment=success&tier=" + (planTier || 'pro'),
+            return_url: `https://kamala-jeanne.vercel.app/dashboard.html?payment=return&tier=${planTier || 'pro'}`,
+            webhook_url: "https://kamala-jeanne-production.up.railway.app/api/payments/webhook",
             metadata: {
                 userId: userId || 'anonymous',
                 planTier: planTier || 'pro',
@@ -941,6 +1032,7 @@ app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
         if (data && data.data && data.data.checkout_url) {
             res.json({ 
                 success: true, 
+                sessionId: data.data.id,
                 checkout_url: data.data.checkout_url,
                 paymentUrl: data.data.checkout_url
             });
@@ -970,9 +1062,19 @@ app.post('/api/payments/webhook', async (req, res) => {
             }
         }
 
-        if (payload.event === 'transaction.success') {
-            const userId = payload.data?.metadata?.userId;
-            const planTier = payload.data?.metadata?.planTier;
+        const sessionData = payload.data || payload;
+        const isSuccess = (payload.event === 'transaction.success' || 
+                           payload.event === 'checkout.session.completed' || 
+                           payload.status === 'SUCCESS' || 
+                           sessionData.status === 'SUCCESS' || 
+                           sessionData.status === 'PAID' || 
+                           !!sessionData.paid_at);
+
+        if (isSuccess) {
+            const userId = sessionData.metadata?.userId || payload.userId;
+            const planTier = sessionData.metadata?.planTier || payload.planTier || 'pro';
+            const cycle = sessionData.metadata?.cycle || payload.cycle || 'monthly';
+            const sessionId = sessionData.id || payload.id;
 
             const validPlans = {
                 basic: { credits: 1000, maxPrice: 7900 },
@@ -980,48 +1082,73 @@ app.post('/api/payments/webhook', async (req, res) => {
                 business: { credits: 10000, maxPrice: 30000 }
             };
 
-            if (userId && validPlans[planTier]) {
+            if (userId && validPlans[planTier] && supabase) {
                 const credits = validPlans[planTier].credits;
                 
-                // Mettre à jour les crédits sur le profil
-                await supabase
-                    .from('profiles')
-                    .update({ credits: credits })
-                    .eq('id', userId);
-
-                // Activer officiellement le forfait payant dans Supabase Auth (sécurisé)
+                // Récupérer et dédupliquer les commandes
+                let existingOrders = [];
                 try {
-                    await supabase.auth.admin.updateUserById(userId, {
-                        app_metadata: {
-                            plan: planTier,
-                            plan_status: 'active',
-                            plan_cycle: payload.data?.metadata?.cycle || 'monthly',
-                            plan_activated_at: new Date().toISOString()
-                        }
-                    });
-                } catch(uErr) {
-                    console.error('[PAIEMENT] Notice updateUserById:', uErr.message);
-                }
-                    
-                console.log(`[PAIEMENT] Compte ${userId} activé avec forfait ${planTier} et ${credits} crédits.`);
-                
-                // LOGIQUE D'AFFILIATION 20% PLAFONNEE ET SECURISEE
-                try {
-                    const rawAmount = parseFloat(payload.data?.amount || "0");
-                    const amountPaid = Math.min(Math.max(0, rawAmount), validPlans[planTier].maxPrice);
+                    const { data: uData } = await supabase.auth.admin.getUserById(userId);
+                    existingOrders = uData?.user?.app_metadata?.orders || [];
+                } catch(e) {}
 
-                    const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', userId).single();
-                    if (payer && payer.referred_by && amountPaid > 0) {
-                        const commission = Math.floor(amountPaid * 0.20);
-                        const { data: sponsor } = await supabase.from('profiles').select('id, affiliate_balance').eq('affiliate_code', payer.referred_by).single();
-                        if (sponsor) {
-                            const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
-                            await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
-                            console.log(`[AFFILIATION] Commission certifiee de ${commission} FCFA versee au parrain ${payer.referred_by}`);
-                        }
+                const alreadyProcessed = sessionId ? existingOrders.some(o => o.sessionId === sessionId) : false;
+
+                if (!alreadyProcessed) {
+                    if (sessionId) {
+                        existingOrders.push({
+                            sessionId,
+                            transactionId: sessionData.transaction || null,
+                            amount: sessionData.amount,
+                            currency: sessionData.currency || 'XOF',
+                            planTier,
+                            cycle,
+                            status: 'PAID',
+                            paidAt: sessionData.paid_at || new Date().toISOString()
+                        });
                     }
-                } catch(affErr) {
-                    console.error("[AFFILIATION] Erreur webhook:", affErr.message);
+
+                    // Mettre à jour les crédits sur le profil
+                    await supabase
+                        .from('profiles')
+                        .update({ credits: credits })
+                        .eq('id', userId);
+
+                    // Activer officiellement le forfait payant dans Supabase Auth (sécurisé)
+                    try {
+                        await supabase.auth.admin.updateUserById(userId, {
+                            app_metadata: {
+                                plan: planTier,
+                                plan_status: 'active',
+                                plan_cycle: cycle,
+                                plan_activated_at: new Date().toISOString(),
+                                orders: existingOrders
+                            }
+                        });
+                    } catch(uErr) {
+                        console.error('[PAIEMENT WEBHOOK] Notice updateUserById:', uErr.message);
+                    }
+                        
+                    console.log(`[PAIEMENT WEBHOOK] Compte ${userId} activé avec forfait ${planTier} et ${credits} crédits.`);
+                    
+                    // LOGIQUE D'AFFILIATION 20%
+                    try {
+                        const rawAmount = parseFloat(sessionData.amount || "0");
+                        const amountPaid = Math.min(Math.max(0, rawAmount), validPlans[planTier].maxPrice);
+
+                        const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', userId).single();
+                        if (payer && payer.referred_by && amountPaid > 0) {
+                            const commission = Math.floor(amountPaid * 0.20);
+                            const { data: sponsor } = await supabase.from('profiles').select('id, affiliate_balance').eq('affiliate_code', payer.referred_by).single();
+                            if (sponsor) {
+                                const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
+                                await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
+                                console.log(`[AFFILIATION] Commission certifiée de ${commission} FCFA versée au parrain ${payer.referred_by}`);
+                            }
+                        }
+                    } catch(affErr) {
+                        console.error("[AFFILIATION WEBHOOK] Erreur:", affErr.message);
+                    }
                 }
             }
         }
