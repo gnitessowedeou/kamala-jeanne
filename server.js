@@ -84,6 +84,43 @@ if (fs.existsSync(path.join(__dirname, 'assets'))) {
 }
 
 // Pages HTML publiques
+app.get('/api/diag', async (req, res) => {
+  const os = require('os');
+  const { execSync } = require('child_process');
+  let chromiumLocation = 'none';
+  try {
+    chromiumLocation = execSync('which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf8' }).trim();
+  } catch (e) {
+    chromiumLocation = 'which failed: ' + e.message;
+  }
+
+  let puppeteerTest = 'untested';
+  try {
+    const puppeteer = require('puppeteer');
+    const chromiumPath = getChromiumExecutablePath();
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      ...(chromiumPath ? { executablePath: chromiumPath } : {})
+    });
+    const version = await browser.version();
+    await browser.close();
+    puppeteerTest = 'SUCCESS: ' + version;
+  } catch (pErr) {
+    puppeteerTest = 'FAILED: ' + pErr.message;
+  }
+
+  res.json({
+    platform: process.platform,
+    arch: process.arch,
+    chromiumLocation,
+    detectedPath: getChromiumExecutablePath(),
+    puppeteerTest,
+    env_PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH,
+    env_PORT: process.env.PORT
+  });
+});
+
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
@@ -362,7 +399,7 @@ app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
 
 app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
   const { userId } = req.params;
-  res.json({ status: waStatuses[userId] || 'DISCONNECTED', qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null });
+  res.json({ status: waStatuses[userId] || 'DISCONNECTED', qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null, error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null });
 });
 
 // === 5. CONFIGURATION IA ===
