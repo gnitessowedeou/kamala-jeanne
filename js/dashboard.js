@@ -2828,6 +2828,126 @@ function setupBillingAndAffiliate() {
 
 // --- LOGIQUE DE CONNEXION WHATSAPP V2 (SAAS) ---
 (function() {
+    window.currentWhatsAppStatus = 'DISCONNECTED';
+    window.currentWhatsAppPhone = null;
+
+    // Fonction universelle de mise à jour visuelle du statut WhatsApp & Quotas
+    window.applyWhatsAppState = function(status, phone) {
+        window.currentWhatsAppStatus = status || 'DISCONNECTED';
+        if (phone) window.currentWhatsAppPhone = phone;
+
+        const isConnected = (status === 'CONNECTED');
+        let user = {};
+        try { user = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
+
+        // 1. Détermination du quota selon le forfait
+        const planName = (user?.plan?.name || user?.plan || "").toLowerCase();
+        let maxWa = 1;
+        if (planName.includes("business") || planName.includes("scale") || planName.includes("entreprise")) maxWa = 5;
+        else if (planName.includes("pro")) maxWa = 2;
+
+        const connectedCount = isConnected ? 1 : 0;
+        const activePhone = phone ? ('+' + phone.toString().replace(/^\+/, '')) : (user?.fullPhone || '+229 62639593');
+
+        // 2. Header (En-tête supérieur)
+        const headerNum = document.getElementById("header-connected-num");
+        const headerBadge = document.getElementById("header-status-badge");
+        const headerPill = document.getElementById("header-status-pill");
+        if (headerNum) headerNum.textContent = activePhone;
+        if (headerBadge) {
+            if (isConnected) {
+                headerBadge.textContent = "Connecté";
+                headerBadge.className = "status-badge-mini badge-green";
+                if (headerPill) {
+                    headerPill.style.borderColor = "rgba(37, 211, 102, 0.4)";
+                    headerPill.style.background = "rgba(37, 211, 102, 0.1)";
+                }
+            } else {
+                headerBadge.textContent = "À Connecter";
+                headerBadge.className = "status-badge-mini badge-amber";
+                if (headerPill) {
+                    headerPill.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                    headerPill.style.background = "rgba(245, 158, 11, 0.08)";
+                }
+            }
+        }
+
+        // 3. Barre latérale (Sidebar)
+        const sidebarNum = document.getElementById("sidebar-connected-num");
+        const sidebarBadge = document.getElementById("sidebar-status-badge");
+        const navDevicesBadge = document.getElementById("nav-badge-devices");
+        if (sidebarNum) sidebarNum.textContent = isConnected ? "IA Active" : "Non lié";
+        if (sidebarBadge) {
+            sidebarBadge.textContent = isConnected ? "Connecté" : "Prêt";
+            sidebarBadge.className = isConnected ? "status-badge-mini badge-green" : "status-badge-mini";
+        }
+        if (navDevicesBadge) {
+            navDevicesBadge.textContent = isConnected ? "1 Actif" : "Prêt";
+            navDevicesBadge.className = isConnected ? "badge badge-green" : "badge";
+        }
+
+        // 4. Section Numéros & Coexistence (#view-devices)
+        const waLimitStatus = document.getElementById("wa-limit-status");
+        if (waLimitStatus) {
+            waLimitStatus.textContent = `${connectedCount} / ${maxWa} Numéro${maxWa > 1 ? 's' : ''}`;
+            if (isConnected) {
+                waLimitStatus.style.color = "var(--whatsapp-green)";
+                waLimitStatus.style.background = "rgba(37, 211, 102, 0.15)";
+                waLimitStatus.style.border = "1px solid rgba(37, 211, 102, 0.3)";
+            } else {
+                waLimitStatus.style.color = "var(--amber)";
+                waLimitStatus.style.background = "rgba(245, 158, 11, 0.1)";
+                waLimitStatus.style.border = "1px solid rgba(245, 158, 11, 0.25)";
+            }
+        }
+
+        // Carte principale du numéro
+        const cardNum = document.getElementById("main-card-num");
+        const cardBadge = document.getElementById("main-card-status-badge");
+        const cardLabel = document.getElementById("main-card-label");
+        if (cardNum) cardNum.textContent = activePhone;
+        if (cardBadge) {
+            if (isConnected) {
+                cardBadge.textContent = "🟢 En Ligne & IA Active";
+                cardBadge.className = "badge badge-green";
+            } else if (status === 'QR_READY') {
+                cardBadge.textContent = "🟡 En attente de scan QR";
+                cardBadge.className = "badge badge-amber";
+            } else {
+                cardBadge.textContent = "🟡 En attente de connexion";
+                cardBadge.className = "badge badge-amber";
+            }
+        }
+        if (cardLabel) {
+            cardLabel.textContent = isConnected ? "Ligne Principale Vente (IA Active)" : "Ligne à synchroniser via QR Code";
+        }
+
+        // 5. Contrôle strict du bouton "Connecter un Numéro" (#btn-add-whatsapp-num)
+        const btnAddWa = document.getElementById("btn-add-whatsapp-num");
+        if (btnAddWa) {
+            btnAddWa.classList.remove('btn-open-qr');
+            btnAddWa.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (connectedCount >= maxWa) {
+                    if (typeof showToast === 'function') {
+                        showToast(`⭐ Limite de ${maxWa} numéro atteinte. Pour ajouter d'autres lignes WhatsApp, passez au forfait Pro (2 numéros) ou Business (5 numéros).`, "info");
+                    }
+                    setTimeout(() => {
+                        if (typeof openPlanModal === 'function') openPlanModal('pro');
+                    }, 350);
+                } else {
+                    const qrModal = document.getElementById("qr-modal");
+                    if (qrModal) qrModal.classList.add("active");
+                    if (typeof window.startWhatsApp === 'function') {
+                        window.startWhatsApp();
+                    }
+                }
+            };
+        }
+    };
+
     function initWhatsAppSaaS() {
         const qrModal = document.getElementById('qr-modal');
         if(!qrModal) return;
@@ -2836,30 +2956,60 @@ function setupBillingAndAffiliate() {
         
         const originalQrContent = qrBox.innerHTML;
         let userId = '';
-      try {
-          const u = JSON.parse(localStorage.getItem('vendia_current_user'));
-          if (u && u.id) userId = u.id;
-      } catch(e) {}
+        try {
+            const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+            if (u && u.id) userId = u.id;
+        } catch(e) {}
+
         let statusInterval;
+        let pollAttempts = 0;
 
         document.body.addEventListener('click', (e) => {
-            if(e.target.closest('.btn-open-qr')) {
+            if (e.target.closest('.btn-open-qr')) {
                 startWhatsApp();
             }
-            if(e.target.closest('[data-close-modal="qr-modal"]')) {
+            if (e.target.closest('[data-close-modal="qr-modal"]')) {
                 clearInterval(statusInterval);
                 qrBox.innerHTML = originalQrContent;
             }
         });
 
-                let pollAttempts = 0;
+        async function syncWhatsAppStatus(force = false) {
+            if (!userId) {
+                try {
+                    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+                    if (u && u.id) userId = u.id;
+                } catch(e) {}
+            }
+            if (!userId) return;
+
+            try {
+                const res = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                window.applyWhatsAppState(data.status, data.phone);
+
+                if (qrModal.classList.contains('active')) {
+                    if (data.status === 'QR_READY' && data.qr) {
+                        qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                    } else if (data.status === 'CONNECTED') {
+                        clearInterval(statusInterval);
+                        qrModal.classList.remove('active');
+                        if (typeof showToast === 'function') {
+                            showToast("🎉 WhatsApp connecté avec succès ! Numéro : " + (data.phone ? '+' + data.phone : ''), "success");
+                        }
+                    }
+                }
+            } catch (err) {}
+        }
+        window.syncWhatsAppStatus = syncWhatsAppStatus;
 
         async function startWhatsApp(forceRestart = false) {
             window.startWhatsApp = startWhatsApp;
             clearInterval(statusInterval);
             pollAttempts = 0;
 
-            // S'assurer d'avoir un userId valide
             if (!userId) {
                 try {
                     const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
@@ -2885,9 +3035,13 @@ function setupBillingAndAffiliate() {
                 const data = await res.json().catch(() => ({}));
                 if (data.status === 'QR_READY' && data.qr) {
                     qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
+                    window.applyWhatsAppState('QR_READY', null);
+                    statusInterval = setInterval(checkStatus, 2000);
                     return;
                 } else if (data.status === 'CONNECTED') {
                     qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
+                    window.applyWhatsAppState('CONNECTED', data.phone);
+                    setTimeout(() => { qrModal.classList.remove('active'); }, 1500);
                     return;
                 }
                 
@@ -2915,39 +3069,20 @@ function setupBillingAndAffiliate() {
                 const res = await fetch(API_URL + '/api/whatsapp/status/' + userId, { headers: getAuthHeaders() });
                 const data = await res.json();
 
+                window.applyWhatsAppState(data.status, data.phone);
+
                 if (data.status === 'QR_READY' && data.qr) {
-                    clearInterval(statusInterval);
                     qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" style="width: 100%; height: 100%; border-radius: 8px;">';
                 } 
                 else if (data.status === 'CONNECTED') {
                     clearInterval(statusInterval);
-                    
                     const wasActive = qrModal.classList.contains('active');
                     qrModal.classList.remove('active');
-                    
-                    const badge = document.getElementById('sidebar-status-badge');
-                    if(badge) {
-                        badge.textContent = "Connecté";
-                        badge.className = "status-badge-mini badge-green";
-                    }
-                    
-                    if (data.phone) {
-                        const formattedPhone = '+' + data.phone;
-                        const headerNum = document.getElementById('header-connected-num');
-                        const cardNum = document.getElementById('main-card-num');
-                        
-                        if (headerNum) headerNum.textContent = formattedPhone;
-                        if (cardNum) cardNum.textContent = formattedPhone;
-                    }
-
-                    const num = document.getElementById('sidebar-connected-num');
-                    if(num) num.textContent = "IA Active";
-                    
-                    if (wasActive) {
+                    if (wasActive && typeof showToast === 'function') {
                         showToast("✅ Succès ! WhatsApp est connecté avec le numéro " + (data.phone ? '+' + data.phone : ''), "success");
                     }
                 }
-                else if (data.status === 'ERROR' || pollAttempts > 25) {
+                else if (data.status === 'ERROR' || pollAttempts > 35) {
                     clearInterval(statusInterval);
                     qrBox.innerHTML = `
                         <div style="padding: 14px; text-align: center;">
@@ -2964,6 +3099,13 @@ function setupBillingAndAffiliate() {
                 }
             } catch (error) {}
         }
+
+        // Synchronisation immédiate dès le chargement de la page
+        syncWhatsAppStatus();
+        // Synchronisation d'arrière-plan toutes les 10 secondes
+        setInterval(() => {
+            if (!document.hidden) syncWhatsAppStatus();
+        }, 10000);
     }
     
     if (document.readyState === 'loading') {

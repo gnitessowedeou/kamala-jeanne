@@ -311,10 +311,10 @@
           </button>
 
           <!-- Connected Status Pill (Desktop) -->
-          <div class="status-connected-pill" id="header-status-pill" title="WhatsApp Connecté">
-            <span class="status-dot-pulse"></span>
-            <span id="header-connected-num">WhatsApp</span>
-            <span class="status-badge-mini" id="header-status-badge">Connecté</span>
+          <div class="status-connected-pill" id="header-status-pill" title="Statut WhatsApp">
+            <span class="status-dot-pulse" id="header-status-dot"></span>
+            <span id="header-connected-num">+229 62639593</span>
+            <span class="status-badge-mini badge-amber" id="header-status-badge">À Connecter</span>
           </div>
 
           <!-- Upgrade Plan Button (Desktop & Mobile) -->
@@ -1095,7 +1095,7 @@
               </div>
               <div style="display:flex; align-items:center; gap: 15px;">
                 <span id="wa-limit-status" style="font-size: 14px; font-weight: 600; color: var(--amber); background: rgba(245, 158, 11, 0.1); padding: 5px 10px; border-radius: 6px;">0 / 1 Numro</span>
-                <button class="btn-primary-glow btn-open-qr" id="btn-add-whatsapp-num">
+                <button class="btn-primary-glow" id="btn-add-whatsapp-num">
                   <i class="fa-solid fa-qrcode"></i>
                   <span>Connecter un Numro</span>
                 </button>
@@ -1111,11 +1111,11 @@
                     <i class="fa-brands fa-whatsapp"></i>
                   </div>
                   <div>
-                    <h3 id="main-card-num" style="font-size: 16px;">+226 05158494</h3>
-                    <span style="font-size: 12px; color: var(--text-muted);">Ligne Principale Vente</span>
+                    <h3 id="main-card-num" style="font-size: 16px;">+229 62639593</h3>
+                    <span id="main-card-label" style="font-size: 12px; color: var(--text-muted);">Ligne Principale Vente</span>
                   </div>
                 </div>
-                <span class="badge badge-green">En Ligne &amp; Actif</span>
+                <span class="badge badge-amber" id="main-card-status-badge">En attente de connexion</span>
               </div>
 
               <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); margin: 16px 0;">

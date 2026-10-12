@@ -513,42 +513,9 @@
         }
 
         
-        // Update WhatsApp Limits
-        const waLimitStatus = document.getElementById("wa-limit-status");
-        if (waLimitStatus) {
-            const plan = user.plan?.name?.toLowerCase() || "";
-            let maxWa = 1;
-            if (plan.includes("pro")) maxWa = 2;
-            if (plan.includes("business")) maxWa = 5;
-            
-            // On regarde si un numero est connecte (dans le header ou sidebar)
-            const isConnected = document.getElementById('sidebar-status-badge')?.textContent.includes('Connect') ? 1 : 0;
-            
-            waLimitStatus.textContent = isConnected + " / " + maxWa + " Numéros";
-            if (isConnected >= maxWa) {
-                waLimitStatus.style.color = "#f43f5e"; // Red
-                waLimitStatus.style.background = "rgba(244, 63, 94, 0.1)";
-            } else {
-                waLimitStatus.style.color = "var(--whatsapp-green)";
-                waLimitStatus.style.background = "rgba(37, 211, 102, 0.1)";
-            }
-            
-            // Intercept QR modal button if limit reached
-            const btnAddWa = document.getElementById("btn-add-whatsapp-num");
-            if (btnAddWa) {
-                // Remove old listeners to avoid duplicates
-                const newBtn = btnAddWa.cloneNode(true);
-                btnAddWa.parentNode.replaceChild(newBtn, btnAddWa);
-                
-                newBtn.addEventListener("click", () => {
-                    if (isConnected >= maxWa) {
-                        alert("Vous avez atteint la limite de numéros pour votre forfait actuel (" + maxWa + "). Veuillez upgrader votre forfait pour en connecter d'autres.");
-                    } else {
-                        const qrModal = document.getElementById("qr-modal");
-                        if (qrModal) qrModal.classList.add("active");
-                    }
-                });
-            }
+        // Synchronisation dynamique des limites et de l'état WhatsApp
+        if (typeof window.applyWhatsAppState === 'function') {
+            window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', user.fullPhone);
         }
 
         const welcomeNames = document.querySelectorAll(".welcome-name");
@@ -559,15 +526,15 @@
       // 3. Statut WhatsApp connecté
       const headerNum = document.getElementById("header-connected-num");
       const sidebarNum = document.getElementById("sidebar-connected-num");
-      const headerBadge = document.getElementById("header-status-badge");
       if (user.fullPhone && user.fullPhone.trim()) {
         if (headerNum) headerNum.textContent = user.fullPhone;
         if (sidebarNum) sidebarNum.textContent = user.fullPhone;
-        if (headerBadge) headerBadge.textContent = "Connecté";
       } else {
         if (headerNum) headerNum.textContent = "WhatsApp";
         if (sidebarNum) sidebarNum.textContent = "Non lié";
-        if (headerBadge) headerBadge.textContent = "Prêt";
+      }
+      if (typeof window.applyWhatsAppState === 'function') {
+        window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', user.fullPhone);
       }
 
       // 4. Champs de configuration Profil
