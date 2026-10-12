@@ -171,7 +171,16 @@ app.get('/api/diag', (req, res, next) => {
     detectedPath: getChromiumExecutablePath(),
     puppeteerTest,
     env_PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH,
-    env_PORT: process.env.PORT
+    env_PORT: process.env.PORT,
+    env_diagnostics: {
+      has_SASPAY_SECRET_KEY: !!process.env.SASPAY_SECRET_KEY,
+      has_SAASPAY_SECRET_KEY: !!process.env.SAASPAY_SECRET_KEY,
+      has_SASPAY_KEY: !!process.env.SASPAY_KEY,
+      has_SAASPAY_KEY: !!process.env.SAASPAY_KEY,
+      has_SUPABASE_SERVICE_KEY: !!process.env.SUPABASE_SERVICE_KEY,
+      has_SUPABASE_URL: !!process.env.SUPABASE_URL,
+      saspayPrefix: (process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || '') ? (process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY).substring(0, 7) + '...' : 'none'
+    }
   });
 });
 
@@ -858,10 +867,11 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
     const { sessionId, userId } = req.body;
     if (!sessionId) return res.status(400).json({ error: "sessionId requis" });
 
+    const saspaySecret = process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || process.env.SASPAY_KEY || process.env.SAASPAY_KEY || process.env.SASPAY_API_KEY;
     const fetch = (await import('node-fetch')).default;
     const saspayRes = await fetch(`https://api.saspay.me/api/v1/checkout-sessions/${encodeURIComponent(sessionId)}/`, {
       headers: {
-        'Authorization': `Bearer ${process.env.SASPAY_SECRET_KEY}`
+        'Authorization': `Bearer ${saspaySecret}`
       }
     });
 
@@ -1017,11 +1027,12 @@ app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
             }
         };
 
+        const saspaySecret = process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || process.env.SASPAY_KEY || process.env.SAASPAY_KEY || process.env.SASPAY_API_KEY;
         const fetch = (await import('node-fetch')).default;
         const saspayRes = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.SASPAY_SECRET_KEY}`,
+                'Authorization': `Bearer ${saspaySecret}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(saspayPayload)
