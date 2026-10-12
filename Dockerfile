@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 
 # Installer Chromium, git et toutes les librairies systeme Linux (libglib, libnss, etc.)
 RUN apt-get update && apt-get install -y \

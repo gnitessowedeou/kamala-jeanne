@@ -6,6 +6,17 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[SERVER] Rejet non gr :', reason);
 });
 
+// Polyfill WebSocket pour compatibilité Node.js 18 - 22 (requis par @supabase/supabase-js)
+if (typeof globalThis.WebSocket === 'undefined') {
+  try {
+    globalThis.WebSocket = require('ws');
+    console.log('[POLYFILL] WebSocket activé avec succès via ws.');
+  } catch (e) {
+    console.warn('[POLYFILL] Avertissement ws :', e.message);
+  }
+}
+
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
