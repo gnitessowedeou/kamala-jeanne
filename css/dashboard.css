@@ -4153,6 +4153,10 @@
   background: rgba(37, 211, 102, 0.08);
 }
 
+.pay-method-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .pay-method-inner {
   display: flex;
   align-items: center;

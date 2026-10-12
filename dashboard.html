@@ -16,7 +16,7 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v13">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v14">
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -2159,8 +2159,8 @@
               <label class="pay-method-card active">
                 <input type="radio" name="modal_pay_method" value="wave" checked>
                 <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="background: rgba(30, 169, 232, 0.15); color: #1ea9e8;">
-                    <i class="fa-solid fa-water"></i>
+                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #1dc4e9; border: 1px solid rgba(255,255,255,0.2);">
+                    <img src="images/wave.png" alt="Wave" style="width: 100%; height: 100%; object-fit: contain;">
                   </div>
                   <div class="pay-method-text">
                     <strong>Wave</strong>
@@ -2172,8 +2172,8 @@
               <label class="pay-method-card">
                 <input type="radio" name="modal_pay_method" value="orange">
                 <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="background: rgba(255, 121, 0, 0.15); color: #ff7900;">
-                    <i class="fa-solid fa-mobile-screen"></i>
+                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #000; border: 1px solid rgba(255,102,0,0.35);">
+                    <img src="images/orange_money.png" alt="Orange Money" style="width: 100%; height: 100%; object-fit: contain;">
                   </div>
                   <div class="pay-method-text">
                     <strong>Orange Money</strong>
@@ -2185,8 +2185,8 @@
               <label class="pay-method-card">
                 <input type="radio" name="modal_pay_method" value="mtn">
                 <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="background: rgba(255, 204, 0, 0.15); color: #ffcc00;">
-                    <i class="fa-solid fa-bolt"></i>
+                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #ffcc00; border: 1px solid rgba(255,204,0,0.45);">
+                    <img src="images/mtn_momo.png" alt="MTN MoMo" style="width: 100%; height: 100%; object-fit: contain;">
                   </div>
                   <div class="pay-method-text">
                     <strong>MTN MoMo</strong>
@@ -2196,10 +2196,23 @@
               </label>
 
               <label class="pay-method-card">
+                <input type="radio" name="modal_pay_method" value="moov">
+                <div class="pay-method-inner">
+                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #005ca9; border: 1px solid rgba(255,255,255,0.18);">
+                    <img src="images/moov_africa.png" alt="Moov Africa" style="width: 100%; height: 100%; object-fit: cover;">
+                  </div>
+                  <div class="pay-method-text">
+                    <strong>Moov Africa</strong>
+                    <small>Bénin, Togo, CI, BF</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="pay-method-card">
                 <input type="radio" name="modal_pay_method" value="card">
                 <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
-                    <i class="fa-solid fa-credit-card"></i>
+                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #0033cc; border: 1px solid rgba(255,255,255,0.2);">
+                    <img src="images/visa.png" alt="Carte Bancaire" style="width: 100%; height: 100%; object-fit: cover;">
                   </div>
                   <div class="pay-method-text">
                     <strong>Carte Bancaire</strong>
@@ -2736,7 +2749,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v13"></script>
+  <script src="js/dashboard.js?v=20261012_v14"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
