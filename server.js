@@ -282,6 +282,10 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     }
     delete waSessionsQR[userId];
     delete waNumbers[userId];
+    const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+    if (fs.existsSync(authDir)) {
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+    }
   } else if (waClients[userId]) {
     if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
       return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
