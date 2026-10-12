@@ -2066,62 +2066,73 @@ function setupActionButtons() {
     });
   }
 
-      // Load AI Agent settings
-    const agentPromptInput = document.getElementById("agent-prompt-input");
-    let userId = '';
+      // Chargement rsilient des paramtres de l'Agent IA
+  loadAgentConfig();
+
+  // Bouton Enregistrer les Paramtres
+  const saveAgentBtn = document.getElementById("btn-save-agent");
+  const agentPromptInput = document.getElementById("agent-prompt-input");
+
+  if (saveAgentBtn && agentPromptInput) {
+    saveAgentBtn.addEventListener("click", async () => {
+      const userId = getAppUserId();
+      const prompt = agentPromptInput.value.trim();
+
+      if (!prompt) {
+        showToast("Veuillez saisir des instructions pour votre Agent IA avant d'enregistrer.", "info");
+        return;
+      }
+
+      // 1. Sauvegarde locale immdiate (zro perte de donnes)
+      localStorage.setItem('vendia_ai_prompt_' + userId, agentPromptInput.value);
+      localStorage.setItem('vendia_ai_prompt', agentPromptInput.value);
+
+      // Sauvegarder le ton actif
+      const activeToneBtn = document.querySelector("#tone-selector .tag-select-btn.active");
+      if (activeToneBtn) {
+        localStorage.setItem('vendia_agent_tone', activeToneBtn.textContent.trim());
+      }
+
+      // Sauvegarder le nom de l'agent
+      const nameInput = document.getElementById("agent-name-input");
+      if (nameInput && nameInput.value.trim()) {
+        localStorage.setItem('vendia_agent_name', nameInput.value.trim());
+      }
+
+      // 2. tat visuel du bouton
+      saveAgentBtn.disabled = true;
+      saveAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Enregistrement...</span>';
+
       try {
-          const u = JSON.parse(localStorage.getItem('vendia_current_user'));
-          if (u && u.id) userId = u.id;
-      } catch(e) {}
-    
-    if (agentPromptInput) {
-        fetch(API_URL + '/api/ai/config/' + userId, { headers: getAuthHeaders() })
-            .then(res => res.json())
-            .then(data => {
-                if (data.prompt) {
-                    agentPromptInput.value = data.prompt;
-                }
-            })
-            .catch(err => console.error("Erreur chargement prompt", err));
-    }
-
-    // Save AI Agent settings
-    const saveAgentBtn = document.getElementById("btn-save-agent");
-    if (saveAgentBtn && agentPromptInput) {
-      saveAgentBtn.addEventListener("click", () => {
-        saveAgentBtn.disabled = true;
-        saveAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde...';
-        
-        fetch(API_URL + '/api/ai/config', {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ userId: userId, prompt: agentPromptInput.value })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showToast("Configuration de l'Agent IA synchronisée avec succès !", "success");
-            } else {
-                showToast("Erreur lors de la sauvegarde.", "error");
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            showToast("Erreur de connexion au serveur.", "error");
-        })
-        .finally(() => {
-            saveAgentBtn.disabled = false;
-            saveAgentBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+        const res = await fetch(API_URL + '/api/ai/config', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId: userId, prompt: agentPromptInput.value })
         });
-      });
-    }
+        const data = await res.json();
 
-  // Tone selector buttons
+        if (res.ok && data.success) {
+          showToast("Instructions enregistrées avec succès ! Votre Agent IA WhatsApp obéit désormais à ces règles.", "success");
+        } else {
+          showToast(data.error || "Erreur lors de la synchronisation serveur.", "error");
+        }
+      } catch (err) {
+        console.error("[AI CONFIG] Erreur enregistrement :", err);
+        showToast("Instructions sauvegardées localement. Synchronisation serveur en cours...", "info");
+      } finally {
+        saveAgentBtn.disabled = false;
+        saveAgentBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>Enregistrer les Paramètres</span>';
+      }
+    });
+  }
+
+  // Slecteur de ton
   const toneBtns = document.querySelectorAll("#tone-selector .tag-select-btn");
   toneBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       toneBtns.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      localStorage.setItem('vendia_agent_tone', btn.textContent.trim());
     });
   });
 

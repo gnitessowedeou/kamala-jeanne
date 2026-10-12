@@ -689,11 +689,28 @@ app.post('/api/whatsapp/send', authMiddleware, async (req, res) => {
 
 // === 5. CONFIGURATION IA ===
 app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
+  try {
     const { userId } = req.params;
-    const { data, error } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ prompt: data.ai_prompt || "Tu es un assistant IA poli. Réponds brièvement." });
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+    if (!supabase) return res.json({ prompt: "" });
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('ai_prompt')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[AI CONFIG] Erreur Supabase GET:', error.message);
+      return res.json({ prompt: "" });
+    }
+    res.json({ prompt: data?.ai_prompt || "" });
+  } catch (err) {
+    console.error('[AI CONFIG] Erreur GET:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
+
 
 app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
   try {
@@ -731,18 +748,33 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
 });
 
 app.post('/api/ai/config', authMiddleware, async (req, res) => {
+  try {
     const { userId, prompt } = req.body;
     console.log('--- REQUETE API CONFIG ---');
     console.log('userId reçu:', userId);
-    console.log('prompt reçu:', prompt);
-    if (!userId || !prompt) return res.status(400).json({ error: "Données manquantes" });
-    const { error } = await supabase.from('profiles').update({ ai_prompt: prompt }).eq('id', userId);
-    if (error) {
-        console.error('Erreur Supabase:', error.message);
-        return res.status(500).json({ error: error.message });
+    console.log('prompt longueur:', prompt ? prompt.length : 0);
+    if (!userId || typeof prompt !== 'string') {
+      return res.status(400).json({ error: "Données manquantes : userId et prompt requis" });
     }
-    console.log('Succès Supabase');
+    if (!supabase) {
+      return res.status(503).json({ error: "Base de données indisponible" });
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ ai_prompt: prompt })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('[AI CONFIG] Erreur Supabase update:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+    console.log('✅ Succès mise à jour prompt Supabase pour', userId);
     res.json({ success: true });
+  } catch (err) {
+    console.error('[AI CONFIG] Exception POST:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
