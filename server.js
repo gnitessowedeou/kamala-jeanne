@@ -465,12 +465,51 @@ async function generateSalesAgentResponse({
   } else if (cleanPhone.startsWith('229')) {
     detectedCountry = "Bénin (Indicatif +229)";
     recommendedPaymentText = "👉 Pour le Bénin, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('225') || cleanPhone.startsWith('221') || cleanPhone.startsWith('228') || cleanPhone.startsWith('223')) {
-    detectedCountry = "Afrique de l'Ouest (Côte d'Ivoire, Sénégal, Togo, Mali)";
-    recommendedPaymentText = "👉 Propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('225')) {
+    detectedCountry = "Côte d'Ivoire (Indicatif +225)";
+    recommendedPaymentText = "👉 Pour la Côte d'Ivoire, propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MoMo au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('221')) {
+    detectedCountry = "Sénégal (Indicatif +221)";
+    recommendedPaymentText = "👉 Pour le Sénégal, propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('228')) {
+    detectedCountry = "Togo (Indicatif +228)";
+    recommendedPaymentText = "👉 Pour le Togo, propose prioritairement :\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('223')) {
+    detectedCountry = "Mali (Indicatif +223)";
+    recommendedPaymentText = "👉 Pour le Mali, propose prioritairement :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('227')) {
+    detectedCountry = "Niger (Indicatif +227)";
+    recommendedPaymentText = "👉 Pour le Niger, propose prioritairement :\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('224')) {
+    detectedCountry = "Guinée (Indicatif +224)";
+    recommendedPaymentText = "👉 Pour la Guinée, propose prioritairement :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('237')) {
+    detectedCountry = "Cameroun (Indicatif +237)";
+    recommendedPaymentText = "👉 Pour le Cameroun, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
+  } else if (cleanPhone.startsWith('242')) {
+    detectedCountry = "Congo-Brazzaville (Indicatif +242)";
+    recommendedPaymentText = "👉 Pour le Congo-Brazzaville, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
+  } else if (cleanPhone.startsWith('243')) {
+    detectedCountry = "RD Congo (Indicatif +243)";
+    recommendedPaymentText = "👉 Pour la RD Congo, propose prioritairement :\n- ORANGE MONEY / AIRTEL / M-PESA au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
+  } else if (cleanPhone.startsWith('241')) {
+    detectedCountry = "Gabon (Indicatif +241)";
+    recommendedPaymentText = "👉 Pour le Gabon, propose prioritairement :\n- MOOV MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
+  } else if (cleanPhone.startsWith('234')) {
+    detectedCountry = "Nigeria (Indicatif +234)";
+    recommendedPaymentText = "👉 Pour le Nigeria, propose prioritairement :\n- Paiement instantané sécurisé par Carte Bancaire (Visa/Mastercard) ou lien de paiement officiel VANDIA";
+  } else if (cleanPhone.startsWith('233')) {
+    detectedCountry = "Ghana (Indicatif +233)";
+    recommendedPaymentText = "👉 Pour le Ghana, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte Bancaire (Visa/Mastercard)";
+  } else if (cleanPhone.startsWith('220')) {
+    detectedCountry = "Gambie (Indicatif +220)";
+    recommendedPaymentText = "👉 Pour la Gambie, propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
+  } else if (cleanPhone.startsWith('231') || cleanPhone.startsWith('232') || cleanPhone.startsWith('245') || cleanPhone.startsWith('238') || cleanPhone.startsWith('222')) {
+    detectedCountry = "Zone Ouest-Africaine (Liberia, Sierra Leone, Guinée-Bissau, Cap-Vert, Mauritanie)";
+    recommendedPaymentText = "👉 Propose les options disponibles :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard sécurisée";
   } else {
-    detectedCountry = "International / Tous pays";
-    recommendedPaymentText = "👉 Propose les options disponibles :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
+    detectedCountry = "International / Diaspora / Tous pays";
+    recommendedPaymentText = "👉 Propose les options disponibles :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte Bancaire internationale (Visa / Mastercard)";
   }
 
   const paymentRoutingGuidelines = `

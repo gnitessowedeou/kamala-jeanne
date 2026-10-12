@@ -216,7 +216,9 @@
 }
 
 .country-code-select {
-  width: 125px;
+  width: 140px;
+  max-width: 45%;
+  flex-shrink: 0;
   padding: 12px 10px;
   background: rgba(16, 24, 40, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);

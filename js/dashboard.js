@@ -2617,15 +2617,15 @@ function getOperatorBrandColor(key) {
 function getOperatorCountryTags(key) {
   switch (key) {
     case 'wave':
-      return '<span class="integ-country-pill">🇸🇳 Sénégal</span><span class="integ-country-pill">🇨🇮 Côte d\'Ivoire</span>';
+      return '<span class="integ-country-pill">🇸🇳 Sénégal</span><span class="integ-country-pill">🇨🇮 Côte d\'Ivoire</span><span class="integ-country-pill">🇧🇫 Burkina</span><span class="integ-country-pill">🇲🇱 Mali</span><span class="integ-country-pill">🇬🇲 Gambie</span>';
     case 'orange_money':
-      return '<span class="integ-country-pill">🇧🇫 Burkina</span><span class="integ-country-pill">🇲🇱 Mali</span><span class="integ-country-pill">🇸🇳 SN</span><span class="integ-country-pill">🇨🇮 CI</span>';
+      return '<span class="integ-country-pill">🇨🇮 CI</span><span class="integ-country-pill">🇸🇳 SN</span><span class="integ-country-pill">🇧🇫 BF</span><span class="integ-country-pill">🇲🇱 Mali</span><span class="integ-country-pill">🇬🇳 Guinée</span><span class="integ-country-pill">🇨🇲 Cameroun</span><span class="integ-country-pill">🇨🇩 RDC</span><span class="integ-country-pill">🇸🇱 SL</span>';
     case 'mtn_momo':
-      return '<span class="integ-country-pill">🇧🇯 Bénin</span><span class="integ-country-pill">🇨🇮 Côte d\'Ivoire</span>';
+      return '<span class="integ-country-pill">🇧🇯 Bénin</span><span class="integ-country-pill">🇨🇮 CI</span><span class="integ-country-pill">🇨🇲 Cameroun</span><span class="integ-country-pill">🇨🇬 Congo</span><span class="integ-country-pill">🇬🇭 Ghana</span><span class="integ-country-pill">🇳🇬 Nigeria</span><span class="integ-country-pill">🇬🇼 GW</span>';
     case 'moov_money':
-      return '<span class="integ-country-pill">🇧🇯 Bénin</span><span class="integ-country-pill">🇹🇬 Togo</span><span class="integ-country-pill">🇨🇮 CI</span>';
+      return '<span class="integ-country-pill">🇧🇯 Bénin</span><span class="integ-country-pill">🇹🇬 Togo</span><span class="integ-country-pill">🇨🇮 CI</span><span class="integ-country-pill">🇧🇫 BF</span><span class="integ-country-pill">🇳🇪 Niger</span><span class="integ-country-pill">🇬🇦 Gabon</span><span class="integ-country-pill">🇲🇱 Mali</span>';
     case 'saspay':
-      return '<span class="integ-country-pill">🌍 Diaspora</span><span class="integ-country-pill">💳 VISA / MC</span>';
+      return '<span class="integ-country-pill">🌍 20 Pays &amp; Diaspora</span><span class="integ-country-pill">💳 VISA / MC</span><span class="integ-country-pill">🔒 3D Secure</span>';
     case 'meta_api':
       return '<span class="integ-country-pill">⚡ WhatsApp Cloud</span><span class="integ-country-pill">✓ Meta Verified</span>';
     default:
