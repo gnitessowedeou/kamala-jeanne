@@ -284,7 +284,9 @@ function getChromiumExecutablePath() {
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes générés
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
-const waNumbers = {};    // Stocke le numéro de téléphone connecté
+const waNumbers = {};
+const waChatHistories = new Map(); // Memoire contextuelle IA des conversations
+    // Stocke le numéro de téléphone connecté
 
 app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   const { userId, restart } = req.body;
@@ -456,21 +458,42 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         }
       })();
 
+      // Determiner le destinataire exact
+      let targetChat = msg.from;
+      if (isSelfTest && client.info && client.info.wid) {
+        targetChat = client.info.wid._serialized;
+      }
+
       // Prompt IA personnalise
       const systemPrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
         ? profile.ai_prompt 
         : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIA AI. Reponds de maniere concise, polie et engageante avec des emojis adaptes.";
+
+      // Gestion de la memoire conversationnelle (les 8 derniers echanges)
+      const historyKey = `${userId}:${targetChat}`;
+      const history = waChatHistories.get(historyKey) || [];
+
+      // Règle de fluidité : ne saluer que si premier message, répondre directement ensuite
+      const isFirstMessage = history.length === 0;
+      const conversationalInstruction = isFirstMessage
+        ? "\n\n[REGLE DE SALUTATION : C'est le tout premier message du client. Accueille-le poliment et chaleureusement.]"
+        : "\n\n[REGLE DE FLUIDITE : La conversation est DEJA engagee. Ne redis JAMAIS 'Bonjour', 'Bonsoir' ou 'Bienvenue'. Réponds DIRECTEMENT, naturellement et precisement a sa question ou remarque sans repeter de salutations.]";
+
+      const finalSystemPrompt = systemPrompt + conversationalInstruction;
+      const userMsgObj = { role: "user", content: msg.body };
+      const openAiMessages = [
+        { role: "system", content: finalSystemPrompt },
+        ...history,
+        userMsgObj
+      ];
 
       let aiResponse = "Bonjour ! Je suis l'assistant IA de la boutique. Comment puis-je vous aider aujourd'hui ?";
       if (openai) {
         try {
           const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: msg.body }
-            ],
-            max_tokens: 250
+            messages: openAiMessages,
+            max_tokens: 300
           });
           if (completion.choices && completion.choices[0] && completion.choices[0].message) {
             aiResponse = completion.choices[0].message.content;
@@ -480,11 +503,11 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         }
       }
 
-      // Determiner le destinataire exact
-      let targetChat = msg.from;
-      if (isSelfTest && client.info && client.info.wid) {
-        targetChat = client.info.wid._serialized;
-      }
+      // Enregistrer dans la memoire conversationnelle
+      history.push(userMsgObj);
+      history.push({ role: "assistant", content: aiResponse });
+      if (history.length > 8) history.splice(0, history.length - 8);
+      waChatHistories.set(historyKey, history);
 
       console.log(`[WA] Envoi de la reponse IA a ${targetChat} : "${aiResponse}"`);
       
