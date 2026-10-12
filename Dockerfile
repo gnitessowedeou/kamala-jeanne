@@ -2,6 +2,7 @@ FROM node:20-slim
 
 # Installer Chromium et toutes les librairies systeme Linux (libglib, libnss, etc.)
 RUN apt-get update && apt-get install -y \
+    git \
     chromium \
     fonts-liberation \
     libasound2 \
