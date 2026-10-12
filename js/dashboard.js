@@ -663,6 +663,7 @@ function initDashboard() {
   renderIntegrations();
   renderAutomations();
   syncAffiliateModule();
+  renderTeamMembers();
 
   // Initialize Chart.js
   initCharts();
@@ -3216,6 +3217,16 @@ function setupActionButtons() {
     });
   }
 
+  // Bouton Inviter un membre de l'équipe
+  const inviteTeamBtn = document.getElementById("btn-invite-team");
+  if (inviteTeamBtn) {
+    inviteTeamBtn.addEventListener("click", () => {
+      if (typeof window.openTeamInviteModal === 'function') {
+        window.openTeamInviteModal();
+      }
+    });
+  }
+
   // Initialiser les sélecteurs et charger les paramètres IA
   setupToneSelector();
   loadAgentConfig();
@@ -3411,6 +3422,10 @@ function setupProfileSystem() {
       } else {
         avatarBox.innerHTML = `<span class="avatar-preview-initials">${escapeHtml(initials)}</span>`;
       }
+    }
+
+    if (typeof renderTeamMembers === 'function') {
+      renderTeamMembers();
     }
   };
 
@@ -4618,4 +4633,214 @@ window.simulateAffiliateTest = function() {
   localStorage.setItem(key, JSON.stringify(current));
   syncAffiliateModule();
   showToast(`🎉 Test réussi ! +1 Clic et +1 Filleul inscrit synchronisé avec +2 980 FCFA de commission !`, "success");
+};
+
+// ==============================================================================
+// GESTION DES MEMBRES DE L'ÉQUIPE & INVITATIONS VANDIA AI
+// ==============================================================================
+function getSavedTeamMembers() {
+  try {
+    const raw = localStorage.getItem("vendia_team_members");
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return [];
+}
+
+function saveTeamMembersList(list) {
+  try {
+    localStorage.setItem("vendia_team_members", JSON.stringify(list));
+  } catch (e) {}
+}
+
+function renderTeamMembers() {
+  const tbody = document.getElementById("team-members-table-body");
+  if (!tbody) return;
+
+  // 1. Profil du Propriétaire / Administrateur Principal
+  let currentUser = null;
+  try {
+    currentUser = window.AuthEngine ? window.AuthEngine.getCurrentUser() : JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+  } catch(e) {}
+  
+  const leadName = currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Administrateur' : 'Administrateur';
+  const leadEmail = currentUser?.email || 'admin@vandia.ai';
+  const leadInitial = ((currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || '')).toUpperCase() || (leadName.charAt(0) || 'A').toUpperCase();
+
+  const invited = getSavedTeamMembers();
+
+  let html = `
+    <tr>
+      <td>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.4); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #c084fc; flex-shrink: 0;">
+            ${escapeHtml(leadInitial)}
+          </div>
+          <div>
+            <strong id="team-lead-name" style="color: #ffffff; display: block; font-size: 13.5px;">${escapeHtml(leadName)}</strong>
+            <span style="font-size: 11px; color: #94a3b8;">Créateur de l'espace</span>
+          </div>
+        </div>
+      </td>
+      <td id="team-lead-email" style="color: #94a3b8; font-size: 13px;">${escapeHtml(leadEmail)}</td>
+      <td><span class="badge badge-purple" style="font-size: 11px; padding: 4px 9px;">Propriétaire</span></td>
+      <td><span class="badge badge-green" style="font-size: 11px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px;"><span class="pulse-dot-green" style="width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: #22c55e;"></span> Actif</span></td>
+      <td>
+        <button type="button" class="btn-secondary-glass btn-open-profile-modal" style="padding: 5px 12px; font-size: 12px;">Gérer</button>
+      </td>
+    </tr>
+  `;
+
+  // 2. Membres invités
+  invited.forEach(member => {
+    let roleBadge = '<span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 11px; padding: 4px 9px; border-radius: 6px; font-weight: 600;">Commercial</span>';
+    if (member.role === 'admin') {
+      roleBadge = '<span class="badge badge-purple" style="font-size: 11px; padding: 4px 9px;">Admin</span>';
+    } else if (member.role === 'support') {
+      roleBadge = '<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 11px; padding: 4px 9px; border-radius: 6px; font-weight: 600;">Support</span>';
+    }
+
+    const statusBadge = member.status === 'actif'
+      ? '<span class="badge badge-green" style="font-size: 11px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span> Actif</span>'
+      : '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 11px; padding: 4px 9px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock" style="font-size: 10px;"></i> En attente</span>';
+
+    const initial = (member.name?.charAt(0) || 'M').toUpperCase();
+
+    html += `
+      <tr data-member-id="${member.id}">
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #38bdf8; flex-shrink: 0;">
+              ${escapeHtml(initial)}
+            </div>
+            <div>
+              <strong style="color: #ffffff; display: block; font-size: 13.5px;">${escapeHtml(member.name)}</strong>
+              ${member.phone ? `<span style="font-size: 11px; color: #64748b;"><i class="fa-brands fa-whatsapp" style="color: #25d366;"></i> ${escapeHtml(member.phone)}</span>` : ''}
+            </div>
+          </div>
+        </td>
+        <td style="color: #94a3b8; font-size: 13px;">${escapeHtml(member.email)}</td>
+        <td>${roleBadge}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn-secondary-glass" title="Copier le lien d'invitation" onclick="copyTeamInviteLink('${member.id}')" style="padding: 4px 9px; font-size: 11.5px;">
+              <i class="fa-solid fa-link"></i> <span style="margin-left: 3px;">Lien</span>
+            </button>
+            <button type="button" class="btn-secondary-glass" title="Révoquer l'accès" onclick="removeTeamMember('${member.id}')" style="padding: 4px 8px; font-size: 11.5px; color: #ef4444;" aria-label="Supprimer">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+
+  // Reconnecter les boutons "Gérer" du tableau
+  document.querySelectorAll(".btn-open-profile-modal").forEach(btn => {
+    btn.removeEventListener("click", openProfileModal);
+    btn.addEventListener("click", openProfileModal);
+  });
+}
+
+window.renderTeamMembers = renderTeamMembers;
+
+window.openTeamInviteModal = function() {
+  const modal = document.getElementById("team-invite-modal");
+  if (!modal) return;
+  modal.classList.add("active");
+  modal.style.display = "flex";
+  modal.style.opacity = "1";
+  modal.style.pointerEvents = "auto";
+  document.body.style.overflow = "hidden";
+  const nameInput = document.getElementById("invite-member-name");
+  if (nameInput) setTimeout(() => nameInput.focus(), 150);
+};
+
+window.closeTeamInviteModal = function() {
+  const modal = document.getElementById("team-invite-modal");
+  if (!modal) return;
+  modal.classList.remove("active");
+  modal.style.display = "none";
+  modal.style.opacity = "0";
+  modal.style.pointerEvents = "none";
+  document.body.style.overflow = "";
+};
+
+window.handleSendTeamInvite = function(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const name = document.getElementById("invite-member-name")?.value.trim();
+  const email = document.getElementById("invite-member-email")?.value.trim();
+  const country = document.getElementById("invite-member-country")?.value || "+225";
+  const rawPhone = document.getElementById("invite-member-phone")?.value.trim();
+  const role = document.getElementById("invite-member-role")?.value || "commercial";
+  const note = document.getElementById("invite-member-note")?.value.trim();
+
+  if (!name || !email) {
+    showToast("Veuillez renseigner le nom et l'adresse e-mail du collaborateur.", "info");
+    return;
+  }
+
+  const submitBtn = document.getElementById("btn-submit-team-invite");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Création de l\'invitation...</span>';
+  }
+
+  setTimeout(() => {
+    const newMember = {
+      id: "mem_" + Date.now(),
+      name: name,
+      email: email,
+      phone: rawPhone ? (country + " " + rawPhone) : "",
+      role: role,
+      note: note,
+      status: "invite",
+      invitedAt: new Date().toISOString()
+    };
+
+    const list = getSavedTeamMembers();
+    list.push(newMember);
+    saveTeamMembersList(list);
+
+    renderTeamMembers();
+    closeTeamInviteModal();
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Envoyer l\'invitation</span>';
+    }
+
+    document.getElementById("form-invite-member")?.reset();
+
+    const inviteLink = `${window.location.origin}/?join_team=${newMember.id}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(inviteLink).catch(() => {});
+    }
+
+    showToast(`✅ Invitation envoyée à ${name} (${email}) ! Le lien d'accès a été copié.`, "success");
+  }, 400);
+};
+
+window.copyTeamInviteLink = function(memberId) {
+  const inviteLink = `${window.location.origin}/?join_team=${memberId}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      showToast("Lien d'invitation copié dans le presse-papier !", "success");
+    }).catch(() => {
+      showToast("Lien d'invitation : " + inviteLink, "info");
+    });
+  } else {
+    showToast("Lien d'invitation : " + inviteLink, "info");
+  }
+};
+
+window.removeTeamMember = function(memberId) {
+  const list = getSavedTeamMembers();
+  const target = list.find(m => m.id === memberId);
+  const updated = list.filter(m => m.id !== memberId);
+  saveTeamMembersList(updated);
+  renderTeamMembers();
+  showToast(`Collaborateur ${target ? target.name : ''} retiré de l'équipe.`, "info");
 };

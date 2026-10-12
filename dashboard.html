@@ -1373,7 +1373,7 @@
           <div class="glass-panel" style="padding: 24px;">
             <div class="card-top-header">
               <h3 class="card-heading">Membres de l'Équipe &amp; Permissions</h3>
-              <button class="btn-primary-glow" id="btn-invite-team" style="padding: 8px 16px; font-size: 13px;">
+              <button class="btn-primary-glow" id="btn-invite-team" onclick="openTeamInviteModal()" style="padding: 8px 16px; font-size: 13px;">
                 <i class="fa-solid fa-user-plus"></i> Inviter un membre
               </button>
             </div>
@@ -2763,6 +2763,93 @@
     </div>
   </div>
 
+  <!-- ==========================================================================
+       MODAL 11: INVITER UN MEMBRE DANS L'ÉQUIPE (#team-invite-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="team-invite-modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 550px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <div>
+            <h3 class="modal-title">Inviter un Collaborateur dans l'Équipe</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Attribuez un rôle et invitez un membre à collaborer sur VANDIA IA.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeTeamInviteModal()" aria-label="Fermer la modale">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-invite-member" onsubmit="handleSendTeamInvite(event)">
+        <div class="modal-body" style="padding: 24px;">
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nom &amp; Prénom du Collaborateur <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="invite-member-name" class="form-control" required placeholder="Ex: Jean Kouassi" style="width: 100%;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Adresse E-mail professionnelle <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="email" id="invite-member-email" class="form-control" required placeholder="collaborateur@entreprise.com" style="width: 100%;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Numéro WhatsApp du Collaborateur</label>
+            <div class="phone-input-group" style="display: flex; gap: 8px;">
+              <select class="country-code-select" id="invite-member-country" aria-label="Indicatif pays collaborateur">
+                <option value="+225" selected>🇨🇮 +225 · Côte d'Ivoire</option>
+                <option value="+229">🇧🇯 +229 · Bénin</option>
+                <option value="+226">🇧🇫 +226 · Burkina Faso</option>
+                <option value="+221">🇸🇳 +221 · Sénégal</option>
+                <option value="+228">🇹🇬 +228 · Togo</option>
+                <option value="+223">🇲🇱 +223 · Mali</option>
+                <option value="+227">🇳🇪 +227 · Niger</option>
+                <option value="+224">🇬🇳 +224 · Guinée</option>
+                <option value="+245">🇬🇼 +245 · Guinée-Bissau</option>
+                <option value="+234">🇳🇬 +234 · Nigeria</option>
+                <option value="+233">🇬🇭 +233 · Ghana</option>
+                <option value="+220">🇬🇲 +220 · Gambie</option>
+                <option value="+231">🇱🇷 +231 · Liberia</option>
+                <option value="+232">🇸🇱 +232 · Sierra Leone</option>
+                <option value="+238">🇨🇻 +238 · Cap-Vert</option>
+                <option value="+222">🇲🇷 +222 · Mauritanie</option>
+                <option value="+237">🇨🇲 +237 · Cameroun</option>
+                <option value="+242">🇨🇬 +242 · Congo-Brazzaville</option>
+                <option value="+243">🇨🇩 +243 · RD Congo</option>
+                <option value="+241">🇬🇦 +241 · Gabon</option>
+              </select>
+              <input type="tel" class="form-control" id="invite-member-phone" placeholder="07 89 45 12 30" style="flex: 1;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Rôle &amp; Niveau d'accès <span style="color: var(--whatsapp-green);">*</span></label>
+            <select id="invite-member-role" class="form-control" style="width: 100%;" required>
+              <option value="commercial" selected>👤 Commercial / Vendeur (Boîte WhatsApp, Tunnels &amp; CRM)</option>
+              <option value="support">🎧 Support Client (Réponses WhatsApp &amp; Modèles)</option>
+              <option value="admin">👑 Co-Administrateur (Accès complet à la plateforme)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Message d'invitation (optionnel)</label>
+            <textarea id="invite-member-note" class="form-control" rows="2" placeholder="Rejoins notre espace VANDIA AI pour gérer nos ventes WhatsApp." style="width: 100%; resize: none;"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-secondary-glass" onclick="closeTeamInviteModal()">Annuler</button>
+          <button type="submit" class="btn-primary-glow" id="btn-submit-team-invite">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Envoyer l'invitation</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Supabase JS Client via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -2771,7 +2858,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v16"></script>
+  <script src="js/dashboard.js?v=20261012_v17"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -2826,6 +2913,30 @@
         modal.style.display = "none";
         modal.style.opacity = "0";
         modal.style.pointerEvents = "none";
+      }
+    };
+
+    window.openTeamInviteModal = function() {
+      var modal = document.getElementById("team-invite-modal");
+      if (modal) {
+        modal.classList.add("active");
+        modal.style.display = "flex";
+        modal.style.opacity = "1";
+        modal.style.pointerEvents = "auto";
+        document.body.style.overflow = "hidden";
+        var nameInput = document.getElementById("invite-member-name");
+        if (nameInput) setTimeout(function() { nameInput.focus(); }, 120);
+      }
+    };
+
+    window.closeTeamInviteModal = function() {
+      var modal = document.getElementById("team-invite-modal");
+      if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+        modal.style.opacity = "0";
+        modal.style.pointerEvents = "none";
+        document.body.style.overflow = "";
       }
     };
 
