@@ -1027,9 +1027,15 @@ function setupInboxInteraction() {
           uId = u.id;
         } catch(e) {}
 
+        const headers = { 'Content-Type': 'application/json' };
+        try {
+          const authH = getAuthHeaders();
+          if (authH && authH.Authorization) headers.Authorization = authH.Authorization;
+        } catch(e) {}
+
         const res = await fetch(API_URL + '/api/ai/chat-test', {
           method: 'POST',
-          headers: getAuthHeaders(),
+          headers: headers,
           body: JSON.stringify({ userId: uId, message: messageText })
         });
         const data = await res.json();

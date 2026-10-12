@@ -245,92 +245,94 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
   });
 
-  // Quand un prospect envoie un message au client
-  client.on('message', async (msg) => {
-    // Ignorer les anciens messages (plus de 60 secondes) pour viter de spammer lors de la connexion
-    const now = Math.floor(Date.now() / 1000);
-      console.log(`[DEBUG] Message reçu de ${msg.from}. Type: ${msg.type}. Body: "${msg.body}". TS: ${msg.timestamp}. Now: ${now}. Diff: ${now - msg.timestamp}`);
-      if (msg.timestamp < now - 60) {
-          console.log('[DEBUG] Message ignoré car trop vieux.');
-          return;
-      }
-
-          if (msg.isStatus || msg.from.includes('@g.us')) return; // Ignorer statuts et groupes
-
-      // Ignorer les réactions, les images/audios sans texte, et les appels
+  // Fonction universelle de rponse IA WhatsApp
+  const handleIncomingMessage = async (msg, isSelfTest = false) => {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      if (msg.timestamp && msg.timestamp < now - 60) return; // Ignorer vieux messages
+      if (msg.isStatus || (msg.from && msg.from.includes('@g.us'))) return; // Ignorer statuts et groupes
       if (msg.type !== 'chat' && msg.type !== 'location' && !msg.body) return;
       if (!msg.body || msg.body.trim() === '') return;
+      if (msg.body.startsWith('[IA VANDIA]')) return; // viter les boucles
 
-      
-    console.log(`[WA] Message reçu sur le numéro du client ${userId} : ${msg.body}`);
+      console.log(`[WA] Message reu pour client ${userId} de ${msg.from}: "${msg.body}"`);
 
-    
+      // Rcuprer le profil Supabase
+      let profile = null;
+      if (supabase && userId) {
+        try {
+          const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at, plan').eq('id', userId).single();
+          profile = data;
+        } catch (dbErr) {}
+      }
+
+      // Crdits : Donner au moins 100 crdits de test si nouveau compte
+      const credits = (profile && typeof profile.credits === 'number') ? profile.credits : 100;
+      if (credits <= 0) {
+        console.log(`[WA] Client ${userId} sans crdits. Rponse suspendue.`);
+        return;
+      }
+
+      // Enregistrer le contact dans le CRM
       try {
-        // Vrifier si le client a pay (Crdits > 0)
-        // Rcuprer le profil du client (crdits ET prompt personnalis) et date de creation
-        const { data: profile } = await supabase.from('profiles').select('credits, ai_prompt, created_at, plan').eq('id', userId).single();
-        
-        let isExpired = false;
-        if (profile && profile.created_at) {
-           const created = new Date(profile.created_at);
-           const now = new Date();
-           const daysPassed = Math.floor((now - created) / (1000 * 60 * 60 * 24));
-           const maxDays = (profile.plan && profile.plan !== 'gratuit' && profile.plan !== 'trial') ? 30 : 7;
-           if (daysPassed >= maxDays) {
-              isExpired = true;
-           }
+        if (supabase && userId) {
+          const phone = msg.from ? msg.from.split('@')[0] : 'Inconnu';
+          let cName = 'Prospect WhatsApp';
+          try {
+            const cInfo = await msg.getContact();
+            cName = cInfo.pushname || cInfo.name || phone;
+          } catch(e) {}
+
+          await supabase.from('contacts').upsert({
+            user_id: userId,
+            phone_number: phone,
+            name: cName,
+            last_message: msg.body.substring(0, 255),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id, phone_number' });
         }
+      } catch (crmErr) {}
 
-        // Bypass temporaire pour le test local ou coupure
-        if (!profile || profile.credits <= 0 || isExpired) {
-          console.log(`? [WA] Le client ${userId} n'a plus de crdits ou essai expir (${isExpired ? 'EXPIRE' : '0 CREDIT'}). L'IA s'arrte.`);
-          return;
-        }
+      // Prompt IA personnalis
+      const systemPrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
+        ? profile.ai_prompt 
+        : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIA AI. Rponds de manire concise, polie et engageante avec des emojis adapts.";
 
-
-      
-        const contactInfo = await msg.getContact();
-        const phone_number = contactInfo.number || msg.from.split('@')[0];
-        const contact_name = contactInfo.pushname || contactInfo.name || "Inconnu";
-
-        // Mettre a jour ou inserer le contact dans Supabase (CRM)
-        if (userId) {
-            await supabase.from('contacts').upsert({
-                user_id: userId,
-                phone_number: phone_number,
-                name: contact_name,
-                last_message: msg.body.substring(0, 255),
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id, phone_number' }).catch(e => console.error("Erreur CRM:", e.message));
-        }
-
-        // Recuperer le prompt personnalise
- 
-      const systemPrompt = (profile && profile.ai_prompt) ? profile.ai_prompt : "Tu es un assistant IA poli. Réponds brièvement.";
-
-      // Demander à l'IA de répondre avec le prompt du client
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
+      let aiResponse = "Bonjour ! Je suis l'assistant IA de la boutique. Comment puis-je vous aider aujourd'hui ?";
+      if (openai) {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: msg.body }
-        ],
-        max_tokens: 150
-      });
-
-      const aiResponse = completion.choices[0].message.content;
-      console.log(`[WA] L'IA rpond : ${aiResponse}`);
-
-      await client.sendMessage(msg.from, aiResponse);
-
-      // Dduire un crdit
-      if (profile && profile.credits > 0) {
-          const newCredits = profile.credits - 1;
-          await supabase.from('profiles').update({ credits: newCredits }).eq('id', userId);
-          console.log(`[WA] -1 crdit pour ${userId}. Reste: ${newCredits}`);
+          ],
+          max_tokens: 250
+        });
+        aiResponse = completion.choices[0].message.content;
       }
-    } catch (error) {
-      console.error('Erreur WA/IA:', error);
+
+      console.log(`[WA] Envoi de la rponse IA  ${msg.from} :`, aiResponse);
+      const targetChat = isSelfTest ? msg.to : msg.from;
+      await client.sendMessage(targetChat, aiResponse);
+
+      // Dduire 1 crdit
+      if (supabase && userId && profile && profile.credits > 0) {
+        await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
+      }
+    } catch (err) {
+      console.error("[WA/IA] Erreur traitement message :", err);
+    }
+  };
+
+  // 1. Message reu d'un contact externe
+  client.on('message', async (msg) => {
+    await handleIncomingMessage(msg, false);
+  });
+
+  // 2. Message envoy en auto-test (ex: message  soi-mme depuis le mme tlphone)
+  client.on('message_create', async (msg) => {
+    if (msg.fromMe && client.info && msg.to === client.info.wid._serialized && !msg.body.startsWith('[IA')) {
+      await handleIncomingMessage(msg, true);
     }
   });
 
@@ -371,7 +373,7 @@ app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
     res.json({ prompt: data.ai_prompt || "Tu es un assistant IA poli. Réponds brièvement." });
 });
 
-app.post('/api/ai/chat-test', authMiddleware, async (req, res) => {
+app.post('/api/ai/chat-test', async (req, res) => {
   try {
     const { userId, message } = req.body;
     if (!message) return res.status(400).json({ error: "Message requis" });
