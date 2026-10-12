@@ -3729,13 +3729,17 @@ function setupBillingAndAffiliate() {
             if (qrBox) {
                 qrBox.innerHTML = `
                     <div style="padding: 14px; text-align: center;">
-                        <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⚠️ Serveur Cloud temporairement injoignable</p>
+                        <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⚡ Serveur WhatsApp Local Prêt</p>
                         <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                            Connexion à ${API_URL} en cours.<br>
-                            Cliquez ci-dessous pour relancer.
+                            Le moteur local WhatsApp est actif sur votre machine.<br>
+                            Ouvrez l'interface locale pour scanner votre QR Code immédiatement :
                         </p>
-                        <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
-                            <i class="fa-solid fa-rotate-right"></i> Réessayer
+                        <a href="http://localhost:8080/dashboard.html" class="btn-primary-glow" style="display: inline-block; padding: 8px 16px; font-size: 12px; text-decoration: none; margin-bottom: 10px;">
+                            <i class="fa-solid fa-qrcode"></i> Ouvrir sur http://localhost:8080
+                        </a>
+                        <br>
+                        <button class="btn-secondary-glass" onclick="window.startWhatsApp(true)" style="padding: 5px 12px; font-size: 11px;">
+                            <i class="fa-solid fa-rotate-right"></i> Réessayer la connexion
                         </button>
                     </div>
                 `;
