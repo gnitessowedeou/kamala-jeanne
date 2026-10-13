@@ -5992,3 +5992,137 @@ body.modal-open-lock {
     font-size: 11.5px;
   }
 }
+
+/* =============================================================================
+   RESPONSIVE OPTIMIZATIONS FOR UNCORRECTED DASHBOARD VIEWS & MODALS
+   ============================================================================= */
+
+/* 1. Template Modal Responsive Styles */
+@media (max-width: 860px) {
+  .template-modal-body {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    padding: 18px 16px !important;
+  }
+}
+
+@media (max-width: 540px) {
+  .template-form-row-2col,
+  .funnel-form-row-2col,
+  .contact-form-row-2col {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .template-vars-row {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .template-vars-row button {
+    flex: 1 1 auto !important;
+    text-align: center !important;
+  }
+}
+
+/* 2. Modals Footer Button Stacking on Mobile <= 600px */
+@media (max-width: 600px) {
+  .template-modal-footer,
+  .funnel-modal-footer,
+  .payment-config-footer,
+  .contact-modal-footer,
+  .team-invite-footer {
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    padding: 14px 16px !important;
+    gap: 10px !important;
+  }
+
+  .template-modal-footer button,
+  .funnel-modal-footer button,
+  .payment-config-footer button,
+  .contact-modal-footer button,
+  .team-invite-footer button {
+    width: 100% !important;
+    min-height: 44px !important;
+    justify-content: center !important;
+    margin: 0 !important;
+  }
+}
+
+/* 3. FinTech Routing Bar & Payment Gateway Cards Mobile Optimization */
+@media (max-width: 680px) {
+  .fintech-metrics-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 14px 16px !important;
+    gap: 14px !important;
+  }
+
+  .fintech-metrics-inner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .fintech-divider {
+    display: none !important;
+  }
+
+  .fintech-action,
+  .fintech-action button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .integ-card {
+    padding: 16px 14px !important;
+  }
+
+  .integ-cred-val-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+
+  .integ-card-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .integ-card-footer .btn-config-integ {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* 4. Billing Frequency Toggle & Affiliate Program Mobile Optimization */
+@media (max-width: 520px) {
+  .pricing-toggle-wrap-dashboard {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 16px !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .pricing-toggle-wrap-dashboard .toggle-freq-lbl {
+    font-size: 11.5px !important;
+    text-align: center !important;
+  }
+
+  .referral-link-input-row button,
+  .referral-link-input-row a {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+

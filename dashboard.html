@@ -1161,8 +1161,8 @@
           </div>
 
           <!-- FinTech Quick Metrics / Routing Bar -->
-          <div class="glass-panel" style="padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-radius: 14px; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.08);">
-            <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+          <div class="glass-panel fintech-metrics-bar" style="padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-radius: 14px; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div class="fintech-metrics-inner" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(37, 211, 102, 0.12); border: 1px solid rgba(37, 211, 102, 0.25); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
                   <i class="fa-solid fa-bolt"></i>
@@ -1173,7 +1173,7 @@
                 </div>
               </div>
 
-              <div style="width: 1px; height: 28px; background: rgba(255, 255, 255, 0.08);"></div>
+              <div class="fintech-divider" style="width: 1px; height: 28px; background: rgba(255, 255, 255, 0.08);"></div>
 
               <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; color: #38bdf8; font-size: 16px;">
@@ -1185,7 +1185,7 @@
                 </div>
               </div>
 
-              <div style="width: 1px; height: 28px; background: rgba(255, 255, 255, 0.08);"></div>
+              <div class="fintech-divider" style="width: 1px; height: 28px; background: rgba(255, 255, 255, 0.08);"></div>
 
               <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.25); display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 16px;">
@@ -1198,7 +1198,7 @@
               </div>
             </div>
 
-            <div style="display: flex; gap: 8px;">
+            <div class="fintech-action" style="display: flex; gap: 8px;">
               <button type="button" class="btn-secondary-glass" onclick="renderIntegrations(); showToast('Passerelles rafraîchies !', 'info');" style="padding: 7px 14px; font-size: 12px;">
                 <i class="fa-solid fa-arrows-rotate"></i> Actualiser
               </button>
@@ -3154,7 +3154,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       </div>
 
       <form id="template-create-form">
-        <div class="modal-body" style="padding: 24px; display: grid; grid-template-columns: 1fr 340px; gap: 24px;">
+        <div class="modal-body template-modal-body" style="padding: 24px; display: grid; grid-template-columns: 1fr 340px; gap: 24px;">
           
           <!-- Colonne Gauche : Formulaire de configuration -->
           <div style="display: flex; flex-direction: column; gap: 16px;">
@@ -3168,7 +3168,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
               <span style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">Exemple : <code>promo_flash</code>, <code>relance_panier</code>, <code>confirmation_commande</code></span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="template-form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
               <div class="form-group">
                 <label class="form-label" for="tpl-input-category">Catégorie Meta <span class="required">*</span></label>
                 <select class="form-control" id="tpl-input-category" required>
@@ -3196,11 +3196,11 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             </div>
 
             <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
                 <label class="form-label" for="tpl-input-body" style="margin-bottom: 0;">
                   Corps du message (Texte principal) <span class="required">*</span>
                 </label>
-                <div style="display: flex; gap: 6px;">
+                <div class="template-vars-row" style="display: flex; gap: 6px; flex-wrap: wrap;">
                   <button type="button" class="btn-secondary-glass btn-insert-var" data-var="{{1}}" style="padding: 2px 8px; font-size: 11px;">+ {{1}} Prénom</button>
                   <button type="button" class="btn-secondary-glass btn-insert-var" data-var="{{2}}" style="padding: 2px 8px; font-size: 11px;">+ {{2}} Offre</button>
                   <button type="button" class="btn-secondary-glass btn-insert-var" data-var="{{3}}" style="padding: 2px 8px; font-size: 11px;">+ {{3}} Info</button>
@@ -3220,7 +3220,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
               <input type="text" class="form-control" id="tpl-input-footer" placeholder="Ex: Répondez STOP pour vous désabonner">
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="template-form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
               <div class="form-group">
                 <label class="form-label" for="tpl-input-btn-type">Type de Bouton</label>
                 <select class="form-control" id="tpl-input-btn-type">
@@ -3299,7 +3299,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
         </div>
 
-        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-footer template-modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
           <button type="button" class="btn-secondary-glass" data-close-modal="template-modal">Annuler</button>
           <button type="submit" class="btn-primary-glow" id="btn-submit-template">
             <i class="fa-solid fa-paper-plane"></i>
@@ -3352,7 +3352,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             <textarea id="funnel-step1-msg" class="form-control" rows="3" placeholder="Ex: Bonjour ! Voici notre offre spéciale Canva Pro à 1 300 FCFA. Souhaitez-vous recevoir les coordonnées pour l'activer ?" style="width: 100%; resize: vertical;"></textarea>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+          <div class="funnel-form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
             <div class="form-group">
               <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Délai de Relance Automatique</label>
               <select id="funnel-delay" class="form-control" style="width: 100%;">
@@ -3377,7 +3377,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
         </div>
 
-        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+        <div class="modal-footer funnel-modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
           <button type="button" class="btn-secondary-glass" onclick="closeFunnelModal()">Annuler</button>
           <button type="submit" class="btn-primary-glow">
             <i class="fa-solid fa-check"></i>
@@ -3440,7 +3440,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
         </div>
 
-        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+        <div class="modal-footer payment-config-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
           <button type="button" class="btn-secondary-glass" onclick="closePaymentConfigModal()">Annuler</button>
           <button type="submit" class="btn-primary-glow">
             <i class="fa-solid fa-save"></i>
@@ -3484,7 +3484,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             <small style="color: var(--text-muted); font-size: 11px;">Renseignez le numéro avec l'indicatif sans espaces ni symboles superflus.</small>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+          <div class="contact-form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
             <div class="form-group">
               <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Segment / Tag</label>
               <select id="contact-tag-select" class="form-control" style="width: 100%;">
@@ -3505,7 +3505,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
         </div>
 
-        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+        <div class="modal-footer contact-modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
           <button type="button" class="btn-secondary-glass" onclick="closeContactModal()">Annuler</button>
           <button type="submit" class="btn-primary-glow">
             <i class="fa-solid fa-check"></i>
@@ -3592,7 +3592,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
         </div>
 
-        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+        <div class="modal-footer team-invite-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
           <button type="button" class="btn-secondary-glass" onclick="closeTeamInviteModal()">Annuler</button>
           <button type="submit" class="btn-primary-glow" id="btn-submit-team-invite">
             <i class="fa-solid fa-paper-plane"></i>
