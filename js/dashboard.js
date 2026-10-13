@@ -3809,6 +3809,9 @@ function setupProfileSystem() {
     tempAvatarBase64 = undefined;
   };
 
+  window.openProfileModal = openProfileModal;
+  window.closeProfileModal = closeProfileModal;
+
   // Open triggers
   const profileCard = document.getElementById("user-profile-card");
   if (profileCard) profileCard.addEventListener("click", openProfileModal);
@@ -5145,8 +5148,9 @@ function renderTeamMembers() {
 
   // Reconnecter les boutons "Gérer" du tableau
   document.querySelectorAll(".btn-open-profile-modal").forEach(btn => {
-    btn.removeEventListener("click", openProfileModal);
-    btn.addEventListener("click", openProfileModal);
+    btn.onclick = () => {
+      if (typeof window.openProfileModal === "function") window.openProfileModal();
+    };
   });
 }
 

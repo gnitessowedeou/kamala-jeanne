@@ -4090,6 +4090,38 @@
 }
 
 /* 6. Plan Modal (#plan-modal) */
+#plan-modal .modal-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+#plan-modal .modal-header,
+#plan-modal .modal-footer {
+  flex-shrink: 0;
+}
+
+#plan-modal #form-subscribe-plan {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#plan-modal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.modal-open-lock {
+  overflow: hidden !important;
+}
+
 .plan-modal-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
