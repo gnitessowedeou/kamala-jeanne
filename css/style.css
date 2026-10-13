@@ -2755,7 +2755,7 @@ img {
 
 /* Footer 4 colonnes conforme à la maquette */
 .footer-grid-four-cols {
-  grid-template-columns: 1.6fr 1fr 1.2fr 1fr !important;
+  grid-template-columns: 1.6fr 1fr 1.2fr 1fr;
 }
 
 .footer-partner-link:hover {
@@ -3012,8 +3012,10 @@ img {
     grid-template-columns: 1fr;
   }
 
-  .footer-top-grid {
+  .footer-top-grid,
+  .footer-grid-four-cols {
     grid-template-columns: repeat(2, 1fr);
+    gap: 36px 30px;
   }
 }
 
@@ -3220,8 +3222,32 @@ img {
     padding: 50px 20px;
   }
 
-  .footer-top-grid {
+  .footer-top-grid,
+  .footer-grid-four-cols {
     grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .footer-brand-col {
+    max-width: 100%;
+  }
+
+  .footer-desc {
+    max-width: 100%;
+  }
+
+  .footer-col-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .footer-links-list {
+    gap: 10px;
+  }
+
+  .footer-link {
+    font-size: 13.5px;
+    line-height: 1.5;
   }
 
   .footer-bottom-row {
