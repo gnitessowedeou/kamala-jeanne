@@ -3625,6 +3625,109 @@
   }
 }
 
+/* ==============================================================================
+   RESPONSIVE DEVICES VIEW (#view-devices) (Mobile Reframing)
+   ============================================================================== */
+@media (max-width: 680px) {
+  .devices-header-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .devices-action-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  #wa-limit-status {
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    padding: 6px 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  #btn-add-whatsapp-num {
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+  }
+
+  .devices-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .device-active-card {
+    padding: 18px 16px !important;
+  }
+
+  .device-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .device-card-info {
+    width: 100% !important;
+  }
+
+  .device-card-badge {
+    white-space: nowrap !important;
+    width: fit-content !important;
+    font-size: 11.5px !important;
+    padding: 4px 10px !important;
+  }
+
+  .device-spec-item {
+    font-size: 12.5px !important;
+    gap: 6px !important;
+  }
+
+  .device-spec-item strong {
+    text-align: right;
+  }
+
+  .device-card-actions button {
+    font-size: 13px !important;
+    padding: 9px 10px !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .devices-action-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  #wa-limit-status {
+    text-align: center !important;
+  }
+
+  #btn-add-whatsapp-num {
+    width: 100% !important;
+  }
+
+  .device-spec-item {
+    font-size: 11.5px !important;
+  }
+
+  .device-card-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .device-card-actions button {
+    width: 100% !important;
+  }
+}
+
 /* =============================================================================
    FORFAITS & ABONNEMENT + PROGRAMME PARTENAIRES (STYLE COMPLET VANDIA AI)
    ============================================================================= */
@@ -4482,6 +4585,75 @@ body.modal-open-lock {
   .btn-share-whatsapp {
     width: 100%;
     justify-content: center;
+  }
+
+  /* Plan Modal & General Modals Mobile Reframing */
+  .modal-backdrop {
+    padding: 10px 8px !important;
+  }
+
+  .modal-dialog {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 18px !important;
+    margin: 0 auto !important;
+    max-height: 92vh !important;
+  }
+
+  .modal-header {
+    padding: 14px 16px !important;
+  }
+
+  .modal-title {
+    font-size: 15.5px !important;
+  }
+
+  #plan-modal .modal-header .brand-icon-box {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 15px !important;
+  }
+
+  #plan-modal .modal-header p {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  #plan-modal .modal-body {
+    padding: 16px 14px !important;
+  }
+
+  #plan-modal .modal-footer,
+  .modal-footer {
+    padding: 12px 16px !important;
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  #plan-modal .modal-footer button,
+  .modal-footer button {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 44px !important;
+  }
+
+  #btn-submit-plan-order {
+    font-size: 13.5px !important;
+    padding: 12px 14px !important;
+    white-space: nowrap !important;
+  }
+
+  #plan-modal .btn-secondary-glass {
+    font-size: 13px !important;
+    padding: 10px 14px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  #btn-submit-plan-order {
+    font-size: 12.5px !important;
+    padding: 11px 8px !important;
   }
 }
 

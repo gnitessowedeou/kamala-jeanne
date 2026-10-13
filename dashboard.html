@@ -1082,26 +1082,26 @@
              VIEW 8: DEVICES / APPAREILS (#devices)
              ================================================================== -->
         <section class="view-section" id="view-devices">
-          <div class="section-header-bar">
+          <div class="section-header-bar devices-header-bar">
             <div class="section-title-wrap">
-                              <h2>Numros &amp; Coexistence WhatsApp</h2>
-                <p class="section-desc">Grez vos lignes WhatsApp Business connectes  l'API Meta Cloud avec coexistence active.</p>
-              </div>
-              <div style="display:flex; align-items:center; gap: 15px;">
-                <span id="wa-limit-status" style="font-size: 14px; font-weight: 600; color: var(--amber); background: rgba(245, 158, 11, 0.1); padding: 5px 10px; border-radius: 6px;">0 / 1 Numro</span>
-                <button class="btn-primary-glow" id="btn-add-whatsapp-num" onclick="window.handleConnectClick(event);">
-                  <i class="fa-solid fa-qrcode"></i>
-                  <span>Connecter un Numro</span>
-                </button>
-              </div>
+              <h2>Numéros &amp; Coexistence WhatsApp</h2>
+              <p class="section-desc">Gérez vos lignes WhatsApp Business connectées à l'API Meta Cloud avec coexistence active.</p>
+            </div>
+            <div class="devices-action-row" style="display:flex; align-items:center; gap: 15px;">
+              <span id="wa-limit-status" style="font-size: 14px; font-weight: 600; color: var(--amber); background: rgba(245, 158, 11, 0.1); padding: 5px 10px; border-radius: 6px; white-space: nowrap;">0 / 1 Numéro</span>
+              <button class="btn-primary-glow" id="btn-add-whatsapp-num" onclick="window.handleConnectClick(event);">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>Connecter un Numéro</span>
+              </button>
+            </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px;">
+          <div class="devices-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px;">
             <!-- Active Number Card -->
-            <div class="glass-panel" style="padding: 24px;">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
-                <div style="display: flex; gap: 12px; align-items: center;">
-                  <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 20px;">
+            <div class="glass-panel device-active-card" style="padding: 24px;">
+              <div class="device-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                <div class="device-card-info" style="display: flex; gap: 12px; align-items: center;">
+                  <div class="device-card-icon" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 20px; flex-shrink: 0;">
                     <i class="fa-brands fa-whatsapp"></i>
                   </div>
                   <div>
@@ -1109,29 +1109,29 @@
                     <span id="main-card-label" style="font-size: 12px; color: var(--text-muted);">Ligne Principale Vente</span>
                   </div>
                 </div>
-                <span class="badge badge-amber" id="main-card-status-badge">En attente de connexion</span>
+                <span class="badge badge-amber device-card-badge" id="main-card-status-badge">En attente de connexion</span>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); margin: 16px 0;">
-                <div style="display: flex; justify-content: space-between;">
+              <div class="device-specs-list" style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); margin: 16px 0;">
+                <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>Protocole :</span>
                   <strong>Meta Cloud API v19.0</strong>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
+                <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>Mode Coexistence :</span>
                   <strong style="color: var(--whatsapp-green);">Activé (Double Réception)</strong>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
+                <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>Santé du Webhook :</span>
                   <strong style="color: var(--cyan);">100% opérationnel</strong>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
+                <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>Tier d'envoi Meta :</span>
                   <strong>Tier 2 (10 000 conv./jour)</strong>
                 </div>
               </div>
 
-              <div style="display: flex; gap: 10px; margin-top: 18px;">
+              <div class="device-card-actions" style="display: flex; gap: 10px; margin-top: 18px;">
                 <button class="btn-secondary-glass" style="flex: 1; justify-content: center;" id="btn-test-webhook">
                   <i class="fa-solid fa-vial"></i> Tester Webhook
                 </button>
