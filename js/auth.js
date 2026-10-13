@@ -429,6 +429,114 @@
 
     /**
      * ==============================================================================
+     * 5b. CONNEXION SOCIALE OAUTH (GOOGLE, FACEBOOK) VIA SUPABASE REST
+     * ==============================================================================
+     */
+    async signInWithOAuth(provider = "google") {
+      try {
+        const origin = window.location.origin;
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
+        const redirectTo = `${origin}${basePath}dashboard.html`;
+        const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirectTo)}`;
+        window.location.href = authUrl;
+        return { success: true, redirecting: true };
+      } catch (err) {
+        console.error("Erreur redirection OAuth:", err);
+        return { success: false, error: err.message || "Erreur de redirection OAuth." };
+      }
+    },
+
+    async handleOAuthCallback() {
+      try {
+        const hash = window.location.hash;
+        if (!hash || !hash.includes("access_token=")) return false;
+
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        if (!accessToken) return false;
+
+        SupabaseRest.setToken(accessToken);
+
+        // Récupérer le compte utilisateur officiel depuis Supabase Auth
+        const userObj = await SupabaseRest.request("/auth/v1/user", "GET", null, accessToken);
+        if (!userObj || !userObj.id) return false;
+
+        const meta = userObj.user_metadata || {};
+        const cleanEmail = (userObj.email || "").trim().toLowerCase();
+        const fullName = meta.full_name || meta.name || "";
+        const parts = fullName.split(" ");
+        const userFirst = parts[0] || meta.first_name || (cleanEmail ? cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1) : "Utilisateur");
+        const userLast = parts.slice(1).join(" ") || meta.last_name || "";
+        const userAvatar = meta.avatar_url || meta.picture || "";
+
+        let profile = null;
+        try {
+          profile = await SupabaseRest.getProfile(userObj.id, accessToken);
+        } catch (pErr) {
+          console.warn("Lecture profil OAuth Supabase:", pErr);
+        }
+
+        if (!profile) {
+          try {
+            await SupabaseRest.upsertProfile({
+              id: userObj.id,
+              first_name: userFirst,
+              last_name: userLast,
+              email: cleanEmail,
+              whatsapp_number: "",
+              avatar_url: userAvatar,
+              plan: "pro",
+              credits: 3000,
+              created_at: new Date().toISOString()
+            }, accessToken);
+          } catch (upsertErr) {
+            console.warn("Création profil OAuth:", upsertErr);
+          }
+        }
+
+        const loggedInUser = {
+          id: userObj.id,
+          firstName: profile?.first_name || userFirst,
+          lastName: profile?.last_name || userLast,
+          email: profile?.email || cleanEmail,
+          phoneCountry: "+225",
+          phoneNumber: (profile?.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
+          fullPhone: profile?.whatsapp_number || "",
+          company: "Mon Entreprise",
+          role: "Administrateur",
+          avatarUrl: profile?.avatar_url || userAvatar,
+          provider: "google",
+          plan: {
+            name: "Formule Pro 🚀",
+            badge: "PRO",
+            tokensUsed: 0,
+            tokensMax: 3000,
+            daysLeft: 7
+          },
+          createdAt: userObj.created_at || new Date().toISOString()
+        };
+
+        this.saveCurrentUser(loggedInUser);
+
+        // Nettoyer le hash des jetons dans l'URL pour la sécurité
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, null, window.location.pathname + window.location.search);
+        }
+
+        // Si l'utilisateur arrive sur index.html via le callback, rediriger vers le dashboard
+        if (!window.location.pathname.includes("dashboard.html")) {
+          window.location.href = "dashboard.html";
+        }
+
+        return true;
+      } catch (err) {
+        console.error("Erreur traitement callback OAuth:", err);
+        return false;
+      }
+    },
+
+    /**
+     * ==============================================================================
      * 6. MISE À JOUR DU PROFIL DANS SUPABASE (TABLE PROFILES)
      * ==============================================================================
      */
@@ -681,7 +789,8 @@
   window.SupabaseRest = SupabaseRest;
 
   // Initialisation au chargement du DOM
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
+    await AuthEngine.handleOAuthCallback();
     AuthEngine.syncProfileUI();
     AuthEngine.checkSession();
   });
