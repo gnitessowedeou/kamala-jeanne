@@ -949,7 +949,8 @@ function updateHeaderTitle(title, viewId) {
       "analytics": "fa-chart-pie",
       "settings": "fa-gear",
       "billing": "fa-credit-card",
-      "affiliate": "fa-handshake"
+      "affiliate": "fa-handshake",
+      "academy": "fa-graduation-cap"
     };
     iconEl.className = `fa-solid ${iconMap[viewId] || "fa-chart-line"} header-brand-icon`;
   }
@@ -5169,3 +5170,197 @@ window.removeTeamMember = function(memberId) {
   renderTeamMembers();
   showToast(`Collaborateur ${target ? target.name : ''} retiré de l'équipe.`, "info");
 };
+
+
+// ==============================================================================
+// VANDIA ACADEMY — FORMATIONS & DÉMONSTRATIONS VIDÉO CONTROLLER
+// ==============================================================================
+const ACADEMY_VIDEOS = {
+  "video-1": {
+    title: "Module 01 : Lier son Numéro WhatsApp Officiel en 60s via QR Code",
+    badge: "Démarrage Rapide • 3:45",
+    category: "quickstart",
+    desc: "Démonstration complète de la synchronisation de votre numéro WhatsApp avec VANDIA IA via le scan du QR Code.",
+    points: [
+      "Rendez-vous dans la section 'Vue d'ensemble' ou 'Numéros & Coexistence'.",
+      "Cliquez sur 'Lier un numéro' et ouvrez WhatsApp sur votre téléphone > Appareils connectés.",
+      "Scannez le QR Code officiel : vos messages restent actifs sur votre téléphone en parallèle.",
+      "Le statut passe immédiatement au vert 'Connecté 24/7'."
+    ],
+    embedUrl: ""
+  },
+  "video-2": {
+    title: "Module 02 : Configurer le Master Prompt & son Catalogue Produits",
+    badge: "Agent IA & Vente • 6:20",
+    category: "agent",
+    desc: "Apprenez à personnaliser la posture commerciale de votre agent et à ajouter vos produits avec leurs prix en FCFA.",
+    points: [
+      "Allez dans l'onglet 'Agent IA Vendeur & Paramétrage'.",
+      "Collez votre Master Prompt avec vos produits, prix et conditions de vente.",
+      "Sélectionnez le ton de communication adapté à votre clientèle.",
+      "Cliquez sur 'Enregistrer les Paramètres' : l'agent intègre instantanément vos règles."
+    ],
+    embedUrl: ""
+  },
+  "video-3": {
+    title: "Module 03 : Automatiser les Encaissements Wave, Orange Money & MTN MoMo",
+    badge: "Paiements • 5:10",
+    category: "payment",
+    desc: "Comment configurer vos numéros Mobile Money locaux et sécuriser les transactions sans risque de fausses captures.",
+    points: [
+      "Configurez vos numéros Wave, Orange Money et MTN MoMo officiels.",
+      "L'agent détecte l'indicatif du pays (+225, +229, +221, etc.) et donne le bon numéro.",
+      "Le client est invité à régler et à fournir sa preuve de paiement.",
+      "Validation transparente et traçabilité dans l'onglet Intégrations & Paiements."
+    ],
+    embedUrl: ""
+  },
+  "video-4": {
+    title: "Module 04 : Diffusions de Masse WhatsApp sans Risque de Ban Meta",
+    badge: "Diffusions • 7:15",
+    category: "broadcast",
+    desc: "Découvrez la méthode anti-ban de VANDIA pour envoyer vos offres à des milliers de prospects en toute sécurité.",
+    points: [
+      "Importez votre fichier de contacts via CSV ou utilisez les contacts CRM.",
+      "Utilisez des messages personnalisés avec des variables de politesse.",
+      "Activez le mode 'Anti-ban' avec intervalles de temporisation aléatoires.",
+      "Suivez les statistiques de délivrabilité et les réponses en temps réel."
+    ],
+    embedUrl: ""
+  },
+  "video-5": {
+    title: "Module 05 : Live Chat : Prendre la Main sur l'IA & Clôturer les Ventes",
+    badge: "Boîte de Réception • 4:30",
+    category: "agent",
+    desc: "Basculez entre le mode automatique IA et le mode humain en direct pour les clients prioritaires ou demandes complexes.",
+    points: [
+      "Ouvrez la Boîte de Réception WhatsApp intégrée.",
+      "Sélectionnez une discussion en cours : observez les réponses en direct de l'agent.",
+      "Cliquez sur 'Prendre la main' pour désactiver temporairement l'IA et écrire au client.",
+      "Réactivez le mode IA en un clic une fois la commande validée."
+    ],
+    embedUrl: ""
+  },
+  "video-6": {
+    title: "Module 06 : Créer des Tunnels Visuels & Relances de Paniers Abandonnés",
+    badge: "Flow Builder • 8:40",
+    category: "broadcast",
+    desc: "Automatisez la conversion grâce aux arbres de décision et relancez les clients hésitants 30 minutes après.",
+    points: [
+      "Accédez au Flow Builder dans 'Vente & Automatisation'.",
+      "Définissez un mot-clé déclencheur (ex: 'PROMO', 'CATALOGUE', 'COMMANDER').",
+      "Branchez des actions automatiques et boutons de choix rapides.",
+      "Configurez le délai de relance automatique (15 min, 30 min, 1h) en cas d'abandon."
+    ],
+    embedUrl: ""
+  }
+};
+
+function openAcademyVideo(videoId) {
+  const video = ACADEMY_VIDEOS[videoId] || ACADEMY_VIDEOS["video-1"];
+  const modal = document.getElementById("modal-academy-player");
+  const titleEl = document.getElementById("academy-modal-video-title");
+  const badgeEl = document.getElementById("academy-modal-video-badge");
+  const descEl = document.getElementById("academy-placeholder-desc");
+  const pointsEl = document.getElementById("academy-modal-points");
+  const placeholderEl = document.getElementById("academy-player-placeholder");
+  const iframeEl = document.getElementById("academy-player-iframe");
+
+  if (!modal) return;
+
+  if (titleEl) titleEl.textContent = video.title;
+  if (badgeEl) badgeEl.textContent = video.badge;
+  if (descEl) descEl.textContent = video.desc;
+
+  if (pointsEl && Array.isArray(video.points)) {
+    pointsEl.innerHTML = video.points.map(pt => `<li>${escapeHtml(pt)}</li>`).join("");
+  }
+
+  // Si une URL de vidéo embarquée (YouTube/Vimeo/MP4) est fournie
+  if (video.embedUrl && video.embedUrl.trim().length > 0 && iframeEl) {
+    iframeEl.src = video.embedUrl;
+    iframeEl.style.display = "block";
+    if (placeholderEl) placeholderEl.style.display = "none";
+  } else {
+    if (iframeEl) {
+      iframeEl.src = "";
+      iframeEl.style.display = "none";
+    }
+    if (placeholderEl) placeholderEl.style.display = "flex";
+  }
+
+  modal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closeAcademyVideoModal() {
+  const modal = document.getElementById("modal-academy-player");
+  const iframeEl = document.getElementById("academy-player-iframe");
+  if (modal) modal.style.display = "none";
+  if (iframeEl) iframeEl.src = "";
+  document.body.style.overflow = "";
+}
+
+function initAcademy() {
+  // 1. Filtrage par catégorie
+  const pillBtns = document.querySelectorAll("#academy-category-pills .academy-pill-btn");
+  const cards = document.querySelectorAll(".academy-video-card");
+
+  pillBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      pillBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const cat = btn.getAttribute("data-cat");
+      filterAcademyVideos(cat);
+    });
+  });
+
+  // 2. Recherche en direct par mot-clé
+  const searchInput = document.getElementById("academy-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (!q || text.includes(q)) {
+          card.style.display = "flex";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    });
+  }
+
+  // Fermer la modal en cliquant sur le fond
+  const modal = document.getElementById("modal-academy-player");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeAcademyVideoModal();
+    });
+  }
+}
+
+function filterAcademyVideos(cat) {
+  const cards = document.querySelectorAll(".academy-video-card");
+  cards.forEach(card => {
+    const cardCat = card.getAttribute("data-cat");
+    if (cat === "all" || cardCat === cat) {
+      card.style.display = "flex";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+
+// Exposer globalement
+window.openAcademyVideo = openAcademyVideo;
+window.closeAcademyVideoModal = closeAcademyVideoModal;
+window.initAcademy = initAcademy;
+
+// Initialisation au chargement
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAcademy);
+} else {
+  initAcademy();
+}

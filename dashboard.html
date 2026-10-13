@@ -16,7 +16,7 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261013_v1">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261013_v2">
   <link rel="stylesheet" href="css/auth.css?v=20261012_v16">
 </head>
 <body>
@@ -171,6 +171,22 @@
                   <i class="fa-solid fa-file-lines nav-item-icon"></i>
                   <span>Modèles WhatsApp</span>
                 </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Section: FORMATION & RESSOURCES -->
+        <div class="nav-section-group">
+          <div class="nav-section-title">FORMATION &amp; TUTORIELS</div>
+          <ul class="nav-list">
+            <li>
+              <a href="#academy" class="nav-item-link" data-view="academy" data-title="VANDIA Academy — Formations &amp; Tutoriels Vidéo">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-graduation-cap nav-item-icon" style="color: var(--whatsapp-green);"></i>
+                  <span>VANDIA Academy</span>
+                </div>
+                <span class="badge badge-green">Vidéos</span>
               </a>
             </li>
           </ul>
@@ -1721,6 +1737,262 @@
 
         </section>
 
+        <!-- ==================================================================
+             VIEW: VANDIA ACADEMY — FORMATIONS & DÉMONSTRATIONS VIDÉO (#academy)
+             ================================================================== -->
+        <section class="view-section" id="view-academy">
+          
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <h2>VANDIA Academy — Formations &amp; Démonstrations Vidéo</h2>
+              <p class="section-desc">Apprenez à maîtriser votre vendeur IA WhatsApp étape par étape pour automatiser vos ventes et booster votre chiffre d'affaires.</p>
+            </div>
+            <div class="section-actions-wrap">
+              <a href="https://wa.me/2290162639593?text=Bonjour%20VANDIA%20IA,%20j'ai%20besoin%20d'aide%20sur%20un%20tutoriel%20de%20l'Academy." target="_blank" rel="noopener noreferrer" class="btn-primary-glow" style="text-decoration: none;">
+                <i class="fa-brands fa-whatsapp"></i>
+                <span>Support Vidéo en Direct</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Hero Banner Academy -->
+          <div class="academy-hero-card">
+            <div class="academy-hero-left">
+              <div class="academy-tag-pill">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>CENTRE DE FORMATION OFFICIEL</span>
+              </div>
+              <h2 class="academy-hero-title">Passez de 0 à 100 Ventes Automatisées sur WhatsApp</h2>
+              <p class="academy-hero-desc">
+                Chaque module dure entre 3 et 8 minutes. Regardez les vidéos, reproduisez les réglages sur votre compte et laissez votre agent IA encaisser vos commandes 24h/24.
+              </p>
+              <div class="academy-badges-row">
+                <span class="academy-stat-pill"><i class="fa-solid fa-circle-check"></i> 6 Modules Pratiques</span>
+                <span class="academy-stat-pill"><i class="fa-solid fa-clock"></i> ~35 min au total</span>
+                <span class="academy-stat-pill"><i class="fa-solid fa-bolt"></i> Accès Gratuit Illimité</span>
+              </div>
+            </div>
+            <div class="academy-hero-right">
+              <div class="academy-featured-box" onclick="openAcademyVideo('video-1')">
+                <div class="academy-featured-thumb-wrap">
+                  <div class="academy-play-glow"></div>
+                  <div class="academy-play-orb">
+                    <i class="fa-solid fa-play"></i>
+                  </div>
+                  <span class="academy-duration-chip"><i class="fa-solid fa-clock"></i> 3:45</span>
+                </div>
+                <div class="academy-featured-info">
+                  <span class="academy-featured-badge">COMMENCER ICI</span>
+                  <h4 class="academy-featured-title">Module 1 : Lier son WhatsApp en 60s via QR Code</h4>
+                  <p class="academy-featured-sub">Connexion officielle et synchronisation continue.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter & Search Bar -->
+          <div class="glass-panel academy-controls-bar">
+            <div class="academy-search-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="academy-search-input" placeholder="Rechercher un tutoriel (ex: QR code, Wave, Prompt, Anti-ban)...">
+            </div>
+            <div class="academy-filter-pills" id="academy-category-pills">
+              <button class="academy-pill-btn active" data-cat="all">Toutes les vidéos (6)</button>
+              <button class="academy-pill-btn" data-cat="quickstart">🚀 Démarrage Rapide</button>
+              <button class="academy-pill-btn" data-cat="agent">🤖 Agent IA &amp; Vente</button>
+              <button class="academy-pill-btn" data-cat="payment">💳 Paiements Mobile Money</button>
+              <button class="academy-pill-btn" data-cat="broadcast">📢 Diffusions &amp; Funnels</button>
+            </div>
+          </div>
+
+          <!-- Video Tutorials Grid -->
+          <div class="academy-video-grid" id="academy-video-grid">
+            <!-- Video 1 -->
+            <div class="glass-panel academy-video-card" data-video-id="video-1" data-cat="quickstart">
+              <div class="video-card-thumb" onclick="openAcademyVideo('video-1')">
+                <div class="video-thumb-gradient gradient-green">
+                  <i class="fa-brands fa-whatsapp thumb-watermark"></i>
+                </div>
+                <div class="video-play-btn-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+                <span class="video-card-duration">3:45</span>
+                <span class="video-card-level">Débutant</span>
+              </div>
+              <div class="video-card-body">
+                <div class="video-card-meta">
+                  <span class="video-card-cat"><i class="fa-solid fa-rocket"></i> Démarrage Rapide</span>
+                  <span class="video-card-mod">Module 01</span>
+                </div>
+                <h3 class="video-card-title">Lier son Numéro WhatsApp Officiel en 60s via QR Code</h3>
+                <p class="video-card-desc">Apprenez à scanner le QR Code Meta, maintenir votre connexion active 24/7 et utiliser WhatsApp en coexistence sur votre téléphone.</p>
+                <div class="video-card-footer">
+                  <button class="btn-primary-glow btn-watch-video" onclick="openAcademyVideo('video-1')">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Regarder la Vidéo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video 2 -->
+            <div class="glass-panel academy-video-card" data-video-id="video-2" data-cat="agent">
+              <div class="video-card-thumb" onclick="openAcademyVideo('video-2')">
+                <div class="video-thumb-gradient gradient-purple">
+                  <i class="fa-solid fa-robot thumb-watermark"></i>
+                </div>
+                <div class="video-play-btn-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+                <span class="video-card-duration">6:20</span>
+                <span class="video-card-level">Essentiel</span>
+              </div>
+              <div class="video-card-body">
+                <div class="video-card-meta">
+                  <span class="video-card-cat"><i class="fa-solid fa-robot"></i> Agent IA &amp; Vente</span>
+                  <span class="video-card-mod">Module 02</span>
+                </div>
+                <h3 class="video-card-title">Configurer le Master Prompt &amp; son Catalogue Produits</h3>
+                <p class="video-card-desc">Personnalisez la posture de votre commercial d'élite, vos prix officiels en FCFA et activez les garde-fous anti-hallucination.</p>
+                <div class="video-card-footer">
+                  <button class="btn-primary-glow btn-watch-video" onclick="openAcademyVideo('video-2')">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Regarder la Vidéo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video 3 -->
+            <div class="glass-panel academy-video-card" data-video-id="video-3" data-cat="payment">
+              <div class="video-card-thumb" onclick="openAcademyVideo('video-3')">
+                <div class="video-thumb-gradient gradient-cyan">
+                  <i class="fa-solid fa-money-bill-wave thumb-watermark"></i>
+                </div>
+                <div class="video-play-btn-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+                <span class="video-card-duration">5:10</span>
+                <span class="video-card-level">Essentiel</span>
+              </div>
+              <div class="video-card-body">
+                <div class="video-card-meta">
+                  <span class="video-card-cat"><i class="fa-solid fa-wallet"></i> Paiements</span>
+                  <span class="video-card-mod">Module 03</span>
+                </div>
+                <h3 class="video-card-title">Automatiser les Encaissements Wave, Orange Money &amp; MTN MoMo</h3>
+                <p class="video-card-desc">Routage automatique par indicatif pays (+225, +229, +221...), transmission sécurisée du titulaire et validation sans fraude.</p>
+                <div class="video-card-footer">
+                  <button class="btn-primary-glow btn-watch-video" onclick="openAcademyVideo('video-3')">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Regarder la Vidéo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video 4 -->
+            <div class="glass-panel academy-video-card" data-video-id="video-4" data-cat="broadcast">
+              <div class="video-card-thumb" onclick="openAcademyVideo('video-4')">
+                <div class="video-thumb-gradient gradient-amber">
+                  <i class="fa-solid fa-bullhorn thumb-watermark"></i>
+                </div>
+                <div class="video-play-btn-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+                <span class="video-card-duration">7:15</span>
+                <span class="video-card-level">Avancé</span>
+              </div>
+              <div class="video-card-body">
+                <div class="video-card-meta">
+                  <span class="video-card-cat"><i class="fa-solid fa-bullhorn"></i> Diffusions</span>
+                  <span class="video-card-mod">Module 04</span>
+                </div>
+                <h3 class="video-card-title">Diffusions de Masse WhatsApp sans Risque de Ban Meta</h3>
+                <p class="video-card-desc">Règles d'or anti-ban : délais aléatoires entre envois, warm-up du numéro et segmentation ciblée de votre base de contacts.</p>
+                <div class="video-card-footer">
+                  <button class="btn-primary-glow btn-watch-video" onclick="openAcademyVideo('video-4')">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Regarder la Vidéo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video 5 -->
+            <div class="glass-panel academy-video-card" data-video-id="video-5" data-cat="agent">
+              <div class="video-card-thumb" onclick="openAcademyVideo('video-5')">
+                <div class="video-thumb-gradient gradient-blue">
+                  <i class="fa-solid fa-comment-dots thumb-watermark"></i>
+                </div>
+                <div class="video-play-btn-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+                <span class="video-card-duration">4:30</span>
+                <span class="video-card-level">Pratique</span>
+              </div>
+              <div class="video-card-body">
+                <div class="video-card-meta">
+                  <span class="video-card-cat"><i class="fa-solid fa-inbox"></i> Boîte de Réception</span>
+                  <span class="video-card-mod">Module 05</span>
+                </div>
+                <h3 class="video-card-title">Live Chat : Prendre la Main sur l'IA &amp; Clôturer les Ventes</h3>
+                <p class="video-card-desc">Comment basculer instantanément du mode automatique au mode humain pour négocier en direct sur les grosses commandes.</p>
+                <div class="video-card-footer">
+                  <button class="btn-primary-glow btn-watch-video" onclick="openAcademyVideo('video-5')">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Regarder la Vidéo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video 6 -->
+            <div class="glass-panel academy-video-card" data-video-id="video-6" data-cat="broadcast">
+              <div class="video-card-thumb" onclick="openAcademyVideo('video-6')">
+                <div class="video-thumb-gradient gradient-violet">
+                  <i class="fa-solid fa-diagram-project thumb-watermark"></i>
+                </div>
+                <div class="video-play-btn-overlay">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+                <span class="video-card-duration">8:40</span>
+                <span class="video-card-level">Expert</span>
+              </div>
+              <div class="video-card-body">
+                <div class="video-card-meta">
+                  <span class="video-card-cat"><i class="fa-solid fa-diagram-project"></i> Flow Builder</span>
+                  <span class="video-card-mod">Module 06</span>
+                </div>
+                <h3 class="video-card-title">Créer des Tunnels Visuels &amp; Relances de Paniers Abandonnés</h3>
+                <p class="video-card-desc">Arbres de décision automatisés par mots-clés, qualification de prospects et relance automatique 30 minutes après hésitation.</p>
+                <div class="video-card-footer">
+                  <button class="btn-primary-glow btn-watch-video" onclick="openAcademyVideo('video-6')">
+                    <i class="fa-solid fa-circle-play"></i>
+                    <span>Regarder la Vidéo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Help CTA -->
+          <div class="glass-panel academy-help-banner">
+            <div class="help-banner-icon">
+              <i class="fa-solid fa-headset"></i>
+            </div>
+            <div class="help-banner-info">
+              <h3>Besoin d'un accompagnement personnalisé sur votre compte ?</h3>
+              <p>Notre équipe d'experts vous aide à installer votre agent IA, importer vos produits et configurer votre numéro sans effort.</p>
+            </div>
+            <a href="https://wa.me/2290162639593?text=Bonjour,%20je%20souhaite%20un%20accompagnement%20personnalis%C3%A9%20sur%20VANDIA%20IA." target="_blank" rel="noopener noreferrer" class="btn-primary-glow" style="text-decoration: none; white-space: nowrap;">
+              <i class="fa-brands fa-whatsapp"></i>
+              <span>Parler à un Expert VANDIA</span>
+            </a>
+          </div>
+
+        </section>
+
       </main>
     </div>
   </div>
@@ -2809,7 +3081,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v19"></script>
+  <script src="js/dashboard.js?v=20261013_v2"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
