@@ -66,6 +66,8 @@
 html {
   scroll-behavior: smooth;
   font-size: 15px;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -74,6 +76,7 @@ body {
   font-family: var(--font-body);
   line-height: 1.6;
   overflow-x: hidden;
+  max-width: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -129,6 +132,7 @@ img {
   inset: 0;
   pointer-events: none;
   z-index: 0;
+  overflow: hidden;
   background-image: 
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
@@ -796,6 +800,14 @@ img {
   line-height: 1.12;
   margin-bottom: 18px;
   animation: fadeInUp 0.7s ease forwards;
+}
+
+.hero-br-desktop {
+  display: inline;
+}
+
+.hero-br-mobile {
+  display: none;
 }
 
 .hero-subtitle {
@@ -3095,11 +3107,16 @@ img {
     font-size: 11px;
   }
 
+  .hero-br-mobile {
+    display: inline;
+  }
+
   .hero-title {
-    font-size: 33px;
+    font-size: clamp(24px, 6.8vw, 32px);
     letter-spacing: -0.035em;
-    line-height: 1.15;
+    line-height: 1.2;
     margin-bottom: 14px;
+    text-wrap: balance;
   }
 
   .hero-subtitle {
@@ -3236,8 +3253,8 @@ img {
 
 @media (max-width: 420px) {
   .hero-title {
-    font-size: 30px;
-    line-height: 1.16;
+    font-size: clamp(23px, 6.7vw, 27px);
+    line-height: 1.22;
   }
 
   .btn-primary-pill {
@@ -3302,7 +3319,8 @@ img {
 
 @media (max-width: 360px) {
   .hero-title {
-    font-size: 27px;
+    font-size: 23.5px;
+    line-height: 1.22;
   }
 
   .btn-primary-pill {
@@ -3321,6 +3339,13 @@ img {
 
   .btn-nav-cta span {
     display: none;
+  }
+}
+
+@media (max-width: 330px) {
+  .hero-title {
+    font-size: 21.5px;
+    line-height: 1.24;
   }
 }
 
