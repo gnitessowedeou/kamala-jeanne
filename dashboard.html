@@ -2808,7 +2808,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v18"></script>
+  <script src="js/dashboard.js?v=20261012_v19"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -2863,6 +2863,32 @@
         modal.style.display = "none";
         modal.style.opacity = "0";
         modal.style.pointerEvents = "none";
+      }
+    };
+
+    window.openContactModal = function() {
+      var modal = document.getElementById("contact-modal");
+      if (modal) {
+        modal.classList.add("active");
+        modal.style.display = "flex";
+        modal.style.opacity = "1";
+        modal.style.pointerEvents = "auto";
+        document.body.style.overflow = "hidden";
+        var nameInput = document.getElementById("contact-name-input");
+        var phoneInput = document.getElementById("contact-phone-input");
+        if (nameInput) { nameInput.value = ""; setTimeout(function() { nameInput.focus(); }, 120); }
+        if (phoneInput) phoneInput.value = "";
+      }
+    };
+
+    window.closeContactModal = function() {
+      var modal = document.getElementById("contact-modal");
+      if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+        modal.style.opacity = "0";
+        modal.style.pointerEvents = "none";
+        document.body.style.overflow = "";
       }
     };
 

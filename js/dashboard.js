@@ -3581,23 +3581,53 @@ function setupActionButtons() {
     });
   });
 
-  // Export CSV
+  // Bouton Ajouter un contact CRM
+  const addContactBtn = document.getElementById("btn-add-contact");
+  if (addContactBtn) {
+    addContactBtn.addEventListener("click", () => {
+      if (typeof window.openContactModal === "function") {
+        window.openContactModal();
+      }
+    });
+  }
+
+  // Export CSV propre, complet et compatible Excel
   const exportCrmBtn = document.getElementById("btn-export-crm");
   if (exportCrmBtn) {
     exportCrmBtn.addEventListener("click", () => {
-      let csv = "Nom,Telephone,Derniere Interaction\n";
-      document.querySelectorAll('#contacts-table-body tr').forEach(row => {
-        const cols = row.querySelectorAll('td');
-        if (cols.length >= 3) {
-          csv += cols[0].innerText.trim() + "," + cols[1].innerText.trim() + "," + cols[2].innerText.trim() + "\n";
-        }
+      const contacts = Array.isArray(MOCK_DATA.contacts) && MOCK_DATA.contacts.length > 0 
+        ? MOCK_DATA.contacts 
+        : [];
+
+      if (contacts.length === 0) {
+        showToast("Aucun contact à exporter pour le moment dans votre base CRM.", "info");
+        return;
+      }
+
+      // En-tête avec BOM UTF-8 (\uFEFF) pour compatibilité totale Excel francophone
+      let csvContent = "\uFEFFNom du Contact;Numéro WhatsApp;Dernière Interaction;Statut CRM\n";
+      contacts.forEach(c => {
+        const name = (c.name || "Prospect").replace(/;/g, ",");
+        const phone = (c.phone_number || "").replace(/[^0-9+]/g, "");
+        const date = c.updated_at ? new Date(c.updated_at).toLocaleString("fr-FR") : "N/A";
+        const status = "Prospect";
+        csvContent += `"${name}";"${phone}";"${date}";"${status}"\n`;
       });
-      const blob = new Blob([csv], { type: 'text/csv' });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.setAttribute('href', url);
-      a.setAttribute('download', 'contacts_crm.csv');
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `contacts_crm_vandia_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
       a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 200);
+
+      showToast(`Exportation réussie : ${contacts.length} contact(s) exporté(s) au format CSV.`, "success");
     });
   }
 
@@ -4682,14 +4712,14 @@ window.closeContactModal = function() {
 };
 
 window.handleSaveContact = async function(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const name = document.getElementById("contact-name-input")?.value?.trim();
   const phone = document.getElementById("contact-phone-input")?.value?.trim();
   const tag = document.getElementById("contact-tag-select")?.value || "Prospect";
   const status = document.getElementById("contact-status-select")?.value || "en_discussion";
 
   if (!name || !phone) {
-    showToast("Veuillez renseigner le nom et le numéro.", "info");
+    showToast("Veuillez renseigner le nom et le numéro de téléphone.", "info");
     return;
   }
 
@@ -4697,23 +4727,38 @@ window.handleSaveContact = async function(e) {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
 
   try {
-    if (supabaseClient && userId) {
-      await supabaseClient.from('contacts').upsert({
-        user_id: userId,
-        phone_number: cleanPhone,
+    const res = await fetch(API_URL + '/api/contacts/' + userId, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
         name: name,
-        last_message: JSON.stringify({ text: "Contact ajouté manuellement", history: [] }),
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id, phone_number' });
+        phone: cleanPhone,
+        tag: tag,
+        status: status,
+        last_message: JSON.stringify({ text: "Contact ajouté manuellement dans le CRM", tag: tag, status: status, history: [] })
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Erreur lors de l'enregistrement du contact");
     }
-    closeContactModal();
-    showToast("Contact ajouté avec succès au CRM !", "success");
-    // Recharger la liste
-    const fetchFunc = window.loadCloudContacts || renderContacts;
-    if (typeof fetchFunc === 'function') fetchFunc();
+
+    if (typeof window.closeContactModal === "function") {
+      window.closeContactModal();
+    }
+    showToast(`Contact "${name}" ajouté avec succès au CRM !`, "success");
+
+    // Recharger immédiatement l'affichage des contacts et de la vue d'ensemble
+    if (typeof renderContacts === "function") {
+      renderContacts();
+    }
+    if (typeof loadOverviewRealData === "function") {
+      loadOverviewRealData();
+    }
   } catch (err) {
-    console.error("Erreur ajout contact:", err);
-    showToast("Erreur lors de l'enregistrement du contact.", "info");
+    console.error("Erreur ajout contact CRM:", err);
+    showToast(err.message || "Erreur lors de l'enregistrement du contact.", "info");
   }
 };
 

@@ -1506,6 +1506,46 @@ app.get('/api/contacts/:userId', authMiddleware, async (req, res) => {
     }
 });
 
+// === 7. CREATE / UPSERT CONTACT CRM ===
+app.post('/api/contacts/:userId', authMiddleware, async (req, res) => {
+    const { userId } = req.params;
+    const { name, phone, last_message, tag, status } = req.body;
+
+    if (!phone) {
+        return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire.' });
+    }
+
+    try {
+        const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+        const contactName = name ? String(name).trim() : 'Prospect';
+        const nowIso = new Date().toISOString();
+        const payloadMsg = typeof last_message === 'string' 
+            ? last_message 
+            : JSON.stringify({ 
+                text: "Contact ajouté manuellement dans le CRM", 
+                tag: tag || "Prospect", 
+                status: status || "en_discussion", 
+                history: [] 
+              });
+
+        const { data, error } = await supabase.from('contacts').upsert({
+            user_id: userId,
+            phone_number: cleanPhone,
+            name: contactName,
+            last_message: payloadMsg,
+            updated_at: nowIso
+        }, { onConflict: 'user_id, phone_number' }).select().single();
+
+        if (error) throw error;
+
+        console.log(`[CRM] Contact ${contactName} (${cleanPhone}) enregistré pour utilisateur ${userId}`);
+        res.json({ success: true, message: 'Contact enregistré avec succès', contact: data });
+    } catch (err) {
+        console.error('Erreur sauvegarde contact CRM:', err);
+        res.status(500).json({ error: 'Erreur lors de l\'enregistrement du contact dans la base' });
+    }
+});
+
 
 
 // === 8. ROUTES D'AFFILIATION & INTEGRATIONS ===
