@@ -3017,6 +3017,22 @@ img {
     grid-template-columns: repeat(2, 1fr);
     gap: 36px 30px;
   }
+
+  .partner-banner-card {
+    flex-direction: column;
+    padding: 36px 28px;
+    gap: 30px;
+  }
+
+  .partner-banner-left {
+    width: 100%;
+  }
+
+  .partner-banner-right {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
 }
 
 @media (max-width: 768px) {
@@ -3193,8 +3209,95 @@ img {
     justify-content: center;
   }
 
+  .pricing-launch-banner-wrap {
+    padding: 0 10px;
+    margin-bottom: 18px;
+  }
+
+  .pricing-launch-banner {
+    display: block;
+    text-align: center;
+    padding: 11px 18px;
+    border-radius: 14px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-width: 380px;
+    margin: 0 auto;
+  }
+
+  .pricing-launch-banner i {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 12.5px;
+    vertical-align: baseline;
+  }
+
   .pricing-toggle-container {
     flex-wrap: wrap;
+  }
+
+  .partner-banner-card {
+    flex-direction: column;
+    padding: 30px 20px;
+    gap: 26px;
+    border-radius: 20px;
+  }
+
+  .partner-banner-left {
+    width: 100%;
+  }
+
+  .partner-title {
+    font-size: clamp(22px, 6.2vw, 28px);
+    line-height: 1.25;
+    margin-bottom: 14px;
+  }
+
+  .partner-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+    max-width: 100%;
+  }
+
+  .partner-checklist {
+    margin-bottom: 22px;
+    gap: 10px;
+  }
+
+  .partner-checklist li {
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .partner-cta-row {
+    width: 100%;
+  }
+
+  .btn-partner-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 20px;
+  }
+
+  .partner-banner-right {
+    width: 100%;
+    max-width: 100%;
+    flex-shrink: 1;
+  }
+
+  .passive-income-box {
+    padding: 24px 18px;
+    border-radius: 18px;
+  }
+
+  .passive-income-title {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .passive-income-text {
+    font-size: 13px;
   }
 
   .problem-solution-grid {
@@ -3340,6 +3443,21 @@ img {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pricing-launch-banner {
+    padding: 10px 14px;
+    font-size: 12px;
+    max-width: 100%;
+  }
+
+  .partner-banner-card {
+    padding: 24px 16px;
+    gap: 22px;
+  }
+
+  .passive-income-box {
+    padding: 22px 14px;
   }
 }
 
