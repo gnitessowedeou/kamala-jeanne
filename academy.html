@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VANDIA Academy — Formations & Démonstrations Vidéo Officielles</title>
+  <meta name="description" content="Découvrez les tutoriels vidéo officiels de VANDIA IA pour connecter votre WhatsApp, paramétrer vos prix et encaisser par Wave & Mobile Money sans compétence technique.">
+
+  <!-- Google Fonts: Outfit (Titres) & Inter (Texte) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css?v=20261012_v16">
+</head>
+<body>
+
+  <!-- Background Grid & Glowing Ambient Blobs -->
+  <div class="bg-grid-ambient" aria-hidden="true">
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+    <div class="ambient-blob blob-3"></div>
+  </div>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="mobile-drawer-header">
+      <a href="index.html#hero" class="nav-brand mobile-link">
+        <div class="brand-icon-box" style="background: transparent; box-shadow: none;">
+          <img src="images/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <span class="brand-name">VANDIA</span>
+        <span class="brand-badge">IA</span>
+      </a>
+      <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Fermer le menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="mobile-drawer-nav">
+      <a href="index.html#hero" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-house"></i></span>
+          <span class="mobile-item-label">Accueil</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="index.html#features" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="mobile-item-label">Fonctionnalités</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="academy.html" class="mobile-nav-item mobile-link active">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+          <span class="mobile-item-label">Academy Vidéos</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="prompts.html" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="mobile-item-label">Master Prompts</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="index.html#pricing" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-tags"></i></span>
+          <span class="mobile-item-label">Tarifs &amp; Offres</span>
+        </div>
+        <span class="mobile-badge-discount">-50%</span>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="dashboard.html" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+          <span class="mobile-item-label">Connexion Espace Membre</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Site Header / Navbar -->
+  <header class="navbar-wrap" id="navbar-wrap">
+    <nav class="navbar" id="navbar">
+      <!-- Logo Left -->
+      <a href="index.html#hero" class="nav-brand">
+        <div class="brand-icon-box" style="background: transparent; box-shadow: none;">
+          <img src="images/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <span class="brand-name">VANDIA</span>
+        <span class="brand-badge">IA</span>
+      </a>
+
+      <!-- Nav Links Center -->
+      <div class="nav-links">
+        <a href="index.html#features" class="nav-link">Fonctionnalités</a>
+        <a href="academy.html" class="nav-link" style="color: var(--whatsapp-green); font-weight: 700;">Academy</a>
+        <a href="prompts.html" class="nav-link">Master Prompts</a>
+        <a href="index.html#pricing" class="nav-link">Tarifs</a>
+        <a href="index.html#integrations" class="nav-link">Intégrations</a>
+        <a href="index.html#faq" class="nav-link">FAQ</a>
+      </div>
+
+      <!-- Actions Right -->
+      <div class="nav-actions">
+        <button class="lang-selector-btn" aria-label="Langue sélectionnée : Français">
+          <span class="lang-flag-box">FR</span>
+          <span>FR</span>
+          <i class="fa-solid fa-chevron-down" style="font-size: 8px; opacity: 0.8;"></i>
+        </button>
+
+        <a href="dashboard.html" class="btn-nav-login">Connexion</a>
+        
+        <a href="index.html#pricing" class="btn-nav-cta">
+          <span>Accès Instantané</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+
+        <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Ouvrir le menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ==========================================================================
+       HERO: ACADEMY
+       ========================================================================== -->
+  <section class="hero-section" style="padding-top: 140px; padding-bottom: 50px;">
+    <div class="container">
+      <div class="hero-content" style="text-align: center; max-width: 860px; margin: 0 auto;">
+        
+        <div class="pill-tag" style="margin-bottom: 18px;">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>CENTRE DE FORMATION OFFICIEL</span>
+        </div>
+
+        <h1 class="hero-title" style="font-size: 46px; margin-bottom: 20px;">
+          VANDIA Academy : <span class="gradient-text-green">Maîtrisez Votre Vendeur IA</span> en 30 Minutes
+        </h1>
+
+        <p class="hero-subtitle" style="font-size: 16px; margin-bottom: 30px;">
+          Toutes les formations vidéo gratuites pas-à-pas pour connecter votre WhatsApp officiel, régler vos prix en FCFA et automatiser vos encaissements Wave &amp; Mobile Money sans aucune compétence technique.
+        </p>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;">
+          <a href="#modules" class="btn-primary-pill">
+            <span class="btn-icon-box"><i class="fa-solid fa-play"></i></span>
+            <span class="btn-text-main">Voir les Formations Vidéo</span>
+            <i class="fa-solid fa-arrow-down"></i>
+          </a>
+          <a href="dashboard.html#academy" class="btn-nav-login" style="padding: 10px 22px; font-size: 14px;">
+            <i class="fa-solid fa-arrow-up-right-from-square" style="margin-right: 8px;"></i>
+            Ouvrir dans mon Dashboard
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       MODULES VIDÉO SHOWCASE
+       ========================================================================== -->
+  <section class="section" id="modules" style="padding: 40px 0 80px 0;">
+    <div class="container">
+      
+      <div class="section-header-center" style="margin-bottom: 40px;">
+        <h2 class="section-title">
+          Le Programme Complet de <span class="gradient-text-green">Démarrage Rapide</span>
+        </h2>
+        <p class="section-subtitle">
+          Cliquez sur un module pour lancer la démonstration commentée.
+        </p>
+      </div>
+
+      <!-- Video Grid Showcase -->
+      <div class="academy-landing-grid">
+        <!-- Module 1 -->
+        <div class="academy-landing-card">
+          <div class="landing-video-thumb">
+            <div class="thumb-bg-gradient grad-green">
+              <i class="fa-brands fa-whatsapp thumb-watermark-lg"></i>
+            </div>
+            <div class="landing-play-orb">
+              <i class="fa-solid fa-play"></i>
+            </div>
+            <span class="landing-vid-duration"><i class="fa-solid fa-clock"></i> 3:45</span>
+            <span class="landing-vid-badge">Module 01</span>
+          </div>
+          <div class="landing-video-info">
+            <h3 class="landing-video-title">Connecter son WhatsApp Officiel en 60s via QR Code</h3>
+            <p class="landing-video-desc">Scannez le QR Code sécurisé et gardez WhatsApp actif sur votre téléphone en parallèle 24h/24 grâce à la coexistence active.</p>
+            <a href="dashboard.html#academy" class="landing-video-link">
+              <span>Lancer le tutoriel vidéo</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Module 2 -->
+        <div class="academy-landing-card">
+          <div class="landing-video-thumb">
+            <div class="thumb-bg-gradient grad-purple">
+              <i class="fa-solid fa-robot thumb-watermark-lg"></i>
+            </div>
+            <div class="landing-play-orb">
+              <i class="fa-solid fa-play"></i>
+            </div>
+            <span class="landing-vid-duration"><i class="fa-solid fa-clock"></i> 6:20</span>
+            <span class="landing-vid-badge">Module 02</span>
+          </div>
+          <div class="landing-video-info">
+            <h3 class="landing-video-title">Configurer le Master Prompt &amp; son Catalogue de Prix</h3>
+            <p class="landing-video-desc">Réglez la posture commerciale d'élite, ajoutez vos produits en FCFA et activez la protection anti-hallucination.</p>
+            <a href="dashboard.html#academy" class="landing-video-link">
+              <span>Lancer le tutoriel vidéo</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Module 3 -->
+        <div class="academy-landing-card">
+          <div class="landing-video-thumb">
+            <div class="thumb-bg-gradient grad-cyan">
+              <i class="fa-solid fa-money-bill-wave thumb-watermark-lg"></i>
+            </div>
+            <div class="landing-play-orb">
+              <i class="fa-solid fa-play"></i>
+            </div>
+            <span class="landing-vid-duration"><i class="fa-solid fa-clock"></i> 5:10</span>
+            <span class="landing-vid-badge">Module 03</span>
+          </div>
+          <div class="landing-video-info">
+            <h3 class="landing-video-title">Automatiser Wave, Orange Money &amp; MTN MoMo</h3>
+            <p class="landing-video-desc">Routage automatique par indicatif pays (+225, +229, +221...), envoi du titulaire officiel et confirmation instantanée.</p>
+            <a href="dashboard.html#academy" class="landing-video-link">
+              <span>Lancer le tutoriel vidéo</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Module 4 -->
+        <div class="academy-landing-card">
+          <div class="landing-video-thumb">
+            <div class="thumb-bg-gradient grad-amber">
+              <i class="fa-solid fa-bullhorn thumb-watermark-lg"></i>
+            </div>
+            <div class="landing-play-orb">
+              <i class="fa-solid fa-play"></i>
+            </div>
+            <span class="landing-vid-duration"><i class="fa-solid fa-clock"></i> 7:15</span>
+            <span class="landing-vid-badge">Module 04</span>
+          </div>
+          <div class="landing-video-info">
+            <h3 class="landing-video-title">Diffusions de Masse WhatsApp sans Risque de Ban</h3>
+            <p class="landing-video-desc">Envoyez vos offres à des milliers de prospects en respectant les protocoles de temporisation aléatoire SafeSend™.</p>
+            <a href="dashboard.html#academy" class="landing-video-link">
+              <span>Lancer le tutoriel vidéo</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Callout Banner -->
+      <div class="academy-landing-cta-box" style="margin-top: 40px;">
+        <div class="cta-box-left">
+          <span class="cta-box-badge"><i class="fa-solid fa-bolt"></i> TOUT EST INCLUS SANS FRAIS SUPPLÉMENTAIRES</span>
+          <h3>Prêt à déployer votre commercial WhatsApp IA dès aujourd'hui ?</h3>
+        </div>
+        <a href="dashboard.html#academy" class="btn-primary-pill" style="white-space: nowrap;">
+          <span class="btn-icon-box"><i class="fa-solid fa-arrow-right"></i></span>
+          <span class="btn-text-main">Accéder au Dashboard</span>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer" style="padding: 50px 0 30px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: #060911;">
+    <div class="container" style="text-align: center;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px;">
+        <img src="images/logo.png" alt="Logo" style="width: 26px; height: 26px; object-fit: contain;">
+        <span style="font-family: var(--font-heading); font-size: 18px; font-weight: 800; color: #fff;">VANDIA IA</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+        Plateforme SaaS d'Automatisation Commerciale WhatsApp IA pour l'Afrique et l'International.
+      </p>
+      <div style="display: flex; justify-content: center; gap: 20px; font-size: 13px;">
+        <a href="index.html#hero" style="color: var(--text-secondary);">Accueil</a>
+        <a href="academy.html" style="color: var(--whatsapp-green);">Academy</a>
+        <a href="prompts.html" style="color: var(--text-secondary);">Master Prompts</a>
+        <a href="index.html#pricing" style="color: var(--text-secondary);">Tarifs</a>
+      </div>
+      <div style="margin-top: 25px; font-size: 12px; color: #64748b;">
+        © 2026 VANDIA IA. Tous droits réservés.
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

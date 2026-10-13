@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VANDIA IA — Bibliothèque Officielle de Master Prompts par Secteur</title>
+  <meta name="description" content="Découvrez nos Master Prompts de vente WhatsApp IA prêts à l'emploi pour E-commerce, Restaurants, Instituts de beauté, Formations et Services B2B.">
+
+  <!-- Google Fonts: Outfit (Titres) & Inter (Texte) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css?v=20261012_v16">
+</head>
+<body>
+
+  <!-- Background Grid & Glowing Ambient Blobs -->
+  <div class="bg-grid-ambient" aria-hidden="true">
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+    <div class="ambient-blob blob-3"></div>
+  </div>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="mobile-drawer-header">
+      <a href="index.html#hero" class="nav-brand mobile-link">
+        <div class="brand-icon-box" style="background: transparent; box-shadow: none;">
+          <img src="images/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <span class="brand-name">VANDIA</span>
+        <span class="brand-badge">IA</span>
+      </a>
+      <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Fermer le menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="mobile-drawer-nav">
+      <a href="index.html#hero" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-house"></i></span>
+          <span class="mobile-item-label">Accueil</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="index.html#features" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="mobile-item-label">Fonctionnalités</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="academy.html" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+          <span class="mobile-item-label">Academy Vidéos</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="prompts.html" class="mobile-nav-item mobile-link active">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="mobile-item-label">Master Prompts</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="index.html#pricing" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-tags"></i></span>
+          <span class="mobile-item-label">Tarifs &amp; Offres</span>
+        </div>
+        <span class="mobile-badge-discount">-50%</span>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+
+      <a href="dashboard.html" class="mobile-nav-item mobile-link">
+        <div class="mobile-item-left">
+          <span class="mobile-item-icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+          <span class="mobile-item-label">Connexion Espace Membre</span>
+        </div>
+        <i class="fa-solid fa-chevron-right mobile-item-arrow"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Site Header / Navbar -->
+  <header class="navbar-wrap" id="navbar-wrap">
+    <nav class="navbar" id="navbar">
+      <!-- Logo Left -->
+      <a href="index.html#hero" class="nav-brand">
+        <div class="brand-icon-box" style="background: transparent; box-shadow: none;">
+          <img src="images/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <span class="brand-name">VANDIA</span>
+        <span class="brand-badge">IA</span>
+      </a>
+
+      <!-- Nav Links Center -->
+      <div class="nav-links">
+        <a href="index.html#features" class="nav-link">Fonctionnalités</a>
+        <a href="academy.html" class="nav-link">Academy</a>
+        <a href="prompts.html" class="nav-link" style="color: var(--whatsapp-green); font-weight: 700;">Master Prompts</a>
+        <a href="index.html#pricing" class="nav-link">Tarifs</a>
+        <a href="index.html#integrations" class="nav-link">Intégrations</a>
+        <a href="index.html#faq" class="nav-link">FAQ</a>
+      </div>
+
+      <!-- Actions Right -->
+      <div class="nav-actions">
+        <button class="lang-selector-btn" aria-label="Langue sélectionnée : Français">
+          <span class="lang-flag-box">FR</span>
+          <span>FR</span>
+          <i class="fa-solid fa-chevron-down" style="font-size: 8px; opacity: 0.8;"></i>
+        </button>
+
+        <a href="dashboard.html" class="btn-nav-login">Connexion</a>
+        
+        <a href="index.html#pricing" class="btn-nav-cta">
+          <span>Accès Instantané</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+
+        <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Ouvrir le menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ==========================================================================
+       HERO: MASTER PROMPTS
+       ========================================================================== -->
+  <section class="hero-section" style="padding-top: 140px; padding-bottom: 50px;">
+    <div class="container">
+      <div class="hero-content" style="text-align: center; max-width: 860px; margin: 0 auto;">
+        
+        <div class="pill-tag" style="margin-bottom: 18px;">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>BIBLIOTHÈQUE OFFICIELLE DE PROMPTS DE VENTE</span>
+        </div>
+
+        <h1 class="hero-title" style="font-size: 46px; margin-bottom: 20px;">
+          Ne Rédigez Rien de Zéro. <span class="gradient-text-green">Des Prompts Conçus Pour Vendre.</span>
+        </h1>
+
+        <p class="hero-subtitle" style="font-size: 16px; margin-bottom: 30px;">
+          Découvrez comment notre IA accueille vos clients, répond aux hésitations de prix et encaisse les acomptes en direct sur WhatsApp selon votre secteur d'activité.
+        </p>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;">
+          <a href="#prompts-library" class="btn-primary-pill">
+            <span class="btn-icon-box"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+            <span class="btn-text-main">Explorer les Modèles</span>
+            <i class="fa-solid fa-arrow-down"></i>
+          </a>
+          <a href="dashboard.html#prompts" class="btn-nav-login" style="padding: 10px 22px; font-size: 14px;">
+            <i class="fa-solid fa-sliders" style="margin-right: 8px;"></i>
+            Appliquer dans mon Dashboard
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       INTERACTIVE PROMPT SHOWCASE
+       ========================================================================== -->
+  <section class="section" id="prompts-library" style="padding: 30px 0 80px 0;">
+    <div class="container">
+      
+      <!-- Interactive Sector Tabs -->
+      <div class="landing-prompt-tabs" id="landing-prompt-tabs">
+        <button class="landing-prompt-tab-btn active" data-tab="tab-ecom">🛍️ Boutique &amp; E-commerce</button>
+        <button class="landing-prompt-tab-btn" data-tab="tab-resto">🍽️ Restaurant &amp; Livraison</button>
+        <button class="landing-prompt-tab-btn" data-tab="tab-beauty">💆‍♀️ Institut &amp; Beauté</button>
+        <button class="landing-prompt-tab-btn" data-tab="tab-coach">🎓 Coaching &amp; Formations</button>
+      </div>
+
+      <!-- Interactive Prompt Showcase Box -->
+      <div class="landing-prompt-showcase-box">
+        
+        <!-- Left: Sector Rules & Features -->
+        <div class="prompt-showcase-left">
+          <span class="showcase-sector-badge" id="showcase-badge">E-COMMERCE &amp; PRÊT-À-PORTER</span>
+          <h3 class="showcase-sector-title" id="showcase-title">Boutique de Vêtements, Chaussures &amp; Accessoires</h3>
+          <p class="showcase-sector-desc" id="showcase-desc">
+            L'agent accueille le prospect, vérifie les tailles et couleurs disponibles, lève l'objection du prix en valorisant la qualité et encaisse le montant exact par Wave ou Mobile Money.
+          </p>
+
+          <div class="showcase-features-list" id="showcase-features">
+            <div class="showcase-feat-item">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Traitement de l'objection "C'est trop cher" avec remise de livraison</span>
+            </div>
+            <div class="showcase-feat-item">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Envoi immédiat du numéro Wave / OM officiel avec le nom du titulaire</span>
+            </div>
+            <div class="showcase-feat-item">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Confirmation de commande et transmission immédiate au service livraison</span>
+            </div>
+          </div>
+
+          <div class="showcase-actions-row" style="display: flex; gap: 14px; flex-wrap: wrap;">
+            <button class="btn-primary-pill" id="btn-copy-prompt">
+              <span class="btn-icon-box"><i class="fa-solid fa-copy"></i></span>
+              <span class="btn-text-main" id="copy-btn-text">Copier ce Master Prompt</span>
+            </button>
+            <a href="dashboard.html#prompts" class="btn-nav-login" style="padding: 10px 20px; font-size: 13.5px; border-radius: 999px;">
+              <span>Activer dans mon Agent IA</span>
+              <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Right: Real-time Simulated WhatsApp Chat Phone -->
+        <div class="prompt-showcase-right">
+          <div class="landing-phone-mockup">
+            <!-- Top WhatsApp Bar -->
+            <div class="phone-top-wa-bar">
+              <div class="phone-wa-contact">
+                <div class="phone-wa-avatar" id="phone-avatar"><i class="fa-solid fa-store"></i></div>
+                <div class="phone-wa-meta">
+                  <span class="phone-wa-name" id="phone-name">Prestige Mode</span>
+                  <span class="phone-wa-status"><i class="fa-solid fa-circle"></i> En ligne • Vendeur IA</span>
+                </div>
+              </div>
+              <div class="phone-wa-icons">
+                <i class="fa-solid fa-video"></i>
+                <i class="fa-solid fa-phone"></i>
+              </div>
+            </div>
+
+            <!-- WhatsApp Chat Body -->
+            <div class="phone-wa-body" id="phone-chat-body">
+              <div class="phone-msg msg-in">
+                Bonjour, le polo noir en photo est à combien svp ? C'est disponible en taille L ?
+                <span class="msg-time">10:14</span>
+              </div>
+              <div class="phone-msg msg-out">
+                Bonjour et bienvenue chez Prestige Mode ! 😊 Oui, il est disponible en taille L en noir et bleu nuit à 12 000 FCFA (coton piqué respirant). Vous êtes dans quelle ville pour la livraison ?
+                <span class="msg-time">10:14</span>
+              </div>
+              <div class="phone-msg msg-in">
+                Je suis à Abidjan (Cocody). C'est un peu cher, vous faites pas 10 000 ?
+                <span class="msg-time">10:15</span>
+              </div>
+              <div class="phone-msg msg-out">
+                Je comprends tout à fait ! Ce modèle est de qualité premium importée avec garantie échange sous 48h. Pour votre première commande, je vous offre la livraison gratuite à Cocody ! Ça vous convient ? ✨
+                <span class="msg-time">10:15</span>
+              </div>
+              <div class="phone-msg msg-in">
+                D'accord super, comment je fais pour payer ?
+                <span class="msg-time">10:16</span>
+              </div>
+              <div class="phone-msg msg-out">
+                Vous pouvez régler 12 000 FCFA par Wave au 07 XX XX XX XX (Nom : Boutique Prestige). Envoyez-moi juste la capture ici avec votre adresse précise pour expédition cet après-midi ! 🛵
+                <span class="msg-time">10:16</span>
+              </div>
+              <div class="phone-msg msg-in">
+                [Capture Wave 12 000 FCFA] Reçu envoyé ! Je suis à Angré 8e tranche.
+                <span class="msg-time">10:17</span>
+              </div>
+              <div class="phone-msg msg-out">
+                Paiement bien validé ! 🎉 Votre colis est en préparation. Notre livreur vous contactera dès 14h au numéro de livraison. Merci !
+                <span class="msg-time">10:17</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer" style="padding: 50px 0 30px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: #060911;">
+    <div class="container" style="text-align: center;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px;">
+        <img src="images/logo.png" alt="Logo" style="width: 26px; height: 26px; object-fit: contain;">
+        <span style="font-family: var(--font-heading); font-size: 18px; font-weight: 800; color: #fff;">VANDIA IA</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+        Plateforme SaaS d'Automatisation Commerciale WhatsApp IA pour l'Afrique et l'International.
+      </p>
+      <div style="display: flex; justify-content: center; gap: 20px; font-size: 13px;">
+        <a href="index.html#hero" style="color: var(--text-secondary);">Accueil</a>
+        <a href="academy.html" style="color: var(--text-secondary);">Academy</a>
+        <a href="prompts.html" style="color: var(--whatsapp-green);">Master Prompts</a>
+        <a href="index.html#pricing" style="color: var(--text-secondary);">Tarifs</a>
+      </div>
+      <div style="margin-top: 25px; font-size: 12px; color: #64748b;">
+        © 2026 VANDIA IA. Tous droits réservés.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var tabsData = {
+        "tab-ecom": {
+          badge: "E-COMMERCE & PRÊT-À-PORTER",
+          title: "Boutique de Vêtements, Chaussures & Accessoires",
+          desc: "L'agent accueille le prospect, vérifie les tailles et couleurs disponibles, lève l'objection du prix en valorisant la qualité et encaisse le montant exact par Wave ou Mobile Money.",
+          features: [
+            "Traitement de l'objection 'C'est trop cher' avec remise de livraison",
+            "Envoi immédiat du numéro Wave / OM officiel avec le nom du titulaire",
+            "Confirmation de commande et transmission immédiate au service livraison"
+          ],
+          avatarIcon: "fa-store",
+          contactName: "Prestige Mode",
+          promptCode: "# RÔLE : Conseiller Commercial d'Élite pour Boutique Mode E-commerce\n\n1. Accueillir chaleureusement et vérifier la disponibilité du modèle et de la taille demandée.\n2. Si le prospect hésite sur le prix, valoriser la matière premium et proposer la livraison gratuite.\n3. Fournir le numéro Wave / Orange Money avec le nom du titulaire officiel.\n4. Dès réception de la capture, confirmer la commande et transmettre au livreur.",
+          messages: [
+            { in: true, text: "Bonjour, le polo noir en photo est à combien svp ? C'est disponible en taille L ?", time: "10:14" },
+            { in: false, text: "Bonjour et bienvenue chez Prestige Mode ! 😊 Oui, il est disponible en taille L en noir et bleu nuit à 12 000 FCFA (coton piqué respirant). Vous êtes dans quelle ville pour la livraison ?", time: "10:14" },
+            { in: true, text: "Je suis à Abidjan (Cocody). C'est un peu cher, vous faites pas 10 000 ?", time: "10:15" },
+            { in: false, text: "Je comprends tout à fait ! Ce modèle est de qualité premium importée avec garantie échange sous 48h. Pour votre première commande, je vous offre la livraison gratuite à Cocody ! Ça vous convient ? ✨", time: "10:15" },
+            { in: true, text: "D'accord super, comment je fais pour payer ?", time: "10:16" },
+            { in: false, text: "Vous pouvez régler 12 000 FCFA par Wave au 07 XX XX XX XX (Nom : Boutique Prestige). Envoyez-moi juste la capture ici avec votre adresse précise pour expédition cet après-midi ! 🛵", time: "10:16" },
+            { in: true, text: "[Capture Wave 12 000 FCFA] Reçu envoyé ! Je suis à Angré 8e tranche.", time: "10:17" },
+            { in: false, text: "Paiement bien validé ! 🎉 Votre colis est en préparation. Notre livreur vous contactera dès 14h au numéro de livraison. Merci !", time: "10:17" }
+          ]
+        },
+        "tab-resto": {
+          badge: "RESTAURATION & FAST-FOOD",
+          title: "Restaurant, Traiteur & Livraison Express",
+          desc: "Conçu pour les restaurants et fast-foods. L'agent présente le menu du jour, fait un upsell de boissons/desserts et encaisse par Mobile Money avant le départ du livreur.",
+          features: [
+            "Présentation du plat du jour avec options et accompagnements",
+            "Vente additionnelle de jus frais et desserts maison (+25% de panier moyen)",
+            "Encaissement instantané MoMo/Orange Money et envoi de la commande en cuisine"
+          ],
+          avatarIcon: "fa-utensils",
+          contactName: "Saveurs d'Afrique",
+          promptCode: "# RÔLE : Hôte Commercial pour Restaurant & Livraison Express\n\n1. Accueillir avec enthousiasme et présenter les plats et formules du jour.\n2. Toujours suggérer un accompagnement, une boisson fraîche maison ou un dessert (+25% de panier moyen).\n3. Demander le quartier de livraison et calculer le total avec les frais de livraison.\n4. Encaisser avant le départ du livreur par Mobile Money.",
+          messages: [
+            { in: true, text: "Bonsoir, vous avez du Tchep poisson ce soir ?", time: "19:30" },
+            { in: false, text: "Bonsoir ! 🍲 Oui, notre Tchep poisson braisé royal est disponible à 4 500 FCFA ! Souhaitez-vous y ajouter un jus d'ananas-gingembre frais maison à 1 000 FCFA ?", time: "19:30" },
+            { in: true, text: "Oui avec le jus svp. C'est pour livrer à Akwa Nord.", time: "19:31" },
+            { in: false, text: "Parfait ! Total 5 500 FCFA (livraison offerte ce soir dès 5 000 FCFA !). Vous pouvez régler par MTN MoMo ou OM au 69X XX XX XX. Le livreur part chez vous en 35 min chrono. 🛵", time: "19:31" },
+            { in: true, text: "Dépôt effectué sur le MoMo !", time: "19:32" },
+            { in: false, text: "Paiement confirmé ! Votre commande est en cuisine. Le livreur est en route. Bon appétit d'avance ! ✨", time: "19:33" }
+          ]
+        },
+        "tab-beauty": {
+          badge: "BEAUTÉ & BIEN-ÊTRE",
+          title: "Institut de Beauté, Spas & Salons de Coiffure",
+          desc: "L'agent conseille les clientes sur les soins, valorise la tenue des produits et sécurise la réservation grâce à un acompte Mobile Money pour éliminer les no-shows.",
+          features: [
+            "Conseil personnalisé sur les prestations et tarifs officiels",
+            "Proposition de deux créneaux horaires disponibles au choix",
+            "Versement d'acompte 30% Mobile Money pour bloquer définitivement le rendez-vous"
+          ],
+          avatarIcon: "fa-spa",
+          contactName: "Glamour Institut",
+          promptCode: "# RÔLE : Conseillère Beauté & Gestionnaire de Réservations\n\n1. Répondre avec bienveillance et professionnalisme aux demandes de prestations.\n2. Proposer systématiquement deux créneaux horaires précis au choix.\n3. Sécuriser le rendez-vous en demandant un acompte de 30% via Wave/MoMo pour éliminer les annulations de dernière minute.\n4. Dès confirmation, envoyer l'adresse exacte et les recommandations de préparation.",
+          messages: [
+            { in: true, text: "Bonjour, je veux faire une pose d'ongles en résine demain samedi. Quels sont vos tarifs ?", time: "14:02" },
+            { in: false, text: "Bonjour ma belle ! 💅 Notre pose complète résine avec capsules et nail art sur-mesure est à 15 000 FCFA (tenue 4 semaines). Pour demain samedi, j'ai de la place à 11h00 ou 15h30. Quel horaire vous arrange ?", time: "14:02" },
+            { in: true, text: "15h30 c'est parfait pour moi !", time: "14:03" },
+            { in: false, text: "C'est noté avec plaisir ! Pour bloquer définitivement votre place, un acompte de 5 000 FCFA est demandé via Wave au 01 XX XX XX XX. Dès réception, je vous envoie l'adresse et le plan d'accès ! ✨", time: "14:03" },
+            { in: true, text: "Reçu Wave envoyé à l'instant !", time: "14:04" },
+            { in: false, text: "Acompte bien reçu ! Votre créneau de 15h30 est sécurisé. À demain ma belle ! 💖", time: "14:04" }
+          ]
+        },
+        "tab-coach": {
+          badge: "FORMATIONS & INFOPRODUITS",
+          title: "Infopreneurs, Formateurs & Programmes en Ligne",
+          desc: "L'agent qualifie le prospect, présente la formation comme la solution idéale à ses objectifs et envoie le lien d'accès immédiat dès le paiement.",
+          features: [
+            "Qualification bienveillante des besoins du futur apprenant",
+            "Mise en avant du tarif promotionnel et des bonus inclus",
+            "Envoi du lien d'inscription et délivrance instantanée des accès membres"
+          ],
+          avatarIcon: "fa-graduation-cap",
+          contactName: "Académie Business IA",
+          promptCode: "# RÔLE : Conseiller Pédagogique & Vente de Programmes de Formation\n\n1. Qualifier le niveau actuel du prospect et ses objectifs professionnels.\n2. Présenter le programme comme la solution étape-par-étape la plus rapide.\n3. Souligner la garantie satisfait ou remboursé et les bonus offerts.\n4. Envoyer le lien de paiement direct Wave/OM et confirmer l'activation immédiate des accès.",
+          messages: [
+            { in: true, text: "Salut, est-ce que la formation e-commerce marche même si je pars de zéro ?", time: "16:40" },
+            { in: false, text: "Bonjour ! Absolument, plus de 70% de nos membres ont démarré sans aucune expérience. Le programme vous guide pas-à-pas : du choix des produits jusqu'à l'automatisation complète. Quel produit souhaitez-vous vendre ? 🚀", time: "16:40" },
+            { in: true, text: "Je veux vendre des mèches et cosmétiques. Combien coûte l'accès ?", time: "16:41" },
+            { in: false, text: "C'est un marché très porteur ! Le programme complet (vidéos à vie + modèles + communauté privée) est en promo à 25 000 FCFA au lieu de 50 000 FCFA. Dès règlement par Wave ou MoMo, vous recevez vos accès en 2 minutes. Voulez-vous le lien ? ✨", time: "16:41" },
+            { in: true, text: "Oui je veux m'inscrire maintenant !", time: "16:42" },
+            { in: false, text: "Génial ! Voici le lien sécurisé Wave/OM : https://vandia.ai/pay/ecom-pro. Dès validation, vos accès s'activent immédiatement. Bienvenue parmi nous ! 🎉", time: "16:42" }
+          ]
+        }
+      };
+
+      var currentTab = "tab-ecom";
+
+      document.addEventListener("DOMContentLoaded", function() {
+        var buttons = document.querySelectorAll("#landing-prompt-tabs .landing-prompt-tab-btn");
+        var copyBtn = document.getElementById("btn-copy-prompt");
+        var copyBtnText = document.getElementById("copy-btn-text");
+
+        buttons.forEach(function(btn) {
+          btn.addEventListener("click", function() {
+            buttons.forEach(function(b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+
+            currentTab = btn.getAttribute("data-tab");
+            var data = tabsData[currentTab];
+            if (!data) return;
+
+            document.getElementById("showcase-badge").textContent = data.badge;
+            document.getElementById("showcase-title").textContent = data.title;
+            document.getElementById("showcase-desc").textContent = data.desc;
+            document.getElementById("phone-name").textContent = data.contactName;
+            document.getElementById("phone-avatar").innerHTML = '<i class="fa-solid ' + data.avatarIcon + '"></i>';
+
+            var featEl = document.getElementById("showcase-features");
+            if (featEl && Array.isArray(data.features)) {
+              featEl.innerHTML = data.features.map(function(f) {
+                return '<div class="showcase-feat-item"><i class="fa-solid fa-circle-check"></i><span>' + f + '</span></div>';
+              }).join("");
+            }
+
+            var chatBody = document.getElementById("phone-chat-body");
+            if (chatBody && Array.isArray(data.messages)) {
+              chatBody.innerHTML = data.messages.map(function(m) {
+                var cls = m.in ? "msg-in" : "msg-out";
+                return '<div class="phone-msg ' + cls + '">' + m.text + '<span class="msg-time">' + m.time + '</span></div>';
+              }).join("");
+            }
+          });
+        });
+
+        if (copyBtn) {
+          copyBtn.addEventListener("click", function() {
+            var data = tabsData[currentTab];
+            if (!data || !data.promptCode) return;
+            navigator.clipboard.writeText(data.promptCode).then(function() {
+              if (copyBtnText) copyBtnText.textContent = "✓ Prompt Copié !";
+              setTimeout(function() {
+                if (copyBtnText) copyBtnText.textContent = "Copier ce Master Prompt";
+              }, 2500);
+            });
+          });
+        }
+      });
+    })();
+  </script>
+  <script src="js/script.js"></script>
+</body>
+</html>
