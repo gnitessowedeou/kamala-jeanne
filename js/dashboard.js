@@ -57,6 +57,13 @@ try {
 // AUTHENTICATION GUARD
 // ==============================================================================
 (function() {
+    // Si l'utilisateur revient d'une authentification Google/OAuth avec son jeton dans l'URL
+    if (
+        (window.location.hash && (window.location.hash.includes('access_token=') || window.location.hash.includes('refresh_token='))) ||
+        (window.location.search && window.location.search.includes('code='))
+    ) {
+        return; // Ne pas rejeter, laisser AuthEngine traiter le jeton
+    }
     let u = null;
     try {
         u = JSON.parse(localStorage.getItem('vendia_current_user'));

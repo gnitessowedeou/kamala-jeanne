@@ -548,16 +548,16 @@ function initAuthModal() {
   // OAuth Google
   const btnGoogle = document.getElementById("btn-oauth-google");
   if (btnGoogle) {
-    btnGoogle.addEventListener("click", async () => {
+    btnGoogle.addEventListener("click", async (e) => {
+      if (e) e.preventDefault();
       hideAlert();
       btnGoogle.disabled = true;
-      btnGoogle.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Connexion Google...</span>';
+      btnGoogle.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Google...</span>';
       const res = await window.AuthEngine.signInWithOAuth("google");
-      if (res.success) {
-        showAlert("Connecté avec succès via Google ! Redirection...", "success");
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 900);
+      if (!res.success && res.error) {
+        btnGoogle.disabled = false;
+        btnGoogle.innerHTML = '<i class="fa-brands fa-google auth-social-icon"></i><span>Continuer avec Google</span>';
+        showAlert(res.error, "error");
       }
     });
   }
@@ -565,16 +565,16 @@ function initAuthModal() {
   // OAuth Facebook
   const btnFacebook = document.getElementById("btn-oauth-facebook");
   if (btnFacebook) {
-    btnFacebook.addEventListener("click", async () => {
+    btnFacebook.addEventListener("click", async (e) => {
+      if (e) e.preventDefault();
       hideAlert();
       btnFacebook.disabled = true;
-      btnFacebook.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Connexion Facebook...</span>';
+      btnFacebook.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Facebook...</span>';
       const res = await window.AuthEngine.signInWithOAuth("facebook");
-      if (res.success) {
-        showAlert("Connecté avec succès via Facebook ! Redirection...", "success");
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 900);
+      if (!res.success && res.error) {
+        btnFacebook.disabled = false;
+        btnFacebook.innerHTML = '<i class="fa-brands fa-facebook auth-social-icon"></i><span>Continuer avec Facebook</span>';
+        showAlert(res.error, "error");
       }
     });
   }

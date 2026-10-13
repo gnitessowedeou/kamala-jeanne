@@ -449,9 +449,20 @@
     async handleOAuthCallback() {
       try {
         const hash = window.location.hash;
-        if (!hash || !hash.includes("access_token=")) return false;
+        if (!hash) return false;
 
         const params = new URLSearchParams(hash.substring(1));
+        const errorDesc = params.get("error_description") || params.get("error");
+        if (errorDesc) {
+          console.error("Erreur retour OAuth:", errorDesc);
+          this.showToast("Erreur de connexion Google : " + decodeURIComponent(errorDesc.replace(/\+/g, " ")), "error");
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname + window.location.search);
+          }
+          return false;
+        }
+
+        if (!hash.includes("access_token=")) return false;
         const accessToken = params.get("access_token");
         if (!accessToken) return false;
 
