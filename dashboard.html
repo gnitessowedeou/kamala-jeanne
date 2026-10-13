@@ -2561,24 +2561,92 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       </div>
 
       <div class="modal-body qr-container">
-        <p style="font-size: 13.5px; color: var(--text-secondary);">
-          Scannez ce QR Code avec votre téléphone dans <strong>WhatsApp &gt; Appareils Connectés</strong> pour synchroniser vos discussions en coexistence avec l'Agent IA.
-        </p>
+        <!-- Dual Connection Mode Tabs -->
+        <div class="wa-conn-tabs">
+          <button type="button" class="wa-conn-tab active" id="tab-btn-qr" onclick="switchWaConnectMode('qr')">
+            <i class="fa-solid fa-qrcode"></i>
+            <span>1. Scanner le QR Code</span>
+          </button>
+          <button type="button" class="wa-conn-tab" id="tab-btn-pairing" onclick="switchWaConnectMode('pairing')">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            <span>2. Lier par Numéro (Sans Caméra)</span>
+          </button>
+        </div>
 
-        <!-- Clean High-Tech SVG QR Code -->
-        <div class="qr-code-box" id="qr-canvas-box" style="display: flex; align-items: center; justify-content: center; min-height: 260px; background: rgba(0,0,0,0.25); border-radius: 12px; margin: 15px auto;">
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center;">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size: 38px; color: #25d366; margin-bottom: 12px;"></i>
-            <p style="color: #fbbf24; font-weight: 600; font-size: 13.5px; margin: 0;">Chargement du QR Code officiel WhatsApp...</p>
-            <span style="font-size: 11px; color: #94a3b8; margin-top: 5px;">Connexion au serveur Cloud Railway...</span>
+        <!-- Pane A: QR Code Mode -->
+        <div id="pane-conn-qr" class="conn-pane active">
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            Scannez ce QR Code avec votre téléphone dans <strong>WhatsApp &gt; Appareils Connectés</strong> pour synchroniser vos discussions en coexistence avec l'Agent IA.
+          </p>
+
+          <div class="qr-code-box" id="qr-canvas-box" style="display: flex; align-items: center; justify-content: center; min-height: 260px; background: rgba(0,0,0,0.25); border-radius: 12px; margin: 15px auto;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center;">
+              <i class="fa-solid fa-spinner fa-spin" style="font-size: 38px; color: #25d366; margin-bottom: 12px;"></i>
+              <p style="color: #fbbf24; font-weight: 600; font-size: 13.5px; margin: 0;">Chargement du QR Code officiel WhatsApp...</p>
+              <span style="font-size: 11px; color: #94a3b8; margin-top: 5px;">Connexion au serveur Cloud Railway...</span>
+            </div>
+          </div>
+
+          <div class="qr-instructions-list">
+            <div><strong>1.</strong> Ouvrez WhatsApp sur votre smartphone.</div>
+            <div><strong>2.</strong> Allez dans <strong>Réglages / Menu</strong> &gt; <strong>Appareils connectés</strong>.</div>
+            <div><strong>3.</strong> Appuyez sur <strong>Connecter un appareil</strong>.</div>
+            <div><strong>4.</strong> Pointez votre caméra vers ce code pour valider la liaison.</div>
           </div>
         </div>
 
-        <div class="qr-instructions-list">
-          <div><strong>1.</strong> Ouvrez WhatsApp sur votre smartphone.</div>
-          <div><strong>2.</strong> Allez dans <strong>Réglages / Menu</strong> &gt; <strong>Appareils connectés</strong>.</div>
-          <div><strong>3.</strong> Appuyez sur <strong>Connecter un appareil</strong>.</div>
-          <div><strong>4.</strong> Pointez votre caméra vers ce code pour valider la liaison.</div>
+        <!-- Pane B: Pairing Code Mode (Phone number -> 8-character code) -->
+        <div id="pane-conn-pairing" class="conn-pane" style="display: none;">
+          <div class="pairing-notice-box">
+            <i class="fa-solid fa-circle-info" style="color: var(--whatsapp-green); font-size: 16px;"></i>
+            <span><strong>Idéal si vous êtes sur smartphone :</strong> aucun besoin de scanner avec une caméra. Entrez votre numéro ci-dessous pour recevoir votre code d'association à 8 chiffres.</span>
+          </div>
+
+          <div class="pairing-input-section">
+            <label style="font-size: 12.5px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; display: block;">
+              Votre Numéro WhatsApp (avec indicatif pays) :
+            </label>
+            <div class="pairing-form-row">
+              <div class="pairing-input-wrap">
+                <i class="fa-brands fa-whatsapp"></i>
+                <input type="tel" id="wa-pairing-phone-input" placeholder="Ex: +225 07 01 02 03 04 ou 229..." autocomplete="tel">
+              </div>
+              <button type="button" class="btn-primary-glow" id="btn-submit-pairing" onclick="submitWhatsAppPairingCode()">
+                <i class="fa-solid fa-key"></i>
+                <span id="btn-pairing-text">Générer mon Code</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Pairing Code Display Card (Populates dynamically) -->
+          <div id="pairing-code-result-wrap" style="display: none;">
+            <div class="pairing-code-card">
+              <div class="code-card-header">
+                <span class="code-card-badge"><i class="fa-solid fa-shield-halved"></i> Code Officiel WhatsApp</span>
+                <span style="font-size: 11px; color: #94a3b8;">Expire dans 3 minutes</span>
+              </div>
+              
+              <div class="pairing-code-display" id="pairing-code-display">
+                <!-- Dynamically injected characters -->
+              </div>
+
+              <div style="display: flex; justify-content: center; margin-top: 10px;">
+                <button type="button" class="btn-secondary-glass btn-copy-pairing" id="btn-copy-pairing-code" onclick="copyWhatsAppPairingCode()">
+                  <i class="fa-regular fa-copy"></i>
+                  <span id="copy-pairing-label">Copier le code</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Pairing Steps Guide -->
+            <div class="qr-instructions-list" style="margin-top: 16px;">
+              <div><strong>1.</strong> Ouvrez WhatsApp sur votre smartphone.</div>
+              <div><strong>2.</strong> Allez dans <strong>Réglages / Menu (3 points)</strong> &gt; <strong>Appareils connectés</strong>.</div>
+              <div><strong>3.</strong> Appuyez sur <strong>Connecter un appareil</strong>.</div>
+              <div><strong>4.</strong> Appuyez en bas sur <strong>« Lier avec un numéro de téléphone »</strong>.</div>
+              <div><strong>5.</strong> Tapez ce code à 8 chiffres. La liaison s'effectue en 3 secondes !</div>
+            </div>
+          </div>
         </div>
       </div>
 

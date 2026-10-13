@@ -283,7 +283,8 @@ function getChromiumExecutablePath() {
 // === 3. GESTIONNAIRE WHATSAPP MULTI-CLIENTS & MEMOIRE CONVERSATIONNELLE DURABLE ===
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes generes
-const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
+const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing Code à 8 caractères)
+const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
 
 // Memoire contextuelle persistante & fenetre de session de 24h
@@ -570,8 +571,9 @@ RÈGLES D'EXÉCUTION LORSQUE LE CLIENT VEUT PAYER OU COMMANDE :
 
 
 app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
-  const { userId, restart } = req.body;
+  const { userId, restart, phoneNumber } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
+  const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
 
   if (waStatuses[userId] === 'CONNECTED' && !restart) {
     return res.json({ status: 'CONNECTED', message: "Bot déjà actif", phone: waNumbers[userId] || null });
@@ -584,6 +586,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
       delete waClients[userId];
     }
     delete waSessionsQR[userId];
+    delete waPairingCodes[userId];
     delete waNumbers[userId];
     const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
     if (fs.existsSync(authDir)) {
@@ -602,7 +605,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   const chromiumPath = getChromiumExecutablePath();
   console.log(`[WA] Chemin Chromium détecté: ${chromiumPath || 'Puppeteer standard'}`);
 
-  const client = new Client({
+  const clientOptions = {
     authStrategy: new LocalAuth({ clientId: userId }),
     puppeteer: {
       headless: true,
@@ -617,7 +620,18 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     },
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
-  });
+  };
+
+  if (cleanPhone && cleanPhone.length >= 8) {
+    clientOptions.pairWithPhoneNumber = {
+      phoneNumber: cleanPhone,
+      showNotification: true,
+      intervalMs: 180000
+    };
+    console.log(`[WA] Client ${userId} configuré pour code d'association (+${cleanPhone})`);
+  }
+
+  const client = new Client(clientOptions);
 
   waClients[userId] = client;
 
@@ -627,6 +641,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (scan validé) !`);
     waStatuses[userId] = 'AUTHENTICATED';
     delete waSessionsQR[userId];
+    delete waPairingCodes[userId];
   });
 
   client.on('loading_screen', (percent, message) => {
@@ -637,9 +652,15 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   client.on('qr', async (qr) => {
     const qrImage = await qrcode.toDataURL(qr); // Convertir en image affichable
     waSessionsQR[userId] = qrImage;
-    waStatuses[userId] = 'QR_READY';
+    if (!waPairingCodes[userId]) waStatuses[userId] = 'QR_READY';
     console.log(`\n📱 [WA] SCANNEZ CE QR CODE AVEC VOTRE SMARTPHONE :`);
     try { require('qrcode-terminal').generate(qr, { small: true }); } catch(e) {}
+  });
+
+  client.on('code', (code) => {
+    console.log(`🔑 [WA] Client ${userId} PAIRING CODE REÇU : ${code}`);
+    waPairingCodes[userId] = code;
+    waStatuses[userId] = 'CODE_READY';
   });
 
   // Quand le client a scanné et est connecté
@@ -664,6 +685,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     waStatuses[userId] = 'CONNECTED';
     waNumbers[userId] = client.info ? client.info.wid.user : null;
     delete waSessionsQR[userId];
+    delete waPairingCodes[userId];
     console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
   });
 
@@ -896,9 +918,144 @@ app.get('/api/whatsapp/screenshot/:userId', authMiddleware, async (req, res) => 
   }
 });
 
+// Endpoint d'association WhatsApp par code à 8 caractères (Pairing Code)
+app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
+  const { userId, phoneNumber } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId manquant" });
+  if (!phoneNumber) return res.status(400).json({ error: "Numéro de téléphone requis" });
+
+  const cleanPhone = String(phoneNumber).replace(/\D/g, '');
+  if (cleanPhone.length < 8) {
+    return res.status(400).json({ error: "Numéro de téléphone invalide (incluez l'indicatif pays, ex: 2250701020304)." });
+  }
+
+  // 1. Si un client existe déjà et supporte requestPairingCode
+  const existingClient = waClients[userId];
+  if (existingClient && typeof existingClient.requestPairingCode === 'function' && waStatuses[userId] !== 'CONNECTED') {
+    try {
+      console.log(`[WA] Demande de Pairing Code dynamique pour ${userId} sur +${cleanPhone}...`);
+      const code = await existingClient.requestPairingCode(cleanPhone);
+      waPairingCodes[userId] = code;
+      waStatuses[userId] = 'CODE_READY';
+      return res.json({ status: 'CODE_READY', code });
+    } catch (err) {
+      console.warn(`[WA] Échec requestPairingCode direct: ${err.message}. Redémarrage du client...`);
+    }
+  }
+
+  // 2. Démarrer avec pairWithPhoneNumber
+  try {
+    if (existingClient) {
+      try { await existingClient.destroy(); } catch (e) {}
+      delete waClients[userId];
+    }
+    delete waSessionsQR[userId];
+    delete waPairingCodes[userId];
+    delete waNumbers[userId];
+
+    const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+    if (fs.existsSync(authDir)) {
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+    }
+
+    waStatuses[userId] = 'STARTING';
+    const chromiumPath = getChromiumExecutablePath();
+
+    const client = new Client({
+      authStrategy: new LocalAuth({ clientId: userId }),
+      pairWithPhoneNumber: {
+        phoneNumber: cleanPhone,
+        showNotification: true,
+        intervalMs: 180000
+      },
+      puppeteer: {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--disable-gpu'
+        ],
+        ...(chromiumPath ? { executablePath: chromiumPath } : {})
+      },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+    });
+
+    waClients[userId] = client;
+
+    client.on('code', (code) => {
+      console.log(`🔑 [WA] Pairing Code généré pour ${userId} : ${code}`);
+      waPairingCodes[userId] = code;
+      waStatuses[userId] = 'CODE_READY';
+    });
+
+    client.on('qr', async (qr) => {
+      const qrImage = await qrcode.toDataURL(qr);
+      waSessionsQR[userId] = qrImage;
+      if (!waPairingCodes[userId]) waStatuses[userId] = 'QR_READY';
+    });
+
+    client.on('authenticated', () => {
+      console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (Code validé) !`);
+      waStatuses[userId] = 'AUTHENTICATED';
+      delete waSessionsQR[userId];
+      delete waPairingCodes[userId];
+    });
+
+    client.on('ready', () => {
+      waStatuses[userId] = 'CONNECTED';
+      waNumbers[userId] = client.info ? client.info.wid.user : null;
+      delete waSessionsQR[userId];
+      delete waPairingCodes[userId];
+      console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
+    });
+
+    client.on('auth_failure', (msg) => {
+      console.error(`[WA] Échec auth pour ${userId} :`, msg);
+      waStatuses[userId] = 'DISCONNECTED';
+      delete waClients[userId];
+      delete waPairingCodes[userId];
+    });
+
+    client.on('disconnected', () => {
+      waStatuses[userId] = 'DISCONNECTED';
+      delete waClients[userId];
+      delete waPairingCodes[userId];
+      delete waSessionsQR[userId];
+    });
+
+    client.initialize().catch((err) => {
+      console.error(`[WA] Erreur initialize pour ${userId}:`, err.message);
+      waStatuses[userId] = 'ERROR';
+    });
+
+    // Attente du code jusqu'à 8 secondes
+    for (let i = 0; i < 16; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      if (waPairingCodes[userId]) {
+        return res.json({ status: 'CODE_READY', code: waPairingCodes[userId] });
+      }
+    }
+
+    return res.json({ status: 'STARTING', message: "Génération du code en cours..." });
+  } catch (error) {
+    console.error("[WA] Erreur endpoint pairing-code:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
   const { userId } = req.params;
-  const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED'); res.json({ status: st, qr: waSessionsQR[userId] || null, phone: waNumbers[userId] || null, error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null });
+  const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED');
+  res.json({
+    status: st,
+    qr: waSessionsQR[userId] || null,
+    pairingCode: waPairingCodes[userId] || null,
+    phone: waNumbers[userId] || null,
+    error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null
+  });
 });
 
 // === 4. GESTION DES DISCUSSIONS & MESSAGES WHATSAPP (BOÎTE DE RÉCEPTION) ===

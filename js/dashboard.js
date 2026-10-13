@@ -5473,3 +5473,123 @@ if (document.readyState === "loading") {
 } else {
   initPromptsLibrary();
 }
+
+// =============================================================================
+// WHATSAPP PAIRING CODE (LIAISON PAR NUMÉRO SANS CAMÉRA) CONTROLLER
+// =============================================================================
+window.currentWaPairingCode = "";
+
+window.switchWaConnectMode = function(mode) {
+    var tabQr = document.getElementById("tab-btn-qr");
+    var tabPairing = document.getElementById("tab-btn-pairing");
+    var paneQr = document.getElementById("pane-conn-qr");
+    var panePairing = document.getElementById("pane-conn-pairing");
+
+    if (mode === "pairing") {
+        if (tabQr) tabQr.classList.remove("active");
+        if (tabPairing) tabPairing.classList.add("active");
+        if (paneQr) paneQr.style.display = "none";
+        if (panePairing) panePairing.style.display = "block";
+    } else {
+        if (tabPairing) tabPairing.classList.remove("active");
+        if (tabQr) tabQr.classList.add("active");
+        if (panePairing) panePairing.style.display = "none";
+        if (paneQr) paneQr.style.display = "block";
+    }
+};
+
+window.renderPairingCode = function(rawCode) {
+    if (!rawCode) return;
+    window.currentWaPairingCode = String(rawCode).trim();
+
+    var displayEl = document.getElementById("pairing-code-display");
+    var resultWrap = document.getElementById("pairing-code-result-wrap");
+    if (!displayEl) return;
+
+    var clean = window.currentWaPairingCode.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    var html = "";
+    for (var i = 0; i < clean.length; i++) {
+        if (i === 4 && clean.length > 4) {
+            html += '<span class="pairing-dash">-</span>';
+        }
+        html += '<span class="pairing-char">' + clean[i] + '</span>';
+    }
+
+    displayEl.innerHTML = html;
+    if (resultWrap) resultWrap.style.display = "block";
+
+    window.switchWaConnectMode("pairing");
+};
+
+window.submitWhatsAppPairingCode = async function() {
+    var phoneInput = document.getElementById("wa-pairing-phone-input");
+    var btn = document.getElementById("btn-submit-pairing");
+    var btnText = document.getElementById("btn-pairing-text");
+    if (!phoneInput) return;
+
+    var phoneNumber = phoneInput.value.trim();
+    if (!phoneNumber) {
+        if (typeof showToast === "function") showToast("Veuillez saisir votre numéro WhatsApp avec indicatif (ex: +225...)", "warning");
+        phoneInput.focus();
+        return;
+    }
+
+    var cleanDigits = phoneNumber.replace(/\D/g, "");
+    if (cleanDigits.length < 8) {
+        if (typeof showToast === "function") showToast("Numéro trop court. Veuillez inclure l'indicatif pays (ex: 2250701020304).", "error");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Génération...';
+
+    var targetUserId = (typeof getAppUserId === "function") ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+
+    try {
+        var res = await fetch(API_URL + "/api/whatsapp/pairing-code", {
+            method: "POST",
+            headers: (typeof getAuthHeaders === "function") ? getAuthHeaders() : { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: targetUserId, phoneNumber: cleanDigits })
+        });
+
+        var data = await res.json();
+        if (data.code) {
+            window.renderPairingCode(data.code);
+            if (typeof showToast === "function") {
+                showToast("🔑 Code d'association généré ! Saisissez-le dans WhatsApp sur votre smartphone.", "success");
+            }
+        } else if (data.status === "STARTING") {
+            if (typeof showToast === "function") {
+                showToast("Initialisation WhatsApp en cours... Le code arrive dans quelques secondes.", "info");
+            }
+        } else if (data.error) {
+            if (typeof showToast === "function") showToast(data.error, "error");
+        }
+
+        if (typeof startWhatsApp === "function") {
+            if (typeof checkStatus === "function") {
+                setInterval(checkStatus, 2000);
+            }
+        }
+    } catch (err) {
+        console.error("Erreur pairing code:", err);
+        if (typeof showToast === "function") showToast("Erreur lors de la demande du code : " + err.message, "error");
+    } finally {
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.innerHTML = 'Générer mon Code';
+    }
+};
+
+window.copyWhatsAppPairingCode = function() {
+    if (!window.currentWaPairingCode) return;
+    navigator.clipboard.writeText(window.currentWaPairingCode).then(function() {
+        var label = document.getElementById("copy-pairing-label");
+        if (label) label.textContent = "✓ Code Copié !";
+        if (typeof showToast === "function") showToast("Code copié dans le presse-papier !", "success");
+        setTimeout(function() {
+            if (label) label.textContent = "Copier le code";
+        }, 2500);
+    }).catch(function() {
+        if (typeof showToast === "function") showToast("Impossible de copier automatiquement.", "error");
+    });
+};

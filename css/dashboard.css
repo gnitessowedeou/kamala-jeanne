@@ -5442,3 +5442,198 @@
     max-width: 100%;
   }
 }
+
+/* =============================================================================
+   WHATSAPP DUAL CONNECTION MODE: QR CODE & PAIRING CODE (BY PHONE NUMBER)
+   ============================================================================= */
+.wa-conn-tabs {
+  display: flex;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.wa-conn-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.wa-conn-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wa-conn-tab.active {
+  background: var(--whatsapp-green);
+  color: #080c14;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
+}
+
+.conn-pane {
+  display: none;
+}
+
+.conn-pane.active {
+  display: block;
+}
+
+.pairing-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(37, 211, 102, 0.08);
+  border: 1px solid rgba(37, 211, 102, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.pairing-form-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pairing-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.pairing-input-wrap i {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--whatsapp-green);
+  font-size: 16px;
+}
+
+.pairing-input-wrap input {
+  width: 100%;
+  padding: 11px 14px 11px 40px;
+  background: rgba(13, 20, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pairing-input-wrap input:focus {
+  border-color: var(--whatsapp-green);
+  box-shadow: 0 0 12px rgba(37, 211, 102, 0.3);
+}
+
+.pairing-code-card {
+  background: linear-gradient(135deg, rgba(8, 24, 20, 0.9), rgba(12, 32, 24, 0.85));
+  border: 1px solid rgba(37, 211, 102, 0.4);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 18px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.code-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.code-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(37, 211, 102, 0.2);
+  color: var(--whatsapp-green);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.pairing-code-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 0 16px 0;
+  flex-wrap: wrap;
+}
+
+.pairing-char {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 44px;
+  padding: 0 8px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1.5px solid rgba(37, 211, 102, 0.5);
+  border-radius: 8px;
+  font-family: 'Outfit', monospace, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #4ade80;
+  box-shadow: 0 0 14px rgba(37, 211, 102, 0.2);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pairing-dash {
+  font-size: 24px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.35);
+  margin: 0 4px;
+}
+
+.btn-copy-pairing {
+  padding: 7px 18px;
+  font-size: 12.5px;
+  border-radius: 999px;
+  gap: 6px;
+}
+
+@media (max-width: 600px) {
+  .wa-conn-tabs {
+    flex-direction: column;
+    border-radius: 12px;
+  }
+  .wa-conn-tab {
+    border-radius: 8px;
+    padding: 9px 12px;
+  }
+  .pairing-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pairing-char {
+    min-width: 28px;
+    height: 40px;
+    font-size: 18px;
+    padding: 0 6px;
+  }
+}
