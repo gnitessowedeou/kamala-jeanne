@@ -287,14 +287,14 @@ const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED
 const waNumbers = {};    // Stocke le numero de telephone connecte
 
 // Memoire contextuelle persistante & fenetre de session de 24h
-const SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 heures d'inactivite
+const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;  // 4 heures d'inactivite (Conforme Master Prompt)
 const MAX_HISTORY_MESSAGES = 10;                // Maintient au minimum les 8 a 10 derniers echanges
 const waChatHistories = new Map();              // Cache memoire haute vitesse: ${userId}:${phone} -> { history, lastActivity, sessionStart, name }
 
 /**
  * Recupere la session et l'historique d'un client.
  * Recharge automatiquement depuis Supabase en cas de redemarrage serveur.
- * Verifie si la session active a expire (> 24h d'inactivite).
+ * Verifie si la session active a expire (> 4h d'inactivite).
  */
 async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
   const historyKey = `${userId}:${phone}`;
@@ -343,7 +343,7 @@ async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
     }
   }
 
-  // Verification de la fenetre des 24h
+  // Verification de la fenetre des 4h
   const isFirstContact = !sessionData || !sessionData.lastActivity || sessionData.lastActivity === 0;
   const elapsed = sessionData && sessionData.lastActivity ? (now - sessionData.lastActivity) : 0;
   const isExpired = elapsed > SESSION_TIMEOUT_MS;
@@ -356,7 +356,7 @@ async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
   if (isNewSession) {
     activeHistory = [];
     sessionStart = new Date(now).toISOString();
-    console.log(`[WA/SESSION] NOUVELLE SESSION pour ${phone} (${isFirstContact ? 'Premier contact' : 'Inactivite > 24h (' + Math.round(elapsed / 3600000) + 'h)'}). Salutation activee.`);
+    console.log(`[WA/SESSION] NOUVELLE SESSION pour ${phone} (${isFirstContact ? 'Premier contact' : 'Inactivite > 4h (' + Math.round(elapsed / 3600000) + 'h)'}). Salutation activee.`);
   } else {
     activeHistory = (sessionData.history || []).slice(-MAX_HISTORY_MESSAGES);
     console.log(`[WA/SESSION] SESSION ACTIVE pour ${phone} (Derniere activite il y a ${Math.round(elapsed / 60000)} min, ${activeHistory.length} msgs). Pas de salutation.`);
@@ -433,23 +433,23 @@ async function generateSalesAgentResponse({
 }) {
   const commercialGuidelines = `
 ## POSTURE COMMERCIALE D'ELITE (VANDIYA IA) :
-- Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp.
-- Tu incarnes un excellent commercial : poli, patient, naturel, attentif et convaincant.
+- Tu es l'agent commercial officiel de l'entreprise sur WhatsApp.
+- Tu incarnes un excellent commercial : poli, patient, naturel, attentif, digne de confiance et convaincant.
 - Reponds UNIQUEMENT des qu'un client t'ecrit. N'initie jamais de conversation et n'envoie aucun message spontanement.
-- Ecoute attentivement : pose des questions pertinentes et courtes pour comprendre les besoins specifiques du client.
-- Presentation adaptee : presente les solutions selon ses besoins avec clarte, enthousiasme et transparence sur les tarifs (ex: Canva Pro 1 300 FCFA, CapCut Pro 1 600 FCFA).
+- Ecoute attentivement : pose au maximum une seule question pertinente et courte a la fois pour comprendre les besoins specifiques du client.
+- Presentation adaptee : presente les solutions selon ses besoins avec clarte, enthousiasme et transparence sur les tarifs, en utilisant exclusivement le catalogue et les prix fournis par l'entreprise.
 - Traitement des objections : reponds calmement, poliment et honnetement aux doutes, inquietudes ou remarques sur le prix ou la fiabilite.
 - Concretisation de commande : guide progressivement le client vers la validation de sa commande et le reglement, sans pression agressive ni fausses promesses.
-- Format WhatsApp : reponses concises, aerees, vivantes et faciles a lire sur mobile avec des emojis bien doses. Pas de longs blocs de texte indigestes.`;
+- Format WhatsApp : reponses concises (3 a 5 lignes courtes), aerees, vivantes et faciles a lire sur mobile avec des emojis bien doses. Pas de longs blocs de texte indigestes.`;
 
   const sessionDirectives = isNewSession
     ? `
-[REGLE DE SESSION - PREMIER CONTACT OU RETOUR APRES PLUS DE 24H D'INACTIVITE] :
+[REGLE DE SESSION - PREMIER CONTACT OU RETOUR APRES PLUS DE 4H D'INACTIVITE] :
 - Salue chaleureusement et poliment le client UNE SEULE FOIS (ex: "Bonjour ${contactName} ! Bienvenue chez nous 😊").
-- Ecoute son besoin ou presente brievement les produits selon sa demande.
+- Si le client pose directement une question, salue-le tres brievement et reponds directement a sa question.
 - Ne repete JAMAIS cette formule d'accueil aux messages suivants.`
     : `
-[REGLE DE FLUIDITE STRICTE - CONVERSATION EN COURS DANS LA SESSION ACTIVE (< 24H)] :
+[REGLE DE FLUIDITE STRICTE - CONVERSATION EN COURS DANS LA SESSION ACTIVE (< 4H)] :
 - INTERDICTION FORMELLE ET ABSOLUE de redire "Bonjour", "Bonsoir", "Bienvenue chez nous" ou de te representer.
 - Reprends DIRECTEMENT et NATURELLEMENT le fil de la conversation.
 - Reponds precisement et directement au dernier message du client en tenant compte du contexte memorise ci-dessous.`;
@@ -512,28 +512,37 @@ async function generateSalesAgentResponse({
     recommendedPaymentText = "👉 Propose les options disponibles :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte Bancaire internationale (Visa / Mastercard)";
   }
 
+  const hasCustomPayments = Boolean(basePrompt && (
+    basePrompt.includes("PAIEMENT") || 
+    basePrompt.includes("Wave") || 
+    basePrompt.includes("Orange Money") || 
+    basePrompt.includes("MTN") || 
+    basePrompt.includes("Moov") || 
+    basePrompt.includes("+")
+  ));
+
   const paymentRoutingGuidelines = `
 ## COORDONNÉES DE PAIEMENT OFFICIELLES & ROUTAGE PAR PAYS (OBLIGATOIRE & IMMÉDIAT) :
-Tu as un accès DIRECT, PERMANENT et COMPLET aux numéros de paiement officiels ci-dessous.
+Tu as un accès DIRECT, PERMANENT et COMPLET aux informations de paiement officielles.
 INTERDICTION FORMELLE ET ABSOLUE de dire que tu n'as pas accès aux numéros, que tu dois vérifier auprès du responsable ou de faire attendre le client !
 
 PAYS DÉTECTÉ DU CLIENT : ${detectedCountry} (Numéro client: ${phone})
-${recommendedPaymentText}
+${hasCustomPayments ? "👉 PRIORITÉ : Utilise en priorité absolue les coordonnées et modalités de paiement définies par l'entreprise dans le prompt configuré ci-dessus." : recommendedPaymentText}
 
-TABLEAU COMPLET DES MOYENS DE PAIEMENT OFFICIELS :
+${hasCustomPayments ? "TABLEAU DES MOYENS DE PAIEMENT DE SECOURS (Si non spécifié par l'entreprise) :" : "TABLEAU COMPLET DES MOYENS DE PAIEMENT OFFICIELS :"}
 - WAVE (CI, Sénégal, Burkina, Bénin, etc.) : +226 05 15 84 94 | Titulaire officiel : Gnitou Essowedeou
 - ORANGE MONEY (Burkina Faso, Mali, etc.) : +226 05 15 84 94 | Titulaire officiel : Gnitou Essowedeou
 - MTN MOBILE MONEY (Bénin, Togo, etc.) : +229 01 62 63 95 93 | Titulaire officiel : Gnitou Essowedeou
 - MOOV MONEY / FLOOZ : +229 01 62 63 95 93 | Titulaire officiel : Gnitou Essowedeou
 
 RÈGLES D'EXÉCUTION LORSQUE LE CLIENT VEUT PAYER OU COMMANDE :
-1. Dès que le client demande à payer, confirme sa commande ou demande le numéro, donne-lui IMMÉDIATEMENT le numéro adapté à son pays avec le nom du titulaire officiel : Gnitou Essowedeou.
-2. Si le client demande un moyen spécifique (ex: "Donne-moi Wave", "Je veux Orange Money", "As-tu MTN ?"), donne-lui IMMÉDIATEMENT le numéro correspondant à ce moyen.
-3. Rappelle toujours le montant exact (Canva Pro : 1 300 FCFA, CapCut Pro : 1 600 FCFA).
-4. Demande-lui d'envoyer la capture d'écran du transfert dès que le paiement est fait pour activer immédiatement son produit !
-`;
+1. Dès que le client demande à payer, confirme sa commande ou demande le numéro, donne-lui IMMÉDIATEMENT le moyen et numéro adapté à son pays (priorité aux coordonnées de l'entreprise si configurées, sinon les coordonnées officielles ci-dessus).
+2. Si le client demande un moyen spécifique (ex: "Donne-moi Wave", "Je veux Orange Money", "As-tu MTN ?"), donne-lui IMMÉDIATEMENT les coordonnées correspondantes.
+3. Rappelle toujours le montant exact selon le produit ou service choisi dans le catalogue officiel de l'entreprise.
+4. Demande poliment la preuve ou capture de transfert Mobile Money, et informe avec transparence que la commande sera validée dès confirmation officielle du paiement.
+5. Ne demande JAMAIS de code secret, code PIN ou mot de passe bancaire/Mobile Money.`;
 
-  const systemMessageContent = `${basePrompt || "Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp."}\n\n${commercialGuidelines}\n\n${paymentRoutingGuidelines}\n\n${sessionDirectives}`;
+  const systemMessageContent = `${basePrompt || "Tu es l'agent commercial officiel de l'entreprise sur WhatsApp."}\n\n${commercialGuidelines}\n\n${paymentRoutingGuidelines}\n\n${sessionDirectives}`;
 
   const openAiMessages = [
     { role: 'system', content: systemMessageContent },
@@ -1019,7 +1028,7 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
 
     // Gestion de session
     const session = await getCustomerSession(userId || 'test_user', phone, 'Client Test');
-    if (simulateInactivityHours >= 24) {
+    if (simulateInactivityHours >= 4) {
       session.isNewSession = true;
       session.history = [];
     }
