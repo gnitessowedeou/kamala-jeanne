@@ -4369,6 +4369,13 @@ function setupBillingAndAffiliate() {
       }
     });
   }
+
+  // Exposer les méthodes de gestion des forfaits et paiements sur window
+  window.openPlanModal = openPlanModal;
+  window.closePlanModal = closePlanModal;
+  window.openPayoutModal = openPayoutModal;
+  window.closePayoutModal = closePayoutModal;
+  window.updatePlanModalSummary = updatePlanModalSummary;
 }
 
 
@@ -4550,11 +4557,19 @@ function setupBillingAndAffiliate() {
 
             window.applyWhatsAppState(data.status, data.phone);
 
+            if (data.pairingCode && typeof window.renderPairingCode === 'function') {
+                window.renderPairingCode(data.pairingCode);
+            }
+
             if (data.status === 'QR_READY' && data.qr) {
                 renderQrImage(data.qr);
             } 
             else if (data.status === 'CONNECTED') {
                 if (statusInterval) clearInterval(statusInterval);
+                if (window._waPairingInterval) {
+                    clearInterval(window._waPairingInterval);
+                    window._waPairingInterval = null;
+                }
                 const wasActive = qrModal && qrModal.classList.contains('active');
                 if (qrModal) qrModal.classList.remove('active');
                 if (wasActive && typeof showToast === 'function') {
@@ -4661,6 +4676,7 @@ function setupBillingAndAffiliate() {
     window._realStartWhatsApp = startWhatsApp;
     window.renderQrImage = renderQrImage;
     window.syncWhatsAppStatus = syncWhatsAppStatus;
+    window.checkWhatsAppStatus = checkStatus;
 
     function initWhatsAppSaaS() {
         const qrModal = document.getElementById('qr-modal');
@@ -4674,9 +4690,52 @@ function setupBillingAndAffiliate() {
             }
             if (e.target.closest('[data-close-modal="qr-modal"]')) {
                 if (statusInterval) clearInterval(statusInterval);
+                if (window._waPairingInterval) {
+                    clearInterval(window._waPairingInterval);
+                    window._waPairingInterval = null;
+                }
                 if (qrBox && originalQrContent) qrBox.innerHTML = originalQrContent;
             }
         });
+
+        // Liaison explicite des boutons de mode de connexion (QR vs Numéro de téléphone)
+        const tabQr = document.getElementById('tab-btn-qr');
+        const tabPairing = document.getElementById('tab-btn-pairing');
+        if (tabQr) {
+            tabQr.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.switchWaConnectMode === 'function') window.switchWaConnectMode('qr');
+            });
+        }
+        if (tabPairing) {
+            tabPairing.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.switchWaConnectMode === 'function') window.switchWaConnectMode('pairing');
+            });
+        }
+        const pairingInput = document.getElementById('wa-pairing-phone-input');
+        if (pairingInput) {
+            pairingInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (typeof window.submitWhatsAppPairingCode === 'function') window.submitWhatsAppPairingCode();
+                }
+            });
+        }
+        const pairingBtn = document.getElementById('btn-submit-pairing');
+        if (pairingBtn) {
+            pairingBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.submitWhatsAppPairingCode === 'function') window.submitWhatsAppPairingCode();
+            });
+        }
+        const copyPairingBtn = document.getElementById('btn-copy-pairing-code');
+        if (copyPairingBtn) {
+            copyPairingBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (typeof window.copyWhatsAppPairingCode === 'function') window.copyWhatsAppPairingCode();
+            });
+        }
 
         // Synchronisation immédiate dès le chargement de la page
         syncWhatsAppStatus();
@@ -4698,13 +4757,13 @@ window.loadAgentConfig = typeof loadAgentConfig !== 'undefined' ? loadAgentConfi
 window.saveAgentConfig = typeof saveAgentConfig !== 'undefined' ? saveAgentConfig : null;
 window.setupToneSelector = typeof setupToneSelector !== 'undefined' ? setupToneSelector : null;
 window.updateAgentPerformanceMetrics = typeof updateAgentPerformanceMetrics !== 'undefined' ? updateAgentPerformanceMetrics : null;
-window.openTemplateModal = openTemplateModal;
-window.closeTemplateModal = closeTemplateModal;
-window.openPlanModal = openPlanModal;
-window.closePlanModal = closePlanModal;
-window.updatePlanModalSummary = updatePlanModalSummary;
-window.updateTemplateLivePreview = updateTemplateLivePreview;
-window.renderTemplates = renderTemplates;
+window.openTemplateModal = typeof openTemplateModal !== 'undefined' ? openTemplateModal : (window.openTemplateModal || null);
+window.closeTemplateModal = typeof closeTemplateModal !== 'undefined' ? closeTemplateModal : (window.closeTemplateModal || null);
+window.openPlanModal = typeof openPlanModal !== 'undefined' ? openPlanModal : (window.openPlanModal || null);
+window.closePlanModal = typeof closePlanModal !== 'undefined' ? closePlanModal : (window.closePlanModal || null);
+window.updatePlanModalSummary = typeof updatePlanModalSummary !== 'undefined' ? updatePlanModalSummary : (window.updatePlanModalSummary || null);
+window.updateTemplateLivePreview = typeof updateTemplateLivePreview !== 'undefined' ? updateTemplateLivePreview : (window.updateTemplateLivePreview || null);
+window.renderTemplates = typeof renderTemplates !== 'undefined' ? renderTemplates : (window.renderTemplates || null);
 if (typeof updateDashboardPricingDisplay !== 'undefined') window.updateDashboardPricingDisplay = updateDashboardPricingDisplay;
 
 
@@ -5508,13 +5567,27 @@ window.switchWaConnectMode = function(mode) {
     if (mode === "pairing") {
         if (tabQr) tabQr.classList.remove("active");
         if (tabPairing) tabPairing.classList.add("active");
-        if (paneQr) paneQr.style.display = "none";
-        if (panePairing) panePairing.style.display = "block";
+        if (paneQr) {
+            paneQr.classList.remove("active");
+            paneQr.style.display = "none";
+        }
+        if (panePairing) {
+            panePairing.classList.add("active");
+            panePairing.style.display = "block";
+        }
+        var phoneInput = document.getElementById("wa-pairing-phone-input");
+        if (phoneInput) setTimeout(function() { phoneInput.focus(); }, 100);
     } else {
         if (tabPairing) tabPairing.classList.remove("active");
         if (tabQr) tabQr.classList.add("active");
-        if (panePairing) panePairing.style.display = "none";
-        if (paneQr) paneQr.style.display = "block";
+        if (panePairing) {
+            panePairing.classList.remove("active");
+            panePairing.style.display = "none";
+        }
+        if (paneQr) {
+            paneQr.classList.add("active");
+            paneQr.style.display = "block";
+        }
     }
 };
 
@@ -5586,17 +5659,18 @@ window.submitWhatsAppPairingCode = async function() {
             if (typeof showToast === "function") showToast(data.error, "error");
         }
 
-        if (typeof startWhatsApp === "function") {
-            if (typeof checkStatus === "function") {
-                setInterval(checkStatus, 2000);
-            }
+        if (window._waPairingInterval) clearInterval(window._waPairingInterval);
+        if (typeof window.checkWhatsAppStatus === "function") {
+            window._waPairingInterval = setInterval(window.checkWhatsAppStatus, 2000);
+        } else if (typeof checkStatus === "function") {
+            window._waPairingInterval = setInterval(checkStatus, 2000);
         }
     } catch (err) {
         console.error("Erreur pairing code:", err);
         if (typeof showToast === "function") showToast("Erreur lors de la demande du code : " + err.message, "error");
     } finally {
         if (btn) btn.disabled = false;
-        if (btnText) btnText.innerHTML = 'Générer mon Code';
+        if (btnText) btnText.innerHTML = '<i class="fa-solid fa-key"></i> <span id="btn-pairing-text">Générer mon Code</span>';
     }
 };
 
