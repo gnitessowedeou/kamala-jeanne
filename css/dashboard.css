@@ -4970,3 +4970,475 @@
     justify-content: center;
   }
 }
+
+/* =============================================================================
+   VANDIA MASTER PROMPTS — BIBLIOTHÈQUE DE VENTE & DÉMONSTRATIONS
+   ============================================================================= */
+
+/* 1. Hero Card */
+.prompts-hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  background: linear-gradient(135deg, rgba(16, 24, 39, 0.98), rgba(24, 18, 8, 0.95)) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  border-radius: 20px;
+  padding: 30px 34px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+  margin-bottom: 24px;
+}
+
+.prompts-hero-left {
+  flex: 1;
+  max-width: 65%;
+}
+
+.prompts-hero-right {
+  flex: 0 0 32%;
+}
+
+.prompts-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--amber);
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+}
+
+.prompts-hero-title {
+  font-size: 25px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+
+.prompts-hero-desc {
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+.prompts-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.prompts-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.prompts-stat-pill i {
+  color: var(--amber);
+}
+
+.prompts-highlight-box {
+  background: rgba(13, 20, 31, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 16px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.prompts-highlight-icon {
+  font-size: 32px;
+  color: var(--whatsapp-green);
+  margin-bottom: 10px;
+}
+
+.prompts-highlight-box h4 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.prompts-highlight-box p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* 2. Controls & Search */
+.prompts-controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.prompts-search-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.prompts-search-wrap i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.prompts-search-wrap input {
+  width: 100%;
+  padding: 12px 16px 12px 46px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  font-size: 13.5px;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.prompts-search-wrap input:focus {
+  border-color: var(--amber);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);
+}
+
+.prompts-filter-pills {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.prompts-filter-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.prompts-pill-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.prompts-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.prompts-pill-btn.active {
+  background: var(--amber);
+  color: #080c14;
+  border-color: var(--amber);
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);
+}
+
+/* 3. Prompts Grid & Cards */
+.prompts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  margin-bottom: 30px;
+}
+
+.prompt-master-card {
+  padding: 24px 28px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.prompt-master-card:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.prompt-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.prompt-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.prompt-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.prompt-conversion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(37, 211, 102, 0.15);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  color: var(--whatsapp-green);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.prompt-description {
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 18px 0;
+}
+
+/* Split Layout */
+.prompt-card-split {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 22px;
+  align-items: stretch;
+}
+
+/* Left: Code Box */
+.prompt-split-left {
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 12, 20, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.prompt-box-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 10px;
+}
+
+.prompt-box-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prompt-box-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-copy-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-copy-prompt:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-apply-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(37, 211, 102, 0.25));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-apply-prompt:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(37, 211, 102, 0.4));
+  border-color: var(--amber);
+  transform: translateY(-1px);
+}
+
+.prompt-code-display {
+  margin: 0;
+  padding: 14px 16px;
+  color: #cbd5e1;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 380px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Right: WhatsApp Chat Simulation */
+.prompt-split-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.prompt-chat-demo {
+  background: #0b141a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.demo-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #1f2c34;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.demo-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--whatsapp-green);
+  color: #080c14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.demo-chat-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.demo-chat-meta strong {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.demo-chat-meta span {
+  font-size: 10.5px;
+  color: #8696a0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.demo-chat-body {
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 380px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.chat-bubble {
+  padding: 9px 12px 18px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  position: relative;
+  max-width: 88%;
+  word-break: break-word;
+}
+
+.bubble-client {
+  align-self: flex-start;
+  background: #202c33;
+  color: #e9edef;
+  border-top-left-radius: 0;
+}
+
+.bubble-agent {
+  align-self: flex-end;
+  background: #005c4b;
+  color: #e9edef;
+  border-top-right-radius: 0;
+}
+
+.bubble-time {
+  position: absolute;
+  bottom: 3px;
+  right: 7px;
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Responsive Prompts */
+@media (max-width: 1100px) {
+  .prompt-card-split {
+    grid-template-columns: 1fr;
+  }
+
+  .prompts-hero-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .prompts-hero-left,
+  .prompts-hero-right {
+    max-width: 100%;
+  }
+}

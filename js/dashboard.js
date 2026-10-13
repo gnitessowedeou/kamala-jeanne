@@ -950,7 +950,8 @@ function updateHeaderTitle(title, viewId) {
       "settings": "fa-gear",
       "billing": "fa-credit-card",
       "affiliate": "fa-handshake",
-      "academy": "fa-graduation-cap"
+      "academy": "fa-graduation-cap",
+      "prompts": "fa-wand-magic-sparkles"
     };
     iconEl.className = `fa-solid ${iconMap[viewId] || "fa-chart-line"} header-brand-icon`;
   }
@@ -5363,4 +5364,112 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initAcademy);
 } else {
   initAcademy();
+}
+
+
+// ==============================================================================
+// VANDIA MASTER PROMPTS — BIBLIOTHÈQUE & DÉMONSTRATIONS CONTROLLER
+// ==============================================================================
+function copyMasterPrompt(elemId) {
+  const elem = document.getElementById(elemId);
+  if (!elem) return;
+  const text = elem.textContent.trim();
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("Master Prompt copié dans le presse-papier ! ✨", "success");
+    }).catch(() => {
+      fallbackCopyPrompt(text);
+    });
+  } else {
+    fallbackCopyPrompt(text);
+  }
+}
+
+function fallbackCopyPrompt(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand("copy");
+    showToast("Master Prompt copié dans le presse-papier ! ✨", "success");
+  } catch (e) {
+    showToast("Erreur lors de la copie", "error");
+  }
+  document.body.removeChild(ta);
+}
+
+async function applyMasterPrompt(elemId) {
+  const elem = document.getElementById(elemId);
+  if (!elem) return;
+  const promptText = elem.textContent.trim();
+
+  const promptInput = document.getElementById("agent-prompt-input");
+  if (promptInput) {
+    promptInput.value = promptText;
+  }
+
+  // Enregistrer automatiquement
+  if (typeof saveAgentConfig === 'function') {
+    await saveAgentConfig();
+  }
+
+  // Basculer vers la section Agent IA pour que l'utilisateur voie la mise à jour
+  if (typeof showView === 'function') {
+    showView('ai-agent');
+  }
+
+  showToast("Master Prompt appliqué et enregistré pour votre Agent IA ! 🤖✨", "success");
+}
+
+function initPromptsLibrary() {
+  // Filtrage par pilules secteur
+  const pillBtns = document.querySelectorAll("#prompts-category-pills .prompts-pill-btn");
+  const cards = document.querySelectorAll(".prompt-master-card");
+
+  pillBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      pillBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const sector = btn.getAttribute("data-sector");
+      cards.forEach(card => {
+        const cardSector = card.getAttribute("data-sector");
+        if (sector === "all" || cardSector === sector) {
+          card.style.display = "flex";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    });
+  });
+
+  // Recherche par mot-clé
+  const searchInput = document.getElementById("prompts-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (!q || text.includes(q)) {
+          card.style.display = "flex";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    });
+  }
+}
+
+// Exposer globalement
+window.copyMasterPrompt = copyMasterPrompt;
+window.applyMasterPrompt = applyMasterPrompt;
+window.initPromptsLibrary = initPromptsLibrary;
+
+// Initialiser au chargement
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initPromptsLibrary);
+} else {
+  initPromptsLibrary();
 }
