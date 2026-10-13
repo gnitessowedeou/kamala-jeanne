@@ -16,7 +16,7 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261012_v16">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261013_v1">
   <link rel="stylesheet" href="css/auth.css?v=20261012_v16">
 </head>
 <body>
@@ -571,41 +571,42 @@
                 </div>
               </div>
             </div>
+          </div> <!-- Fermeture essentielle de chart-payment-row -->
 
           <!-- ==================================================================
-               CONVERSATIONS RÉCENTES WHATSAPP (Conforme au modèle smartphone VENDIA AI)
+               COMMUNICATIONS WHATSAPP & ACTIVITÉS EN DIRECT (Agent IA & Crédits)
                ================================================================== -->
-          <div class="glass-panel mobile-recent-chats-card" id="overview-recent-chats">
-            <div class="card-top-header recent-chats-header">
-              <div class="chats-header-left">
-                <div class="chats-icon-badge">
-                  <i class="fa-brands fa-whatsapp"></i>
+          <div class="overview-comms-row">
+            <!-- Conversations récentes WhatsApp -->
+            <div class="glass-panel mobile-recent-chats-card" id="overview-recent-chats">
+              <div class="card-top-header recent-chats-header">
+                <div class="chats-header-left">
+                  <div class="chats-icon-badge">
+                    <i class="fa-brands fa-whatsapp"></i>
+                  </div>
+                  <h3 class="card-heading">Conversations récentes</h3>
                 </div>
-                <h3 class="card-heading">Conversations récentes</h3>
+                <a href="#inbox" class="see-all-chats-link" data-view="inbox">
+                  <span>Voir tout</span>
+                  <i class="fa-solid fa-chevron-right"></i>
+                </a>
               </div>
-              <a href="#inbox" class="see-all-chats-link" data-view="inbox">
-                <span>Voir tout</span>
-                <i class="fa-solid fa-chevron-right"></i>
-              </a>
+
+              <div class="mobile-chats-list" id="overview-recent-chats-list">
+                <!-- Rendu dynamique par renderOverviewRecentChats() -->
+                <div style="padding: 24px 16px; text-align: center; color: var(--text-muted);">
+                  <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: var(--whatsapp-green); margin-bottom: 8px;"></i>
+                  <p style="font-size: 12.5px; margin: 0;">Chargement de vos conversations...</p>
+                </div>
+              </div>
             </div>
 
-            <div class="mobile-chats-list" id="overview-recent-chats-list">
-              <!-- Rendu dynamique par renderOverviewRecentChats() -->
-              <div style="padding: 24px 16px; text-align: center; color: var(--text-muted);">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: var(--whatsapp-green); margin-bottom: 8px;"></i>
-                <p style="font-size: 12.5px; margin: 0;">Chargement de vos conversations...</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Live Activity Feed & Shortcuts Row -->
-          <div class="activity-shortcuts-row">
-            <!-- Activités & Événements en Direct -->
+            <!-- Activités & Événements en Direct (Commercial IA, WhatsApp & Crédits) -->
             <div class="glass-panel activity-feed-card">
               <div class="card-top-header">
                 <div>
                   <h3 class="card-heading">Activités &amp; Événements en Direct</h3>
-                  <p class="card-subheading">Transactions et actions automatiques de votre agent IA</p>
+                  <p class="card-subheading">Commercial IA, statut WhatsApp et solde de crédits</p>
                 </div>
                 <span class="badge badge-green">Temps réel</span>
               </div>
@@ -624,41 +625,41 @@
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Raccourcis & Opérations -->
-            <div class="glass-panel shortcuts-card">
-              <div class="card-top-header">
-                <div>
-                  <h3 class="card-heading">Raccourcis &amp; Opérations</h3>
-                  <p class="card-subheading">Actions rapides pour votre équipe</p>
-                </div>
+          <!-- Raccourcis & Opérations (En pleine largeur ergonomique) -->
+          <div class="glass-panel shortcuts-card">
+            <div class="card-top-header">
+              <div>
+                <h3 class="card-heading">Raccourcis &amp; Opérations</h3>
+                <p class="card-subheading">Actions rapides pour votre équipe</p>
               </div>
+            </div>
 
-              <div class="shortcuts-grid">
-                <button class="shortcut-action-tile" data-action="go-inbox">
-                  <i class="fa-solid fa-comment-dots" style="color: var(--whatsapp-green);"></i>
-                  <span class="shortcut-tile-title">Ouvrir le Live Chat</span>
-                  <span class="shortcut-tile-desc">Répondre aux clients en direct</span>
-                </button>
+            <div class="shortcuts-grid">
+              <button class="shortcut-action-tile" data-action="go-inbox">
+                <i class="fa-solid fa-comment-dots" style="color: var(--whatsapp-green);"></i>
+                <span class="shortcut-tile-title">Ouvrir le Live Chat</span>
+                <span class="shortcut-tile-desc">Répondre aux clients en direct</span>
+              </button>
 
-                <button class="shortcut-action-tile btn-open-broadcast">
-                  <i class="fa-solid fa-paper-plane" style="color: var(--cyan);"></i>
-                  <span class="shortcut-tile-title">Nouvelle Diffusion</span>
-                  <span class="shortcut-tile-desc">Envoyer offre à 5k contacts</span>
-                </button>
+              <button class="shortcut-action-tile btn-open-broadcast">
+                <i class="fa-solid fa-paper-plane" style="color: var(--cyan);"></i>
+                <span class="shortcut-tile-title">Nouvelle Diffusion</span>
+                <span class="shortcut-tile-desc">Envoyer offre à 5k contacts</span>
+              </button>
 
-                <button class="shortcut-action-tile" data-action="go-automations">
-                  <i class="fa-solid fa-diagram-project" style="color: var(--purple);"></i>
-                  <span class="shortcut-tile-title">Éditer un Funnel</span>
-                  <span class="shortcut-tile-desc">Arbre de décision WhatsApp</span>
-                </button>
+              <button class="shortcut-action-tile" data-action="go-automations">
+                <i class="fa-solid fa-diagram-project" style="color: var(--purple);"></i>
+                <span class="shortcut-tile-title">Éditer un Funnel</span>
+                <span class="shortcut-tile-desc">Arbre de décision WhatsApp</span>
+              </button>
 
-                <button class="shortcut-action-tile btn-open-qr">
-                  <i class="fa-solid fa-qrcode" style="color: var(--amber);"></i>
-                  <span class="shortcut-tile-title">Lier un Numéro</span>
-                  <span class="shortcut-tile-desc">Scanner le QR Code Meta</span>
-                </button>
-              </div>
+              <button class="shortcut-action-tile btn-open-qr">
+                <i class="fa-solid fa-qrcode" style="color: var(--amber);"></i>
+                <span class="shortcut-tile-title">Lier un Numéro</span>
+                <span class="shortcut-tile-desc">Scanner le QR Code Meta</span>
+              </button>
             </div>
           </div>
 

@@ -1215,7 +1215,23 @@
 .bar-purple { background: var(--purple); }
 .bar-yellow { background: var(--amber); }
 
-/* Activity & Operations Row */
+/* Communications & Activités Row (Recadrage parfait 2 colonnes équilibrées) */
+.overview-comms-row {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 18px;
+  margin-top: 24px;
+  align-items: stretch;
+}
+
+.mobile-recent-chats-card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 22px 24px;
+  height: auto;
+}
+
 .activity-shortcuts-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
@@ -1226,38 +1242,41 @@
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
+  height: auto;
+  overflow: visible;
 }
 
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 14px;
+  overflow: visible;
 }
 
 .activity-item {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 11px 14px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   transition: background var(--transition-fast);
 }
 
 .activity-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .activity-icon-wrapper {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
@@ -1265,32 +1284,37 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  flex: 1;
+  min-width: 0;
 }
 
 .activity-text {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .activity-meta {
   font-size: 11.5px;
   color: var(--text-muted);
+  margin-top: 2px;
 }
 
-/* Shortcuts Card */
+/* Shortcuts Card (Pleine largeur ergonomique, sans débordement) */
 .shortcuts-card {
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
+  margin-top: 20px;
 }
 
 .shortcuts-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .shortcut-action-tile {
@@ -2410,8 +2434,16 @@
     grid-template-columns: 1fr;
   }
 
+  .overview-comms-row {
+    grid-template-columns: 1fr;
+  }
+
   .activity-shortcuts-row {
     grid-template-columns: 1fr;
+  }
+
+  .shortcuts-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .integrations-grid, .templates-grid {
