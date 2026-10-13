@@ -589,61 +589,11 @@
               </a>
             </div>
 
-            <div class="mobile-chats-list">
-              <!-- Chat 1: Fatou Diallo -->
-              <div class="mobile-chat-row" data-chat-contact="Fatou Diallo" data-chat-phone="+225 07 89 45 12 30">
-                <div class="mobile-chat-avatar-wrap">
-                  <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80" alt="Fatou Diallo" class="mobile-chat-avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                  <div class="mobile-chat-avatar-fallback" style="display: none;">FD</div>
-                  <span class="chat-online-dot"></span>
-                </div>
-                <div class="mobile-chat-info">
-                  <div class="mobile-chat-top-line">
-                    <span class="mobile-chat-name">Fatou Diallo</span>
-                    <span class="mobile-chat-time">09:42</span>
-                  </div>
-                  <div class="mobile-chat-bottom-line">
-                    <p class="mobile-chat-preview">Bonjour, je suis intéressée par votre...</p>
-                    <span class="mobile-unread-badge">2</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Chat 2: Ibrahim Koné -->
-              <div class="mobile-chat-row" data-chat-contact="Ibrahim Koné" data-chat-phone="+225 05 44 12 89 01">
-                <div class="mobile-chat-avatar-wrap">
-                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" alt="Ibrahim Koné" class="mobile-chat-avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                  <div class="mobile-chat-avatar-fallback" style="display: none;">IK</div>
-                </div>
-                <div class="mobile-chat-info">
-                  <div class="mobile-chat-top-line">
-                    <span class="mobile-chat-name">Ibrahim Koné</span>
-                    <span class="mobile-chat-time">09:28</span>
-                  </div>
-                  <div class="mobile-chat-bottom-line">
-                    <p class="mobile-chat-preview">Merci pour votre réponse !</p>
-                    <span class="mobile-read-status"><i class="fa-solid fa-check-double"></i></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Chat 3: Mariam Traoré -->
-              <div class="mobile-chat-row" data-chat-contact="Mariam Traoré" data-chat-phone="+225 01 23 77 88 44">
-                <div class="mobile-chat-avatar-wrap">
-                  <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=80" alt="Mariam Traoré" class="mobile-chat-avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                  <div class="mobile-chat-avatar-fallback" style="display: none;">MT</div>
-                  <span class="chat-online-dot"></span>
-                </div>
-                <div class="mobile-chat-info">
-                  <div class="mobile-chat-top-line">
-                    <span class="mobile-chat-name">Mariam Traoré</span>
-                    <span class="mobile-chat-time">08:56</span>
-                  </div>
-                  <div class="mobile-chat-bottom-line">
-                    <p class="mobile-chat-preview">Est-ce que vous proposez la livraison ?</p>
-                    <span class="mobile-unread-badge">1</span>
-                  </div>
-                </div>
+            <div class="mobile-chats-list" id="overview-recent-chats-list">
+              <!-- Rendu dynamique par renderOverviewRecentChats() -->
+              <div style="padding: 24px 16px; text-align: center; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: var(--whatsapp-green); margin-bottom: 8px;"></i>
+                <p style="font-size: 12.5px; margin: 0;">Chargement de vos conversations...</p>
               </div>
             </div>
           </div>
@@ -2858,7 +2808,7 @@
 
   <!-- Dashboard JavaScript Logic -->
   <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261012_v17"></script>
+  <script src="js/dashboard.js?v=20261012_v18"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>

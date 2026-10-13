@@ -92,6 +92,63 @@ function sanitizeUrl(url) {
   return trimmed;
 }
 
+
+// ==============================================================================
+// 0.1 FORMATAGE DYNAMIQUE & NUMÉROS WHATSAPP (Vue d'ensemble & CRM)
+// ==============================================================================
+function formatWhatsAppDisplayNumber(phone) {
+  if (!phone) return '<span style="color: var(--text-muted);">Inconnu</span>';
+  const clean = String(phone).replace(/[^0-9]/g, '');
+  if (clean.length > 13 && !clean.startsWith('229') && !clean.startsWith('226') && !clean.startsWith('225') && !clean.startsWith('221') && !clean.startsWith('33')) {
+    return `<span class="badge badge-subtle" title="Identifiant WhatsApp Multi-Device (LID)">WA ID: ${clean.substring(0, 4)}...${clean.substring(clean.length - 4)}</span>`;
+  }
+  if (clean.startsWith('229') && clean.length >= 11) {
+    return `+229 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('226') && clean.length >= 11) {
+    return `+226 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('225') && clean.length >= 12) {
+    return `+225 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('221') && clean.length >= 11) {
+    return `+221 ${clean.slice(3, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  }
+  if (clean.length >= 8) {
+    return `+${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
+  }
+  return clean ? `+${clean}` : 'Inconnu';
+}
+
+function formatRelativeTime(dateInput) {
+  if (!dateInput) return "";
+  if (typeof dateInput === "string" && (dateInput.includes(":") && dateInput.length <= 5 || dateInput.includes("À l'instant") || dateInput.includes("Hier"))) {
+    return dateInput;
+  }
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSec < 60) return "À l'instant";
+    if (diffMin < 60) return `Il y a ${diffMin} min`;
+    if (diffHours < 24 && d.getDate() === now.getDate()) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (diffDays === 1 || (diffHours < 48 && d.getDate() === now.getDate() - 1)) {
+      return "Hier";
+    }
+    return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+  } catch(e) {
+    return String(dateInput);
+  }
+}
+
 // ==============================================================================
 // 1. MOCK DATA STORE (Prêt pour injection Supabase)
 // ==============================================================================
@@ -655,6 +712,8 @@ function initDashboard() {
   // Populate view contents
   renderKpis();
   renderActivityFeed();
+  renderOverviewRecentChats();
+  loadOverviewRealData();
   renderRecentInteractions();
   renderBroadcastCampaigns();
   renderAutomations();
@@ -750,36 +809,49 @@ function setupNavigation() {
     });
   }
 
-  // Recent WhatsApp Conversation Rows (Fatou Diallo, Ibrahim Koné, Mariam Traoré)
-  document.querySelectorAll(".mobile-chat-row").forEach(row => {
-    row.addEventListener("click", () => {
+  // Recent WhatsApp Conversation Rows (Délégation d'événements dynamique et interactive)
+  const recentChatsContainer = document.getElementById("overview-recent-chats-list");
+  if (recentChatsContainer) {
+    recentChatsContainer.addEventListener("click", (e) => {
+      const row = e.target.closest(".mobile-chat-row");
+      if (!row) return;
       showView("inbox");
+      const chatId = row.getAttribute("data-chat-id");
+      const contactPhone = row.getAttribute("data-chat-phone") || row.getAttribute("data-contact-phone") || "";
       const contactName = row.getAttribute("data-chat-contact") || "";
-      const contactPhone = row.getAttribute("data-chat-phone") || "";
       const preview = row.querySelector(".mobile-chat-preview")?.textContent || "";
       
-      let targetConv = MOCK_DATA.conversations.find(c => c.name.toLowerCase().includes(contactName.split(" ")[0].toLowerCase()));
+      let targetConv = null;
+      if (chatId && Array.isArray(MOCK_DATA.conversations)) {
+        targetConv = MOCK_DATA.conversations.find(c => c.id === chatId);
+      }
+      if (!targetConv && contactPhone && Array.isArray(MOCK_DATA.conversations)) {
+        targetConv = MOCK_DATA.conversations.find(c => c.phone && c.phone.includes(contactPhone.replace(/[^0-9]/g, '')));
+      }
+      if (!targetConv && contactName && Array.isArray(MOCK_DATA.conversations)) {
+        targetConv = MOCK_DATA.conversations.find(c => c.name && c.name.toLowerCase().includes(contactName.split(" ")[0].toLowerCase()));
+      }
       if (!targetConv && contactName) {
         targetConv = {
-          id: "conv_sim_" + Date.now(),
+          id: chatId || ("conv_" + Date.now()),
           name: contactName,
-          phone: contactPhone + " • Abidjan, CI",
-          avatar: contactName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+          phone: contactPhone,
+          avatar: contactName.substring(0, 2).toUpperCase(),
           lastMessage: preview,
           time: "À l'instant",
           unread: false,
           aiActive: true,
-          tag: "Prospect Chaud",
-          messages: [
-            { sender: "client", text: preview, time: "À l'instant" }
-          ]
+          messages: preview ? [{ sender: "client", text: preview, time: "À l'instant" }] : []
         };
+        if (!Array.isArray(MOCK_DATA.conversations)) MOCK_DATA.conversations = [];
+        MOCK_DATA.conversations.unshift(targetConv);
       }
-      if (targetConv && typeof openConversation === "function") {
-        openConversation(targetConv);
+      if (targetConv) {
+        if (typeof loadConversation === "function") loadConversation(targetConv);
+        if (typeof renderConversationList === "function") renderConversationList();
       }
     });
-  });
+  }
 
   // Handle brand logo click
   const brandLogo = document.getElementById("brand-logo-btn");
@@ -1242,14 +1314,29 @@ function setupChartFilters() {
 function isCurrentUserDemo() { return false; }
 
 function getUserKpis() {
+  const user = (window.AuthEngine ? window.AuthEngine.getCurrentUser() : null) || {};
+  const contacts = Array.isArray(MOCK_DATA.contacts) ? MOCK_DATA.contacts : [];
+  const chats = Array.isArray(MOCK_DATA.conversations) ? MOCK_DATA.conversations : [];
+  const contactsCount = contacts.length;
+  const chatsCount = chats.length;
+  const usedTokens = user.plan?.tokensUsed || 0;
+  const totalMsgs = chatsCount > 0 ? chatsCount : usedTokens;
+
   return {
     salesUsd: 0,
     salesXof: 0,
     salesTrend: "0%",
     salesNote: "En attente de vos premières commandes WhatsApp",
-    conversations: 0,
-    conversationsTrend: "0%",
-    conversationsNote: "Votre commercial IA est prêt et en attente",
+    conversations: totalMsgs,
+    conversationsTrend: chatsCount > 0 ? `+${chatsCount}` : "0%",
+    conversationsNote: chatsCount > 0 
+      ? `${chatsCount} discussion${chatsCount > 1 ? 's' : ''} WhatsApp active${chatsCount > 1 ? 's' : ''}` 
+      : "Votre commercial IA est prêt et en attente",
+    prospects: contactsCount,
+    prospectsTrend: contactsCount > 0 ? `+${contactsCount}` : "0%",
+    prospectsNote: contactsCount > 0 
+      ? `${contactsCount} prospect${contactsCount > 1 ? 's' : ''} synchronisé${contactsCount > 1 ? 's' : ''} dans le CRM` 
+      : "Capture automatique de prospects",
     conversionRate: "0.0%",
     conversionTrend: "0%",
     conversionNote: "Taux calculé dès vos premières commandes",
@@ -1323,6 +1410,18 @@ function renderKpis() {
     kpiConvsNote.textContent = kpis.conversationsNote;
   }
 
+  const kpiProspectsVal = document.getElementById("kpi-prospects-val");
+  const kpiProspectsTrend = document.getElementById("kpi-prospects-trend");
+  const kpiProspectsNote = document.getElementById("kpi-prospects-note");
+  if (kpiProspectsVal) kpiProspectsVal.textContent = (kpis.prospects || 0).toLocaleString();
+  if (kpiProspectsTrend) {
+    kpiProspectsTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${kpis.prospectsTrend || '0%'}`;
+    kpiProspectsTrend.className = "kpi-badge-trend";
+  }
+  if (kpiProspectsNote) {
+    kpiProspectsNote.textContent = kpis.prospectsNote || "Capture automatique de prospects";
+  }
+
   if (kpiRateVal) kpiRateVal.textContent = kpis.conversionRate;
   if (kpiRateTrend) {
     kpiRateTrend.innerHTML = `<i class="fa-solid fa-arrow-up"></i> ${kpis.conversionTrend}`;
@@ -1349,69 +1448,122 @@ function renderActivityFeed() {
   const container = document.getElementById("activity-live-list");
   if (!container) return;
 
-  if (!isCurrentUserDemo()) {
-    container.innerHTML = `
-      <div class="activity-item">
-        <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
-          <i class="fa-solid fa-check"></i>
-        </div>
-        <div class="activity-info">
-          <div class="activity-text">
-            <strong>Votre instance VANDIA IA est active et prête !</strong> Les commandes WhatsApp et paiements Wave/OM apparaîtront ici en direct.
-          </div>
-          <div class="activity-meta">À l'instant • Mode Réel Actif</div>
-        </div>
-      </div>
-    `;
-    return;
-  }
+  const user = (window.AuthEngine ? window.AuthEngine.getCurrentUser() : null) || MOCK_DATA.currentUser || {};
+  const userName = user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user.full_name || user.email?.split('@')[0] || "Administrateur");
+  const planName = user.plan?.name || "VANDIA Pro (Essai 7j)";
+  const tokensMax = user.plan?.tokensMax || 100;
+  const tokensUsed = user.plan?.tokensUsed || 0;
+  const tokensLeft = Math.max(0, tokensMax - tokensUsed);
 
-  container.innerHTML = `
+  const isWaConnected = window.currentWhatsAppStatus === 'CONNECTED';
+  const contacts = Array.isArray(MOCK_DATA.contacts) ? MOCK_DATA.contacts : [];
+  const chats = Array.isArray(MOCK_DATA.conversations) ? MOCK_DATA.conversations : [];
+
+  const items = [];
+
+  // 1. Statut de l'instance et du commercial IA
+  items.push(`
     <div class="activity-item">
       <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
-        <i class="fa-solid fa-check"></i>
-      </div>
-      <div class="activity-info">
-        <div class="activity-text">
-          Paiement reçu de <strong>Amina Traoré</strong> via Wave (<strong>25 000 XOF</strong>) après recommandation de l'Agent IA.
-        </div>
-        <div class="activity-meta">Il y a 3 minutes • Tunnel Vente Flash WhatsApp</div>
-      </div>
-    </div>
-    <div class="activity-item">
-      <div class="activity-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">
-        <i class="fa-solid fa-cart-arrow-down"></i>
-      </div>
-      <div class="activity-info">
-        <div class="activity-text">
-          Relance automatique panier abandonné envoyée à <strong>Marc Koffi</strong> (Panier: 45 000 XOF).
-        </div>
-        <div class="activity-meta">Il y a 14 minutes • Relance Panier 48h</div>
-      </div>
-    </div>
-    <div class="activity-item">
-      <div class="activity-icon-wrapper" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">
         <i class="fa-solid fa-robot"></i>
       </div>
       <div class="activity-info">
         <div class="activity-text">
-          L'Agent IA a répondu à <strong>Fatou Diallo</strong> concernant les délais de livraison à Dakar.
+          Agent commercial IA activé pour <strong>${escapeHtml(userName)}</strong> (${escapeHtml(planName)}). Répond automatiquement 24/7.
         </div>
-        <div class="activity-meta">Il y a 32 minutes • FAQ &amp; Service Client Auto</div>
+        <div class="activity-meta">Mode Réel Actif • Prêt</div>
       </div>
     </div>
+  `);
+
+  // 2. Statut WhatsApp réel
+  if (isWaConnected) {
+    items.push(`
+      <div class="activity-item">
+        <div class="activity-icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green);">
+          <i class="fa-brands fa-whatsapp"></i>
+        </div>
+        <div class="activity-info">
+          <div class="activity-text">
+            WhatsApp Officiel <strong>synchronisé et en ligne</strong>. Vos clients reçoivent des réponses instantanées.
+          </div>
+          <div class="activity-meta">À l'instant • Session active</div>
+        </div>
+      </div>
+    `);
+  } else {
+    items.push(`
+      <div class="activity-item">
+        <div class="activity-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">
+          <i class="fa-solid fa-qrcode"></i>
+        </div>
+        <div class="activity-info">
+          <div class="activity-text">
+            WhatsApp en attente de liaison. Scannez le QR Code pour démarrer la capture automatique de vos clients.
+          </div>
+          <div class="activity-meta">En attente • Jumelage requis</div>
+        </div>
+      </div>
+    `);
+  }
+
+  // 3. Dernier prospect réel Supabase
+  if (contacts.length > 0) {
+    const latestC = contacts[0];
+    const cName = escapeHtml(latestC.name || 'Nouveau prospect');
+    const cPhone = formatWhatsAppDisplayNumber(latestC.phone_number);
+    const cTime = escapeHtml(formatRelativeTime(latestC.updated_at));
+    items.push(`
+      <div class="activity-item">
+        <div class="activity-icon-wrapper" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">
+          <i class="fa-solid fa-user-check"></i>
+        </div>
+        <div class="activity-info">
+          <div class="activity-text">
+            Prospect capturé dans votre CRM : <strong>${cName}</strong> (${cPhone}).
+          </div>
+          <div class="activity-meta">${cTime} • Base Supabase</div>
+        </div>
+      </div>
+    `);
+  }
+
+  // 4. Dernière conversation en direct WhatsApp
+  if (chats.length > 0) {
+    const latestChat = chats[0];
+    const chatName = escapeHtml(latestChat.name || 'Client');
+    const chatTime = escapeHtml(formatRelativeTime(latestChat.time));
+    items.push(`
+      <div class="activity-item">
+        <div class="activity-icon-wrapper" style="background: rgba(139, 92, 246, 0.15); color: var(--purple);">
+          <i class="fa-solid fa-comments"></i>
+        </div>
+        <div class="activity-info">
+          <div class="activity-text">
+            Échange WhatsApp récent avec <strong>${chatName}</strong> : "${escapeHtml((latestChat.lastMessage || '').substring(0, 55))}".
+          </div>
+          <div class="activity-meta">${chatTime} • Discussion en direct</div>
+        </div>
+      </div>
+    `);
+  }
+
+  // 5. Crédits IA réels
+  items.push(`
     <div class="activity-item">
-      <div class="activity-icon-wrapper" style="background: rgba(139, 92, 246, 0.15); color: var(--purple);">
-        <i class="fa-solid fa-paper-plane"></i>
+      <div class="activity-icon-wrapper" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+        <i class="fa-solid fa-coins"></i>
       </div>
       <div class="activity-info">
         <div class="activity-text">
-          Campagne <em>Promo Flash VIP Weekend</em> terminée : <strong>1 500 contacts</strong> touchés, 94.2% taux d'ouverture.
+          Solde crédits IA : <strong>${tokensLeft} crédits disponibles</strong> (${tokensUsed} consommés sur ${tokensMax}).
         </div>
-        <div class="activity-meta">Il y a 1 heure • Diffusion SafeSend™</div>
+        <div class="activity-meta">Quota sécurisé • Renouvellement inclus</div>
       </div>
     </div>
-  `;
+  `);
+
+  container.innerHTML = items.join("");
 }
 
 function setupCurrencyToggle() {
@@ -1442,6 +1594,149 @@ function setupCurrencyToggle() {
       showToast(`Devise d'affichage basculée sur : ${currentCurrency}`, "info");
     });
   });
+}
+
+// ==============================================================================
+// 8.1 CONVERSATIONS RÉCENTES DE LA VUE D'ENSEMBLE (Dynamique & Personnalisée)
+// ==============================================================================
+function renderOverviewRecentChats() {
+  const container = document.getElementById("overview-recent-chats-list");
+  if (!container) return;
+
+  const chats = Array.isArray(MOCK_DATA.conversations) && MOCK_DATA.conversations.length > 0 
+    ? MOCK_DATA.conversations 
+    : [];
+  const contacts = Array.isArray(MOCK_DATA.contacts) && MOCK_DATA.contacts.length > 0 
+    ? MOCK_DATA.contacts 
+    : [];
+
+  // Cas 1 : Des discussions WhatsApp réelles sont actives
+  if (chats.length > 0) {
+    const topChats = chats.slice(0, 4);
+    container.innerHTML = topChats.map(c => {
+      const name = escapeHtml(c.name || 'Client WhatsApp');
+      const phone = escapeHtml(c.phone || '');
+      const initials = escapeHtml(c.avatar || (c.name ? c.name.substring(0, 2).toUpperCase() : 'WA'));
+      const time = escapeHtml(formatRelativeTime(c.time));
+      const preview = escapeHtml(c.lastMessage || 'Nouvel échange WhatsApp');
+      const unread = Boolean(c.unread && c.unreadCount > 0);
+      const unreadCount = Number(c.unreadCount) || 1;
+
+      return `
+        <div class="mobile-chat-row" data-chat-id="${escapeHtml(c.id)}" data-chat-contact="${name}" data-chat-phone="${phone}">
+          <div class="mobile-chat-avatar-wrap">
+            <div class="mobile-chat-avatar-fallback">${initials}</div>
+            ${unread ? '<span class="chat-online-dot"></span>' : ''}
+          </div>
+          <div class="mobile-chat-info">
+            <div class="mobile-chat-top-line">
+              <span class="mobile-chat-name">${name}</span>
+              <span class="mobile-chat-time">${time}</span>
+            </div>
+            <div class="mobile-chat-bottom-line">
+              <p class="mobile-chat-preview">${preview}</p>
+              ${unread ? `<span class="mobile-unread-badge">${unreadCount}</span>` : `<span class="mobile-read-status"><i class="fa-solid fa-check-double"></i></span>`}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+    return;
+  }
+
+  // Cas 2 : Pas de session WhatsApp en direct, mais des contacts réels sont dans Supabase CRM
+  if (contacts.length > 0) {
+    const topContacts = contacts.slice(0, 4);
+    container.innerHTML = topContacts.map(c => {
+      const name = escapeHtml(c.name || 'Prospect');
+      const phone = escapeHtml(c.phone_number || '');
+      const initials = escapeHtml((c.name || 'P').substring(0, 2).toUpperCase());
+      const time = escapeHtml(formatRelativeTime(c.updated_at));
+      const preview = escapeHtml(c.last_message || 'Contact enregistré dans votre CRM');
+
+      return `
+        <div class="mobile-chat-row" data-contact-phone="${phone}" data-chat-contact="${name}">
+          <div class="mobile-chat-avatar-wrap">
+            <div class="mobile-chat-avatar-fallback">${initials}</div>
+            <span class="chat-online-dot"></span>
+          </div>
+          <div class="mobile-chat-info">
+            <div class="mobile-chat-top-line">
+              <span class="mobile-chat-name">${name}</span>
+              <span class="mobile-chat-time">${time}</span>
+            </div>
+            <div class="mobile-chat-bottom-line">
+              <p class="mobile-chat-preview">${preview}</p>
+              <span class="badge badge-subtle" style="font-size: 10px;">CRM</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+    return;
+  }
+
+  // Cas 3 : Nouvel utilisateur sans contact ni session
+  container.innerHTML = `
+    <div class="empty-recent-chats" style="padding: 24px 16px; text-align: center;">
+      <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(37, 211, 102, 0.12); color: var(--whatsapp-green); display: inline-flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px;">
+        <i class="fa-brands fa-whatsapp"></i>
+      </div>
+      <h4 style="font-size: 13.5px; font-weight: 600; margin: 0 0 5px 0; color: var(--text-primary);">Aucune discussion pour le moment</h4>
+      <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.4;">
+        Connectez votre WhatsApp pour que vos clients et échanges s'affichent automatiquement ici.
+      </p>
+      <button type="button" class="btn-primary-gradient btn-open-qr" style="font-size: 11.5px; padding: 6px 14px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-qrcode"></i> Lier mon WhatsApp
+      </button>
+    </div>
+  `;
+
+  const btnQr = container.querySelector(".btn-open-qr");
+  if (btnQr) {
+    btnQr.addEventListener("click", () => {
+      if (typeof openQrModal === "function") {
+        openQrModal();
+      } else {
+        const qrModal = document.getElementById("qr-modal");
+        if (qrModal) qrModal.classList.add("active");
+      }
+    });
+  }
+}
+
+async function loadOverviewRealData() {
+  const userId = getAppUserId();
+  if (!userId) return;
+
+  try {
+    const contactsPromise = fetch(API_URL + '/api/contacts/' + userId, { headers: getAuthHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null);
+
+    const chatsPromise = fetch(API_URL + '/api/whatsapp/chats/' + userId, { headers: getAuthHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null);
+
+    const [contactsRes, chatsRes] = await Promise.all([contactsPromise, chatsPromise]);
+
+    if (contactsRes && contactsRes.success && Array.isArray(contactsRes.contacts)) {
+      MOCK_DATA.contacts = contactsRes.contacts;
+    }
+
+    if (chatsRes && Array.isArray(chatsRes.chats)) {
+      MOCK_DATA.conversations = chatsRes.chats;
+    }
+
+    renderKpis();
+    renderOverviewRecentChats();
+    renderActivityFeed();
+    if (typeof renderRecentInteractions === "function") {
+      renderRecentInteractions();
+    }
+  } catch (err) {
+    console.warn("[Overview] Erreur chargement données réelles:", err);
+  }
 }
 
 // ==============================================================================
@@ -1491,6 +1786,9 @@ async function syncWhatsAppInbox() {
       } else if (MOCK_DATA.conversations.length === 0) {
         renderConversationList();
       }
+      renderOverviewRecentChats();
+      renderActivityFeed();
+      renderKpis();
     }
   } catch(e) {}
 }
@@ -1802,29 +2100,33 @@ function renderRecentInteractions() {
   const tbody = document.getElementById("table-interactions-body");
   if (!tbody) return;
 
-  if (!isCurrentUserDemo()) {
+  const contacts = Array.isArray(MOCK_DATA.contacts) && MOCK_DATA.contacts.length > 0 
+    ? MOCK_DATA.contacts 
+    : [];
+
+  if (contacts.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          Aucune conversation client pour l'instant. Votre agent commercial attend vos premiers prospects.
+          Aucune interaction client pour l'instant. Votre agent commercial attend vos premiers prospects.
         </td>
       </tr>
     `;
     return;
   }
 
-  tbody.innerHTML = MOCK_DATA.recentInteractions.map(item => `
+  tbody.innerHTML = contacts.slice(0, 6).map(item => `
     <tr>
       <td>
         <div style="display: flex; flex-direction: column;">
-          <span>${item.client}</span>
-          <span style="font-size: 11.5px; color: var(--text-muted); font-weight: normal;">${item.phone}</span>
+          <span>${escapeHtml(item.name || 'Prospect')}</span>
+          <span style="font-size: 11.5px; color: var(--text-muted); font-weight: normal;">${formatWhatsAppDisplayNumber(item.phone_number)}</span>
         </div>
       </td>
-      <td>${item.date}</td>
-      <td>${item.action}</td>
+      <td>${escapeHtml(formatRelativeTime(item.updated_at))}</td>
+      <td>${escapeHtml((item.last_message || 'Interaction IA WhatsApp').substring(0, 45))}</td>
       <td>
-        <span class="badge badge-${item.statusType}">${item.status}</span>
+        <span class="badge badge-green">Actif</span>
       </td>
     </tr>
   `).join("");
@@ -2107,36 +2409,14 @@ async function renderContacts() {
         const data = await res.json();
         
         if (data.success && data.contacts && data.contacts.length > 0) {
-            updateDynamicKpis(data.contacts.length);
+            MOCK_DATA.contacts = data.contacts;
+            renderKpis();
+            renderOverviewRecentChats();
+            renderActivityFeed();
             tbody.innerHTML = data.contacts.map(c => {
               const safeName = escapeHtml(c.name || 'Inconnu');
               const safeInitial = escapeHtml((c.name || 'I')[0].toUpperCase());
-              // Formatage soigné des numéros WhatsApp (LID masqués, indicatifs internationaux aérés)
-function formatWhatsAppDisplayNumber(phone) {
-  if (!phone) return '<span style="color: var(--text-muted);">Inconnu</span>';
-  const clean = String(phone).replace(/[^0-9]/g, '');
-  if (clean.length > 13 && !clean.startsWith('229') && !clean.startsWith('226') && !clean.startsWith('225') && !clean.startsWith('221') && !clean.startsWith('33')) {
-    return `<span class="badge badge-subtle" title="Identifiant WhatsApp Multi-Device (LID)">WA ID: ${clean.substring(0, 4)}...${clean.substring(clean.length - 4)}</span>`;
-  }
-  if (clean.startsWith('229') && clean.length >= 11) {
-    return `+229 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
-  }
-  if (clean.startsWith('226') && clean.length >= 11) {
-    return `+226 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
-  }
-  if (clean.startsWith('225') && clean.length >= 12) {
-    return `+225 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
-  }
-  if (clean.startsWith('221') && clean.length >= 11) {
-    return `+221 ${clean.slice(3, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
-  }
-  if (clean.length >= 8) {
-    return `+${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
-  }
-  return clean ? `+${clean}` : 'Inconnu';
-}
-
-const safePhone = formatWhatsAppDisplayNumber(c.phone_number);
+              const safePhone = formatWhatsAppDisplayNumber(c.phone_number);
               const safeDate = escapeHtml(new Date(c.updated_at).toLocaleDateString());
               return `
               <tr>
