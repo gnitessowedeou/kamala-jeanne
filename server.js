@@ -1279,8 +1279,8 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
       } catch (err) {}
     }
 
-    // Date d'inscription persistante et inaltérable
-    const createdAtStr = profile?.created_at || authUser?.created_at || '2026-10-10T08:51:50.749Z';
+    // Date d'inscription persistante et individuelle depuis Supabase auth.users ou profiles
+    const createdAtStr = authUser?.created_at || profile?.created_at || req.query.client_created_at || req.query.created_at || new Date().toISOString();
     const createdAtTime = new Date(createdAtStr).getTime();
     const nowTime = Date.now();
 
@@ -1290,7 +1290,8 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
     const msLeft = trialEndTime - nowTime;
     const isExpired = msLeft <= 0;
 
-    const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+    // Décompte individuel exact : Jour 7, Jour 6, Jour 5... jusqu'à Jour 0 (expiré)
+    const daysLeft = isExpired ? 0 : Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
     const totalSecondsLeft = Math.max(0, Math.floor(msLeft / 1000));
 
     const days = Math.max(0, Math.floor(msLeft / (24 * 60 * 60 * 1000)));

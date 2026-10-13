@@ -311,7 +311,7 @@
             tokensMax: 100,
             daysLeft: 7
           },
-          createdAt: new Date().toISOString()
+          createdAt: signupRes?.user?.created_at || signupRes?.created_at || new Date().toISOString()
         };
 
         this.saveCurrentUser(newUser);
@@ -378,7 +378,7 @@
             tokensMax: 100,
             daysLeft: 7
           },
-          createdAt: userObj?.created_at || new Date().toISOString()
+          createdAt: userObj?.created_at || profile?.created_at || new Date().toISOString()
         };
 
         this.saveCurrentUser(loggedInUser);

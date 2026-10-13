@@ -375,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==============================================================================
 let trialCountdownTimer = null;
 let currentSubscriptionState = {
-  createdAt: '2026-10-10T08:51:50.749Z',
+  createdAt: null,
   trialDurationMs: 7 * 24 * 60 * 60 * 1000,
   plan: 'trial',
   planStatus: 'active',
@@ -385,11 +385,31 @@ let currentSubscriptionState = {
 };
 
 function getStoredUserCreatedAt() {
+  // 1. Depuis vendia_current_user dans localStorage
   try {
     const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
     if (u && (u.createdAt || u.created_at)) return u.createdAt || u.created_at;
   } catch(e) {}
-  return '2026-10-10T08:51:50.749Z';
+
+  // 2. Depuis le token d'authentification Supabase officiel dans localStorage (sb-*-auth-token)
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const su = JSON.parse(localStorage.getItem(key) || '{}');
+        if (su && su.user && su.user.created_at) return su.user.created_at;
+      }
+    }
+  } catch(e) {}
+
+  // 3. Fallback dynamique et persistant : initialiser dès la première session et mémoriser
+  const nowIso = new Date().toISOString();
+  try {
+    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+    u.createdAt = nowIso;
+    localStorage.setItem('vendia_current_user', JSON.stringify(u));
+  } catch(e) {}
+  return nowIso;
 }
 
 function updateTrialAndSubscriptionUI() {
