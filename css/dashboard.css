@@ -3541,6 +3541,90 @@
   }
 }
 
+/* ==============================================================================
+   RESPONSIVE SETTINGS ADMIN PROFILE CARD (Mobile Reframing)
+   ============================================================================== */
+@media (max-width: 680px) {
+  .settings-profile-card {
+    padding: 18px 16px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .settings-profile-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .settings-profile-header-text {
+    width: 100%;
+  }
+
+  .btn-edit-profile-action {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px 16px !important;
+    font-size: 13.5px !important;
+    white-space: nowrap !important;
+  }
+
+  .settings-profile-body {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+
+  .settings-profile-avatar {
+    width: 68px !important;
+    height: 68px !important;
+    margin: 0 auto !important;
+  }
+
+  .settings-profile-fields-grid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+
+  .settings-profile-field-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 9px;
+  }
+
+  .settings-profile-field-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  #settings-display-email {
+    word-break: break-all;
+  }
+}
+
+@media (max-width: 420px) {
+  .settings-profile-card {
+    padding: 16px 14px !important;
+  }
+
+  .settings-profile-card .card-heading {
+    font-size: 15.5px;
+  }
+
+  .btn-edit-profile-action {
+    font-size: 13px !important;
+    padding: 9px 14px !important;
+  }
+}
+
 /* =============================================================================
    FORFAITS & ABONNEMENT + PROGRAMME PARTENAIRES (STYLE COMPLET VANDIA AI)
    ============================================================================= */

@@ -1316,35 +1316,35 @@
           </div>
 
           <!-- Mon Profil Personnel -->
-          <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
-            <div class="card-top-header" style="margin-bottom: 20px;">
-              <div>
+          <div class="glass-panel settings-profile-card" style="padding: 24px; margin-bottom: 24px;">
+            <div class="card-top-header settings-profile-header" style="margin-bottom: 20px;">
+              <div class="settings-profile-header-text">
                 <h3 class="card-heading">Mon Profil Administrateur</h3>
                 <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Vos coordonnées, numéro WhatsApp officiel et photo de profil.</p>
               </div>
-              <button type="button" class="btn-primary-glow btn-open-profile-modal" id="btn-edit-profile-settings" style="padding: 8px 18px; font-size: 13px;">
+              <button type="button" class="btn-primary-glow btn-open-profile-modal btn-edit-profile-action" id="btn-edit-profile-settings" style="padding: 8px 18px; font-size: 13px;">
                 <i class="fa-solid fa-pen-to-square"></i> Modifier mon profil
               </button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
-              <div class="avatar-preview-box" id="settings-avatar-display" style="width: 72px; height: 72px; flex-shrink: 0;">
+            <div class="settings-profile-body" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+              <div class="avatar-preview-box settings-profile-avatar" id="settings-avatar-display" style="width: 72px; height: 72px; flex-shrink: 0;">
                 <span class="avatar-preview-initials" style="font-size: 24px;">V</span>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; flex: 1;">
-                <div>
+              <div class="settings-profile-fields-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; flex: 1;">
+                <div class="settings-profile-field-item">
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Nom &amp; Prénom</div>
                   <div style="font-size: 15px; font-weight: 700; color: #ffffff;" id="settings-display-fullname">Mon Profil</div>
                 </div>
-                <div>
+                <div class="settings-profile-field-item">
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">E-mail</div>
                   <div style="font-size: 15px; font-weight: 600; color: var(--cyan);" id="settings-display-email">En attente</div>
                 </div>
-                <div>
+                <div class="settings-profile-field-item">
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Numéro WhatsApp</div>
                   <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green);" id="settings-display-phone">Non configuré</div>
                 </div>
-                <div>
+                <div class="settings-profile-field-item">
                   <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Rôle &amp; Statut</div>
                   <div style="font-size: 14px;"><span class="badge badge-purple" id="settings-display-role">Propriétaire</span> <span class="badge badge-green">Actif</span></div>
                 </div>

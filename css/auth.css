@@ -379,6 +379,7 @@
   margin-left: 4px;
   text-decoration: underline;
   text-underline-offset: 3px;
+  white-space: nowrap;
 }
 
 .auth-switch-link:hover {
@@ -630,9 +631,44 @@
   .profile-dialog-body {
     padding: 18px 20px 22px;
   }
-  .vendia-toast {
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
+  .auth-tabs-nav {
+    margin: 14px 16px 0;
+    gap: 6px;
+    padding: 4px;
+  }
+  .auth-tab-btn {
+    padding: 9px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .auth-footer-prompt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px 6px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    text-align: center;
+  }
+  .auth-switch-link {
+    white-space: nowrap;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .auth-tabs-nav {
+    margin: 12px 10px 0;
+    gap: 4px;
+    padding: 3px;
+  }
+  .auth-tab-btn {
+    font-size: 12px;
+    padding: 8px 4px;
+  }
+  .auth-footer-prompt {
+    font-size: 12px;
   }
 }
