@@ -566,11 +566,22 @@ function initAuthModal() {
       hideAlert();
       btnGoogle.disabled = true;
       btnGoogle.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Google...</span>';
-      const mode = currentAuthMode || (tabLogin && tabLogin.classList.contains("active") ? "login" : "signup");
+      
+      const tabLogin = document.getElementById("tab-btn-login");
+      const formLogin = document.getElementById("form-login");
+      const isLogin = (currentAuthMode === "login") || (tabLogin && tabLogin.classList.contains("active")) || (formLogin && formLogin.style.display !== "none");
+      const mode = isLogin ? "login" : "signup";
+
       try {
         localStorage.setItem("vendia_auth_mode", mode);
+        localStorage.setItem("vendia_oauth_mode", mode);
         sessionStorage.setItem("vendia_auth_mode", mode);
+        sessionStorage.setItem("vendia_oauth_mode", mode);
+        document.cookie = `vendia_oauth_mode=${mode}; path=/; max-age=1800; SameSite=Lax`;
+        localStorage.removeItem("vendia_current_user");
+        localStorage.removeItem("vendia_supabase_token");
       } catch(e) {}
+
       const res = await window.AuthEngine.signInWithOAuth("google", mode);
       if (!res.success && res.error) {
         btnGoogle.disabled = false;
@@ -588,11 +599,22 @@ function initAuthModal() {
       hideAlert();
       btnFacebook.disabled = true;
       btnFacebook.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Facebook...</span>';
-      const mode = currentAuthMode || (tabLogin && tabLogin.classList.contains("active") ? "login" : "signup");
+      
+      const tabLogin = document.getElementById("tab-btn-login");
+      const formLogin = document.getElementById("form-login");
+      const isLogin = (currentAuthMode === "login") || (tabLogin && tabLogin.classList.contains("active")) || (formLogin && formLogin.style.display !== "none");
+      const mode = isLogin ? "login" : "signup";
+
       try {
         localStorage.setItem("vendia_auth_mode", mode);
+        localStorage.setItem("vendia_oauth_mode", mode);
         sessionStorage.setItem("vendia_auth_mode", mode);
+        sessionStorage.setItem("vendia_oauth_mode", mode);
+        document.cookie = `vendia_oauth_mode=${mode}; path=/; max-age=1800; SameSite=Lax`;
+        localStorage.removeItem("vendia_current_user");
+        localStorage.removeItem("vendia_supabase_token");
       } catch(e) {}
+
       const res = await window.AuthEngine.signInWithOAuth("facebook", mode);
       if (!res.success && res.error) {
         btnFacebook.disabled = false;

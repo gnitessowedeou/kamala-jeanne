@@ -28,6 +28,27 @@
   const SUPABASE_URL = "https://rcnaebfqtkwwmqdbgkpq.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_76HCqO2mjcqMQIOo0Yx9Bg_dUJmCixv";
 
+  function setAuthCookie(name, value, seconds = 1800) {
+    try {
+      document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${seconds}; SameSite=Lax`;
+    } catch(e) {}
+  }
+
+  function getAuthCookie(name) {
+    try {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[2].trim()) : null;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  function clearAuthCookie(name) {
+    try {
+      document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+    } catch(e) {}
+  }
+
   /**
    * ==============================================================================
    * 1. NATIVE SUPABASE REST CLIENT (Résistant aux pannes de CDN & Adblockers)
@@ -280,12 +301,12 @@
             id: userId,
             first_name: firstName.trim(),
             last_name: lastName.trim(),
+            full_name: `${firstName.trim()} ${lastName.trim()}`,
             email: cleanEmail,
             whatsapp_number: fullPhone,
             avatar_url: "",
             credits: 100,
-            affiliate_code: (firstName.trim().substring(0,3) + Math.floor(Math.random()*10000)).toUpperCase(),
-            referred_by: localStorage.getItem('vendia_ref') || null
+            affiliate_code: (firstName.trim().substring(0,3) + Math.floor(Math.random()*10000)).toUpperCase()
           }, accessToken);
         } catch (profileErr) {
           console.warn("Avertissement upsert table profiles:", profileErr);
@@ -453,24 +474,31 @@
      */
     async signInWithOAuth(provider = "google", mode = null) {
       try {
-        let authMode = mode;
-        if (!authMode) {
-          const tabLogin = document.getElementById("tab-btn-login");
-          if (tabLogin && tabLogin.classList.contains("active")) {
-            authMode = "login";
-          } else {
-            authMode = sessionStorage.getItem("vendia_auth_mode") || localStorage.getItem("vendia_auth_mode") || "signup";
-          }
+        const tabLogin = document.getElementById("tab-btn-login");
+        const formLogin = document.getElementById("form-login");
+        const isTabLogin = (tabLogin && tabLogin.classList.contains("active")) || (formLogin && formLogin.style.display !== "none");
+        
+        let authMode = mode || (isTabLogin ? "login" : (localStorage.getItem("vendia_auth_mode") || "signup"));
+        if (isTabLogin) {
+          authMode = "login";
         }
 
+        console.log("[OAUTH START] Provider:", provider, "Mode:", authMode);
+
+        // Sauvegarder dans 4 canaux distincts pour résister à toute perte de contexte
+        setAuthCookie("vendia_oauth_mode", authMode, 1800);
         try {
+          localStorage.setItem("vendia_oauth_mode", authMode);
           localStorage.setItem("vendia_auth_mode", authMode);
+          sessionStorage.setItem("vendia_oauth_mode", authMode);
           sessionStorage.setItem("vendia_auth_mode", authMode);
+          // Purger toute ancienne session locale résiduelle
+          localStorage.removeItem(STORAGE_KEY_USER);
+          localStorage.removeItem(STORAGE_KEY_TOKEN);
         } catch(e) {}
 
         const origin = window.location.origin;
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
-        // Redirection EXCLUSIVE vers index.html avec le mode explicite
         const redirectTo = `${origin}${basePath}index.html?oauth_mode=${encodeURIComponent(authMode)}`;
         const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirectTo)}`;
         window.location.href = authUrl;
@@ -521,19 +549,31 @@
         const userLast = parts.slice(1).join(" ") || meta.last_name || "";
         const userAvatar = meta.avatar_url || meta.picture || "";
 
-        // Récupération stricte du mode d'authentification (URL > sessionStorage > localStorage)
+        // Détection ultra-robuste du mode d'authentification (URL > Cookie > Local > Session)
         const urlParams = new URLSearchParams(window.location.search);
-        let authMode = urlParams.get("oauth_mode") || sessionStorage.getItem("vendia_auth_mode") || localStorage.getItem("vendia_auth_mode") || "signup";
+        const urlMode = urlParams.get("oauth_mode");
+        const cookieMode = getAuthCookie("vendia_oauth_mode");
+        const localMode = localStorage.getItem("vendia_oauth_mode") || localStorage.getItem("vendia_auth_mode");
+        const sessionMode = sessionStorage.getItem("vendia_oauth_mode") || sessionStorage.getItem("vendia_auth_mode");
+
+        // Si l'un quelconque des 4 canaux a enregistré "login", c'est formellement un LOGIN
+        const isLoginAttempt = (urlMode === "login" || cookieMode === "login" || localMode === "login" || sessionMode === "login");
+        const authMode = isLoginAttempt ? "login" : (urlMode || cookieMode || localMode || sessionMode || "signup");
+
+        console.log("[OAUTH CALLBACK] Modes -> URL:", urlMode, "Cookie:", cookieMode, "Local:", localMode, "Session:", sessionMode, "=> Final:", authMode);
+
+        // Nettoyage des cookies et marqueurs temporaires
+        clearAuthCookie("vendia_oauth_mode");
         try {
-          sessionStorage.removeItem("vendia_auth_mode");
-          localStorage.removeItem("vendia_auth_mode");
+          localStorage.removeItem("vendia_oauth_mode");
+          sessionStorage.removeItem("vendia_oauth_mode");
         } catch(e) {}
 
-        // Nettoyage immédiat du hash dans l'URL pour la sécurité des tokens
         if (window.history && window.history.replaceState) {
           window.history.replaceState(null, null, window.location.pathname);
         }
 
+        // Vérification de l'existence du profil dans Supabase (table profiles)
         let profile = null;
         try {
           profile = await SupabaseRest.getProfile(userObj.id, accessToken);
@@ -541,7 +581,6 @@
           console.warn("Lecture profil OAuth Supabase (ID):", pErr);
         }
 
-        // Si le profil n'est pas trouvé par ID, vérifier par email
         if (!profile && cleanEmail) {
           try {
             const rows = await SupabaseRest.request(`/rest/v1/profiles?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, "GET", null, accessToken);
@@ -555,25 +594,25 @@
 
         // ==============================================================================
         // RÈGLE STRICTE DEMANDÉE PAR L'UTILISATEUR :
-        // Si l'utilisateur clique sur "Se connecter" (login) avec une adresse e-mail
+        // Si l'utilisateur clique sur "Se connecter" (login) avec une adresse email
         // qui n'a pas encore de compte dans la base de données :
-        // 1. REFUSER CATÉGORIQUEMENT L'ACCÈS AU DASHBOARD
+        // 1. REFUSER CATÉGORIQUEMENT L'ACCÈS AU DASHBOARD (INTERDICTION TOTALE)
         // 2. RÉVOQUER LE TOKEN SUPABASE ET SUPPRIMER TOUTE SESSION
         // 3. OUVRIR AUTOMATIQUEMENT LE FORMULAIRE D'INSCRIPTION (MODAL SIGNUP)
-        // 4. PRÉ-REMPLIR LES CHAMPS AVEC LES INFORMATIONS DU COMPTE GOOGLE
-        // 5. AFFICHER LE MESSAGE D'ERREUR ROUGE TRÈS VISIBLE
+        // 4. PRÉ-REMPLIR LES CHAMPS DU FORMULAIRE AVEC LES DONNÉES DU COMPTE GOOGLE
+        // 5. AFFICHER LE MESSAGE D'ERREUR ROUGE CLAIR ET EXPLICITE
         // ==============================================================================
-        if (authMode === "login" && !profile) {
+        if (isLoginAttempt && !profile) {
           console.warn("[AUTH OAUTH] Compte inexistant lors de la connexion Google avec l'email :", cleanEmail);
 
-          // Révoquer le token et effacer toute session locale
           SupabaseRest.setToken(null);
-          try { localStorage.removeItem(STORAGE_KEY_USER); } catch(e) {}
-          try { localStorage.removeItem(STORAGE_KEY_TOKEN); } catch(e) {}
+          try {
+            localStorage.removeItem(STORAGE_KEY_USER);
+            localStorage.removeItem(STORAGE_KEY_TOKEN);
+          } catch(e) {}
 
           const errorMsg = `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
 
-          // Mémoriser en sessionStorage pour robustesse supplémentaire
           try {
             sessionStorage.setItem("vendia_oauth_error", errorMsg);
             sessionStorage.setItem("vendia_prefill_signup", JSON.stringify({
@@ -583,14 +622,12 @@
             }));
           } catch(e) {}
 
-          // Si on est sur dashboard.html (par précaution extrême), renvoyer immédiatement vers index.html
           if (window.location.pathname.includes("dashboard.html")) {
             const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
             window.location.replace(`${window.location.origin}${basePath}index.html?auth=signup`);
             return false;
           }
 
-          // Nous sommes sur index.html : afficher immédiatement le formulaire d'inscription
           if (typeof window.openAuthModal === "function") {
             window.openAuthModal("signup");
           }
@@ -598,7 +635,6 @@
             window.showAuthAlert(errorMsg, "error");
           }
 
-          // Pré-remplir les champs avec les données retournées par Google
           const inputFirst = document.getElementById("signup-firstname");
           const inputLast = document.getElementById("signup-lastname");
           const inputEmail = document.getElementById("signup-email");
@@ -616,10 +652,10 @@
               id: userObj.id,
               first_name: userFirst,
               last_name: userLast,
+              full_name: `${userFirst} ${userLast}`.trim(),
               email: cleanEmail,
               whatsapp_number: "",
               avatar_url: userAvatar,
-              plan: "trial",
               credits: 100,
               created_at: userObj.created_at || new Date().toISOString()
             }, accessToken);
@@ -899,9 +935,14 @@
           if (typeof updateTrialAndSubscriptionUI === 'function') {
             updateTrialAndSubscriptionUI();
           }
+        } else {
+          if (window.location.pathname.includes("dashboard.html")) {
+            console.warn("[CHECK SESSION] Profil inexistant dans Supabase. Éjection immédiate du dashboard.");
+            this.logout();
+            return;
+          }
         }
       } catch (err) {
-        // En cas de coupure réseau, la session locale persiste
         console.warn("Vérification session Supabase:", err);
       }
     },
