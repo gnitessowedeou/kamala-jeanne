@@ -800,29 +800,47 @@
      * ==============================================================================
      */
     async updateProfile(updates) {
-      const current = this.getCurrentUser();
-
-      if (updates.phoneNumber && !this.isValidPhone(updates.phoneNumber)) {
-        return { success: false, error: "Numéro WhatsApp invalide." };
+      let current = this.getCurrentUser();
+      if (!current) {
+        current = {
+          id: null,
+          firstName: "",
+          lastName: "",
+          email: "",
+          phoneCountry: "+228",
+          phoneNumber: "",
+          fullPhone: "",
+          company: "Mon Entreprise",
+          role: "Administrateur"
+        };
       }
 
-      const fullPhone = this.formatPhone(
-        updates.phoneCountry || current.phoneCountry,
-        updates.phoneNumber || current.phoneNumber
-      );
+      if (updates.phoneNumber && !this.isValidPhone(updates.phoneNumber)) {
+        return { success: false, error: "Numéro WhatsApp invalide (minimum 6 chiffres)." };
+      }
+
+      const phoneCountry = updates.phoneCountry || current.phoneCountry || "+228";
+      const phoneNumber = updates.phoneNumber !== undefined ? updates.phoneNumber : (current.phoneNumber || "");
+      const fullPhone = phoneNumber ? this.formatPhone(phoneCountry, phoneNumber) : "";
 
       const updated = {
         ...current,
         ...updates,
+        phoneCountry: phoneCountry,
+        phoneNumber: phoneNumber,
         fullPhone: fullPhone
       };
 
       // Synchronisation directe avec la table 'profiles' de Supabase
-      if (current.id) {
+      const userId = current.id || updated.id;
+      const userEmail = current.email || updated.email;
+
+      if (userId) {
         try {
-          await SupabaseRest.updateProfile(current.id, {
+          await SupabaseRest.updateProfile(userId, {
             first_name: updated.firstName || "",
             last_name: updated.lastName || "",
+            full_name: `${updated.firstName || ""} ${updated.lastName || ""}`.trim(),
             whatsapp_number: fullPhone,
             avatar_url: updated.avatarUrl || current.avatarUrl || "",
             updated_at: new Date().toISOString()
@@ -830,9 +848,25 @@
         } catch (err) {
           console.warn("Avertissement mise à jour table profiles:", err);
         }
+      } else if (userEmail) {
+        try {
+          await SupabaseRest.request(`/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}`, "PATCH", {
+            first_name: updated.firstName || "",
+            last_name: updated.lastName || "",
+            full_name: `${updated.firstName || ""} ${updated.lastName || ""}`.trim(),
+            whatsapp_number: fullPhone,
+            avatar_url: updated.avatarUrl || current.avatarUrl || "",
+            updated_at: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn("Avertissement mise à jour table profiles par email:", err);
+        }
       }
 
       this.saveCurrentUser(updated);
+      try {
+        if (fullPhone) localStorage.setItem('vendia_connected_phone', fullPhone);
+      } catch(e) {}
       this.syncProfileUI(updated);
       if (typeof window.applyWhatsAppState === 'function') {
         window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', updated.fullPhone || '');
