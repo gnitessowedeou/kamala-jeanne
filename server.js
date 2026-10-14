@@ -288,16 +288,51 @@ function getChromiumExecutablePath() {
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes generes
 const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing Code à 8 caractères)
+const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
 
 function getClientPhone(client, userId) {
   if (waNumbers[userId]) return waNumbers[userId];
-  if (client) {
-    if (client.info) {
-      if (client.info.wid && client.info.wid.user) return client.info.wid.user;
-      if (client.info.phone) return client.info.phone;
-      if (client.info.me && client.info.me.user) return client.info.me.user;
+  if (client && client.info) {
+    if (client.info.wid) {
+      const u = client.info.wid.user || (client.info.wid._serialized ? client.info.wid._serialized.split('@')[0] : null);
+      if (u && !String(u).includes('lid')) return String(u).split(':')[0];
     }
+    if (client.info.phone) return String(client.info.phone).split(':')[0];
+    if (client.info.me && client.info.me.user) return String(client.info.me.user).split(':')[0];
+  }
+  return null;
+}
+
+async function getClientPhoneAsync(client, userId) {
+  const syncPhone = getClientPhone(client, userId);
+  if (syncPhone) return syncPhone;
+  if (client && client.pupPage && !client.pupPage.isClosed()) {
+    try {
+      const pagePhone = await client.pupPage.evaluate(() => {
+        try {
+          const userPrefs = window.require && window.require('WAWebUserPrefsMeUser');
+          if (userPrefs) {
+            const pn = userPrefs.getMaybeMePnUser();
+            if (pn && pn.user) return String(pn.user).split(':')[0];
+          }
+          const conn = window.require && window.require('WAWebConnModel')?.Conn;
+          if (conn && conn.wid) {
+            const u = conn.wid.user || (conn.wid._serialized ? conn.wid._serialized.split('@')[0] : null);
+            if (u && !String(u).includes('lid')) return String(u).split(':')[0];
+          }
+          if (window.Store && window.Store.User) {
+            const me = window.Store.User.getMaybeMePnUser ? window.Store.User.getMaybeMePnUser() : (window.Store.User.getMeUser ? window.Store.User.getMeUser() : null);
+            if (me && me.user) return String(me.user).split(':')[0];
+          }
+        } catch(e) {}
+        return null;
+      });
+      if (pagePhone) {
+        waNumbers[userId] = pagePhone;
+        return pagePhone;
+      }
+    } catch(e) {}
   }
   return null;
 }
@@ -702,7 +737,10 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
 
   client.on('ready', async () => {
     waStatuses[userId] = 'CONNECTED';
-    const detectedPhone = getClientPhone(client, userId);
+    let detectedPhone = getClientPhone(client, userId);
+    if (!detectedPhone) {
+      detectedPhone = await getClientPhoneAsync(client, userId);
+    }
     if (detectedPhone) {
       waNumbers[userId] = detectedPhone;
     }
@@ -1090,12 +1128,23 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
+app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const client = waClients[userId];
   const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED');
-  const detectedPhone = getClientPhone(client, userId);
+  let detectedPhone = getClientPhone(client, userId);
+  if (!detectedPhone && client && st === 'CONNECTED') {
+    detectedPhone = await getClientPhoneAsync(client, userId);
+  }
   if (detectedPhone) waNumbers[userId] = detectedPhone;
+
+  // Si connecté et qu'on a le numéro, synchroniser Supabase immédiatement
+  if (st === 'CONNECTED' && waNumbers[userId] && supabase) {
+    try {
+      const fullWa = '+' + String(waNumbers[userId]).replace(/^\+/, '');
+      supabase.from('profiles').update({ whatsapp_number: fullWa }).eq('id', userId).then(() => {}).catch(() => {});
+    } catch(e) {}
+  }
 
   res.json({
     status: st,
