@@ -49,6 +49,17 @@
     } catch(e) {}
   }
 
+  function getBackendUrl() {
+    try {
+      const custom = localStorage.getItem('vandia_api_url') || localStorage.getItem('vandia_backend_url');
+      if (custom) return custom;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return window.location.origin;
+      }
+    } catch(e) {}
+    return 'https://kamala-jeanne-production.up.railway.app';
+  }
+
   /**
    * ==============================================================================
    * 1. NATIVE SUPABASE REST CLIENT (Résistant aux pannes de CDN & Adblockers)
@@ -573,107 +584,171 @@
           window.history.replaceState(null, null, window.location.pathname);
         }
 
-        // Vérification de l'existence du profil dans Supabase (table profiles)
+        // 1. Validation Backend & BDD Supabase (/api/auth/oauth-verify)
+        // La décision d'accès est validée par le serveur pour garantir l'absence de bypass
+        let serverVerified = false;
+        let serverUser = null;
         let profile = null;
+
         try {
-          profile = await SupabaseRest.getProfile(userObj.id, accessToken);
-        } catch (pErr) {
-          console.warn("Lecture profil OAuth Supabase (ID):", pErr);
-        }
+          const backendUrl = getBackendUrl();
+          const verifyResp = await fetch(`${backendUrl}/api/auth/oauth-verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accessToken: accessToken,
+              mode: authMode
+            })
+          });
 
-        if (!profile && cleanEmail) {
-          try {
-            const rows = await SupabaseRest.request(`/rest/v1/profiles?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, "GET", null, accessToken);
-            if (Array.isArray(rows) && rows.length > 0) {
-              profile = rows[0];
+          const resData = await verifyResp.json();
+
+          // Code 403 NO_ACCOUNT : L'accès au dashboard est catégoriquement refusé par le serveur
+          if (verifyResp.status === 403 || resData?.code === "NO_ACCOUNT") {
+            console.warn("[AUTH OAUTH] Blocage Backend : Compte inexistant lors de la connexion Google avec l'email :", cleanEmail);
+
+            SupabaseRest.setToken(null);
+            try {
+              localStorage.removeItem(STORAGE_KEY_USER);
+              localStorage.removeItem(STORAGE_KEY_TOKEN);
+            } catch(e) {}
+
+            const errorMsg = resData?.error || `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
+            const prefill = resData?.user || { firstName: userFirst, lastName: userLast, email: cleanEmail };
+
+            try {
+              sessionStorage.setItem("vendia_oauth_error", errorMsg);
+              sessionStorage.setItem("vendia_prefill_signup", JSON.stringify(prefill));
+            } catch(e) {}
+
+            if (window.location.pathname.includes("dashboard.html")) {
+              const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
+              window.location.replace(`${window.location.origin}${basePath}index.html?auth=signup`);
+              return false;
             }
-          } catch(e) {
-            console.warn("Lecture profil OAuth Supabase (Email):", e);
-          }
-        }
 
-        // ==============================================================================
-        // RÈGLE STRICTE DEMANDÉE PAR L'UTILISATEUR :
-        // Si l'utilisateur clique sur "Se connecter" (login) avec une adresse email
-        // qui n'a pas encore de compte dans la base de données :
-        // 1. REFUSER CATÉGORIQUEMENT L'ACCÈS AU DASHBOARD (INTERDICTION TOTALE)
-        // 2. RÉVOQUER LE TOKEN SUPABASE ET SUPPRIMER TOUTE SESSION
-        // 3. OUVRIR AUTOMATIQUEMENT LE FORMULAIRE D'INSCRIPTION (MODAL SIGNUP)
-        // 4. PRÉ-REMPLIR LES CHAMPS DU FORMULAIRE AVEC LES DONNÉES DU COMPTE GOOGLE
-        // 5. AFFICHER LE MESSAGE D'ERREUR ROUGE CLAIR ET EXPLICITE
-        // ==============================================================================
-        if (isLoginAttempt && !profile) {
-          console.warn("[AUTH OAUTH] Compte inexistant lors de la connexion Google avec l'email :", cleanEmail);
+            if (typeof window.openAuthModal === "function") {
+              window.openAuthModal("signup");
+            }
+            if (typeof window.showAuthAlert === "function") {
+              window.showAuthAlert(errorMsg, "error");
+            }
 
-          SupabaseRest.setToken(null);
-          try {
-            localStorage.removeItem(STORAGE_KEY_USER);
-            localStorage.removeItem(STORAGE_KEY_TOKEN);
-          } catch(e) {}
+            const inputFirst = document.getElementById("signup-firstname");
+            const inputLast = document.getElementById("signup-lastname");
+            const inputEmail = document.getElementById("signup-email");
+            if (inputFirst && prefill.firstName) inputFirst.value = prefill.firstName;
+            if (inputLast && prefill.lastName) inputLast.value = prefill.lastName;
+            if (inputEmail && prefill.email) inputEmail.value = prefill.email;
 
-          const errorMsg = `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
-
-          try {
-            sessionStorage.setItem("vendia_oauth_error", errorMsg);
-            sessionStorage.setItem("vendia_prefill_signup", JSON.stringify({
-              firstName: userFirst,
-              lastName: userLast,
-              email: cleanEmail
-            }));
-          } catch(e) {}
-
-          if (window.location.pathname.includes("dashboard.html")) {
-            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
-            window.location.replace(`${window.location.origin}${basePath}index.html?auth=signup`);
             return false;
           }
 
-          if (typeof window.openAuthModal === "function") {
-            window.openAuthModal("signup");
+          if (verifyResp.ok && resData && resData.success) {
+            serverVerified = true;
+            serverUser = resData.user;
+            profile = resData.profile;
           }
-          if (typeof window.showAuthAlert === "function") {
-            window.showAuthAlert(errorMsg, "error");
-          }
-
-          const inputFirst = document.getElementById("signup-firstname");
-          const inputLast = document.getElementById("signup-lastname");
-          const inputEmail = document.getElementById("signup-email");
-          if (inputFirst && userFirst) inputFirst.value = userFirst;
-          if (inputLast && userLast) inputLast.value = userLast;
-          if (inputEmail && cleanEmail) inputEmail.value = cleanEmail;
-
-          return false;
+        } catch (serverErr) {
+          console.warn("[AUTH OAUTH] Serveur Backend temporairement indisponible, validation directe Supabase:", serverErr);
         }
 
-        // Si l'utilisateur est sur inscription (signup) et n'a pas encore de profil, on le crée en Essai 7j
-        if (!profile) {
+        // 2. Double vérification directe via Supabase REST si le serveur n'a pas répondu
+        if (!serverVerified) {
           try {
-            await SupabaseRest.upsertProfile({
-              id: userObj.id,
-              first_name: userFirst,
-              last_name: userLast,
-              full_name: `${userFirst} ${userLast}`.trim(),
-              email: cleanEmail,
-              whatsapp_number: "",
-              avatar_url: userAvatar,
-              credits: 100,
-              created_at: userObj.created_at || new Date().toISOString()
-            }, accessToken);
-          } catch (upsertErr) {
-            console.warn("Création profil OAuth Supabase:", upsertErr);
+            profile = await SupabaseRest.getProfile(userObj.id, accessToken);
+          } catch (pErr) {
+            console.warn("Lecture profil OAuth Supabase (ID):", pErr);
+          }
+
+          if (!profile && cleanEmail) {
+            try {
+              const rows = await SupabaseRest.request(`/rest/v1/profiles?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, "GET", null, accessToken);
+              if (Array.isArray(rows) && rows.length > 0) {
+                profile = rows[0];
+              }
+            } catch(e) {
+              console.warn("Lecture profil OAuth Supabase (Email):", e);
+            }
+          }
+
+          // RÈGLE STRICTE : Si tentative de connexion (login) mais compte non enregistré dans la table profiles
+          if (isLoginAttempt && !profile) {
+            console.warn("[AUTH OAUTH] Compte inexistant lors de la connexion Google avec l'email :", cleanEmail);
+
+            SupabaseRest.setToken(null);
+            try {
+              localStorage.removeItem(STORAGE_KEY_USER);
+              localStorage.removeItem(STORAGE_KEY_TOKEN);
+            } catch(e) {}
+
+            const errorMsg = `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
+
+            try {
+              sessionStorage.setItem("vendia_oauth_error", errorMsg);
+              sessionStorage.setItem("vendia_prefill_signup", JSON.stringify({
+                firstName: userFirst,
+                lastName: userLast,
+                email: cleanEmail
+              }));
+            } catch(e) {}
+
+            if (window.location.pathname.includes("dashboard.html")) {
+              const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
+              window.location.replace(`${window.location.origin}${basePath}index.html?auth=signup`);
+              return false;
+            }
+
+            if (typeof window.openAuthModal === "function") {
+              window.openAuthModal("signup");
+            }
+            if (typeof window.showAuthAlert === "function") {
+              window.showAuthAlert(errorMsg, "error");
+            }
+
+            const inputFirst = document.getElementById("signup-firstname");
+            const inputLast = document.getElementById("signup-lastname");
+            const inputEmail = document.getElementById("signup-email");
+            if (inputFirst && userFirst) inputFirst.value = userFirst;
+            if (inputLast && userLast) inputLast.value = userLast;
+            if (inputEmail && cleanEmail) inputEmail.value = cleanEmail;
+
+            return false;
+          }
+
+          // Si l'utilisateur est sur inscription (signup) et n'a pas encore de profil, création dans profiles
+          if (!profile) {
+            try {
+              await SupabaseRest.upsertProfile({
+                id: userObj.id,
+                first_name: userFirst,
+                last_name: userLast,
+                full_name: `${userFirst} ${userLast}`.trim(),
+                email: cleanEmail,
+                whatsapp_number: "",
+                avatar_url: userAvatar,
+                credits: 100,
+                created_at: userObj.created_at || new Date().toISOString()
+              }, accessToken);
+            } catch (upsertErr) {
+              console.warn("Création profil OAuth Supabase:", upsertErr);
+            }
           }
         }
 
         const oauthMeta = userObj.app_metadata || {};
-        const activePlan = oauthMeta.plan || profile?.plan || 'trial';
-        const planStatus = oauthMeta.plan_status || profile?.plan_status || 'active';
-        const planCycle = oauthMeta.plan_cycle || profile?.plan_cycle || 'monthly';
+        const activePlan = oauthMeta.plan || profile?.plan || serverUser?.plan?.type || 'trial';
+        const planStatus = oauthMeta.plan_status || profile?.plan_status || serverUser?.plan?.status || 'active';
+        const planCycle = oauthMeta.plan_cycle || profile?.plan_cycle || serverUser?.plan?.cycle || 'monthly';
         const isPaid = (activePlan && activePlan !== 'trial' && activePlan !== 'free' && activePlan !== 'expired' && planStatus === 'active');
         const maxTokens = isPaid ? (activePlan === 'basic' ? 1000 : activePlan === 'pro' ? 3000 : 10000) : 100;
-        const remainingCredits = typeof profile?.credits === 'number' ? profile.credits : (isPaid ? maxTokens : 100);
-        const userCreatedAt = userObj.created_at || profile?.created_at || new Date().toISOString();
+        const remainingCredits = typeof profile?.credits === 'number' ? profile.credits : (typeof serverUser?.credits === 'number' ? serverUser.credits : (isPaid ? maxTokens : 100));
+        const userCreatedAt = userObj.created_at || profile?.created_at || serverUser?.createdAt || new Date().toISOString();
 
-        const loggedInUser = {
+        const loggedInUser = serverUser ? {
+          ...serverUser,
+          provider: "google"
+        } : {
           id: userObj.id,
           firstName: profile?.first_name || userFirst,
           lastName: profile?.last_name || userLast,
@@ -701,7 +776,7 @@
 
         this.saveCurrentUser(loggedInUser);
         try {
-          localStorage.setItem('vendia_user_registered_' + userObj.id, userCreatedAt);
+          localStorage.setItem('vendia_user_registered_' + (loggedInUser.id || userObj.id), userCreatedAt);
         } catch(e) {}
 
         // Redirection vers le dashboard pour l'utilisateur authentifié avec succès

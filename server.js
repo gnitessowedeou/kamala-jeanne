@@ -244,15 +244,19 @@ const authMiddleware = async (req, res, next) => {
   if (targetUserId) {
     if (supabase) {
       try {
-        const { data: profile } = await supabase.from('profiles').select('id').eq('id', targetUserId).single();
+        const { data: profile } = await supabase.from('profiles').select('id').eq('id', targetUserId).maybeSingle();
         if (profile) {
           req.user = { id: profile.id };
           return next();
         }
-      } catch (dbErr) {}
+        return res.status(403).json({ error: "Accès refusé : Profil inexistant ou compte non enregistré." });
+      } catch (dbErr) {
+        console.warn('[AUTH] Erreur vérification profil DB:', dbErr.message);
+      }
+    } else {
+      req.user = { id: targetUserId };
+      return next();
     }
-    req.user = { id: targetUserId };
-    return next();
   }
 
   return res.status(401).json({ error: "Acces refuse : Authentification requise." });
@@ -1252,6 +1256,161 @@ app.post('/api/ai/config', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[AI CONFIG] Exception POST:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// AUTHENTIFICATION GOOGLE OAUTH STRICTE (VÉRIFICATION SERVEUR & BDD SUPABASE)
+// 1. Inscription : crée le profil Supabase (table profiles) et attribue 100 crédits
+// 2. Connexion : n'autorise que les utilisateurs ayant déjà un compte enregistré
+// 3. Si aucun compte lors d'une connexion -> accès refusé (HTTP 403 NO_ACCOUNT)
+// ============================================================================
+app.post('/api/auth/oauth-verify', async (req, res) => {
+  try {
+    const { accessToken, mode } = req.body || {};
+    if (!accessToken) {
+      return res.status(400).json({ success: false, error: "Jeton d'accès (accessToken) requis." });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ success: false, error: "Configuration Supabase manquante sur le serveur." });
+    }
+
+    // 1. Validation cryptographique du token OAuth auprès de Supabase Auth
+    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !user) {
+      return res.status(401).json({
+        success: false,
+        error: "Jeton OAuth invalide ou expiré. Veuillez vous reconnecter."
+      });
+    }
+
+    const cleanEmail = (user.email || '').trim().toLowerCase();
+    const meta = user.user_metadata || {};
+    const fullName = meta.full_name || meta.name || '';
+    const parts = fullName.split(' ');
+    const firstName = meta.first_name || parts[0] || (cleanEmail ? cleanEmail.split('@')[0].charAt(0).toUpperCase() + cleanEmail.split('@')[0].slice(1) : 'Utilisateur');
+    const lastName = meta.last_name || parts.slice(1).join(' ') || '';
+    const avatarUrl = meta.avatar_url || meta.picture || '';
+
+    // 2. Recherche du profil enregistré dans la table public.profiles
+    let profile = null;
+    try {
+      const { data: pById } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (pById) profile = pById;
+    } catch (e) {}
+
+    if (!profile && cleanEmail) {
+      try {
+        const { data: pByEmail } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+        if (pByEmail) profile = pByEmail;
+      } catch (e) {}
+    }
+
+    const authMode = String(mode || 'login').toLowerCase().trim();
+
+    // REGLE 1 : TENTATIVE DE CONNEXION (LOGIN)
+    // Si l'utilisateur clique sur "Se connecter" avec un compte Google qui n'est pas enregistré dans public.profiles :
+    // INTERDICTION ABSOLUE D'ACCÈS AU DASHBOARD (Code HTTP 403 NO_ACCOUNT)
+    if (authMode === 'login' && !profile) {
+      console.warn(`[AUTH OAUTH] Blocage connexion : Aucun compte enregistré pour ${cleanEmail} (${user.id})`);
+      return res.status(403).json({
+        success: false,
+        code: "NO_ACCOUNT",
+        error: `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`,
+        user: {
+          firstName,
+          lastName,
+          email: cleanEmail,
+          avatarUrl
+        }
+      });
+    }
+
+    // REGLE 2 : INSCRIPTION (SIGNUP)
+    // Si l'utilisateur clique sur "Créer un compte" et n'a pas encore de profil :
+    // Création officielle du profil avec 100 crédits et rattachement à Supabase
+    if (!profile) {
+      console.log(`[AUTH OAUTH] Nouvelle inscription Google pour ${cleanEmail} (${user.id})`);
+      const newProfile = {
+        id: user.id,
+        first_name: firstName,
+        last_name: lastName,
+        full_name: `${firstName} ${lastName}`.trim(),
+        email: cleanEmail,
+        whatsapp_number: '',
+        avatar_url: avatarUrl,
+        credits: 100,
+        created_at: user.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: created, error: insertErr } = await supabase
+        .from('profiles')
+        .upsert(newProfile)
+        .select('*')
+        .single();
+
+      if (insertErr) {
+        console.error('[AUTH OAUTH] Erreur création profil Supabase:', insertErr.message);
+        return res.status(500).json({ success: false, error: "Impossible d'initialiser le profil utilisateur." });
+      }
+
+      profile = created || newProfile;
+    }
+
+    // REGLE 3 : UTILISATEUR VALIDE ET AUTORISÉ
+    const appMeta = user.app_metadata || {};
+    const rawPlan = appMeta.plan || profile.plan || 'trial';
+    const planStatus = appMeta.plan_status || profile.plan_status || 'active';
+    const planCycle = appMeta.plan_cycle || profile.plan_cycle || 'monthly';
+    const isPaid = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired' && planStatus === 'active');
+    const maxTokens = isPaid ? (rawPlan === 'basic' ? 1000 : rawPlan === 'pro' ? 3000 : 10000) : 100;
+    const remainingCredits = typeof profile.credits === 'number' ? profile.credits : 100;
+    const userCreatedAt = user.created_at || profile.created_at || new Date().toISOString();
+
+    return res.status(200).json({
+      success: true,
+      profile,
+      user: {
+        id: user.id,
+        firstName: profile.first_name || firstName,
+        lastName: profile.last_name || lastName,
+        email: profile.email || cleanEmail,
+        phoneCountry: "+225",
+        phoneNumber: (profile.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
+        fullPhone: profile.whatsapp_number || "",
+        company: "Mon Entreprise",
+        role: "Administrateur",
+        avatarUrl: profile.avatar_url || avatarUrl,
+        provider: "google",
+        credits: remainingCredits,
+        plan: {
+          name: isPaid ? `Formule ${rawPlan.toUpperCase()}` : "Essai Gratuit 7j 🦾",
+          type: rawPlan,
+          status: planStatus,
+          cycle: planCycle,
+          activatedAt: appMeta.plan_activated_at || profile.plan_activated_at || null,
+          expiresAt: appMeta.plan_expires_at || profile.plan_expires_at || null,
+          badge: isPaid ? rawPlan.toUpperCase() : "ESSAI",
+          tokensUsed: Math.max(0, maxTokens - remainingCredits),
+          tokensMax: maxTokens
+        },
+        createdAt: userCreatedAt
+      }
+    });
+
+  } catch (err) {
+    console.error('[AUTH OAUTH] Exception oauth-verify:', err);
+    return res.status(500).json({ success: false, error: "Erreur serveur lors de la vérification OAuth." });
   }
 });
 

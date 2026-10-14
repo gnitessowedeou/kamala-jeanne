@@ -349,7 +349,10 @@ function initAuthModal() {
     currentAuthMode = mode;
     try {
       localStorage.setItem("vendia_auth_mode", mode);
+      localStorage.setItem("vendia_oauth_mode", mode);
       sessionStorage.setItem("vendia_auth_mode", mode);
+      sessionStorage.setItem("vendia_oauth_mode", mode);
+      document.cookie = `vendia_oauth_mode=${mode}; path=/; max-age=1800; SameSite=Lax`;
     } catch(e) {}
     hideAlert();
     if (mode === "signup") {

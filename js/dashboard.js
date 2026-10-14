@@ -815,6 +815,17 @@ async function syncSubscriptionStatusFromServer() {
     const res = await fetch(API_URL + '/api/user/subscription/' + encodeURIComponent(userId), {
       headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
     });
+
+    if (res.status === 401 || res.status === 403) {
+      console.warn("[DASHBOARD GUARD] Compte non autorisé ou profil inexistant sur le serveur (HTTP " + res.status + "). Éjection vers l'accueil.");
+      try {
+        localStorage.removeItem('vendia_current_user');
+        localStorage.removeItem('vendia_supabase_token');
+      } catch(e) {}
+      window.location.replace('index.html');
+      return;
+    }
+
     if (res.ok) {
       const data = await res.json();
       if (data && data.success) {
