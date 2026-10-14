@@ -1545,6 +1545,7 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
         seconds
       },
       credits,
+      whatsappNumber: profile?.whatsapp_number || "",
       serverTime: new Date().toISOString()
     });
   } catch (err) {

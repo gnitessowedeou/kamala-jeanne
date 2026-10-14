@@ -804,6 +804,20 @@ async function syncSubscriptionStatusFromServer() {
           currentSubscriptionState.credits = profile.credits;
         }
         updateTrialAndSubscriptionUI();
+
+        // Synchronisation directe du numéro WhatsApp personnel depuis Supabase
+        const dbPhone = (profile.whatsapp_number || profile.phone || "").toString().trim();
+        try {
+          const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          u.fullPhone = dbPhone;
+          u.phoneNumber = dbPhone.replace(/^\+\d+\s*/, '');
+          if (profile.first_name) u.firstName = profile.first_name;
+          if (profile.last_name) u.lastName = profile.last_name;
+          localStorage.setItem('vendia_current_user', JSON.stringify(u));
+        } catch(e) {}
+        if (typeof window.applyWhatsAppState === 'function') {
+          window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', dbPhone);
+        }
       }
     } catch (pErr) {
       console.warn("[SUBSCRIPTION] Notice lecture directe Supabase:", pErr);
@@ -854,6 +868,17 @@ async function syncSubscriptionStatusFromServer() {
             tokensMax: (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100),
             tokensUsed: Math.max(0, (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100) - data.credits)
           };
+
+          if (data.whatsappNumber !== undefined) {
+            let apiPhone = (data.whatsappNumber || '').toString().trim();
+            if (apiPhone === '+229 62639593' || apiPhone === '22962639593') apiPhone = '';
+            u.fullPhone = apiPhone;
+            u.phoneNumber = apiPhone.replace(/^\+\d+\s*/, '');
+            if (typeof window.applyWhatsAppState === 'function') {
+              window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', apiPhone);
+            }
+          }
+
           localStorage.setItem('vendia_current_user', JSON.stringify(u));
         } catch(e) {}
 
@@ -3979,7 +4004,9 @@ function setupProfileSystem() {
     if (emailEl) emailEl.textContent = user.email || "";
 
     const phoneEl = document.getElementById("settings-display-phone");
-    if (phoneEl) phoneEl.textContent = user.fullPhone || user.phoneNumber || "";
+    const cleanSettingsPhone = (user.fullPhone || user.phoneNumber || "").toString().trim();
+    const hasValidSettingsPhone = cleanSettingsPhone && cleanSettingsPhone !== '+229 62639593' && cleanSettingsPhone !== '22962639593' && cleanSettingsPhone !== 'Non lié' && cleanSettingsPhone !== 'Non configuré';
+    if (phoneEl) phoneEl.textContent = hasValidSettingsPhone ? cleanSettingsPhone : "Non configuré";
 
     const roleEl = document.getElementById("settings-display-role");
     if (roleEl) roleEl.textContent = user.role || "Propriétaire";
@@ -4018,7 +4045,10 @@ function setupProfileSystem() {
     if (selectCountry && user.phoneCountry) selectCountry.value = user.phoneCountry;
 
     const inputPhone = document.getElementById("profile-phone-number");
-    if (inputPhone) inputPhone.value = user.phoneNumber || "";
+    if (inputPhone) {
+      const rawP = (user.phoneNumber || (user.fullPhone ? user.fullPhone.replace(/^\+\d+\s*/, '') : '')).toString().trim();
+      inputPhone.value = (rawP === '62639593' && (!user.fullPhone || user.fullPhone === '+229 62639593')) ? '' : rawP;
+    }
 
     const inputCompany = document.getElementById("profile-company");
     if (inputCompany) inputCompany.value = user.company || "";
@@ -4188,6 +4218,9 @@ function setupProfileSystem() {
         closeProfileModal();
         syncSettingsCard(res.user);
         window.AuthEngine.syncProfileUI(res.user);
+        if (typeof window.applyWhatsAppState === 'function') {
+          window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', res.user?.fullPhone || '');
+        }
         window.AuthEngine.showToast("Profil mis à jour avec succès.", "success");
       } else {
         showToast(res.error || "Une erreur est survenue lors de la mise à jour.", "info");
@@ -4641,13 +4674,31 @@ function setupBillingAndAffiliate() {
         else if (planName.includes("pro")) maxWa = 2;
 
         const connectedCount = isConnected ? 1 : 0;
-        const activePhone = phone ? ('+' + phone.toString().replace(/^\+/, '')) : (user?.fullPhone || '+229 62639593');
+
+        // Récupération stricte du numéro personnel de l'utilisateur connecté (depuis Supabase / profil)
+        // Aucun numéro personnel par défaut ne doit être affiché
+        let userRawPhone = (phone || user?.fullPhone || user?.whatsapp_number || user?.phone || user?.phoneNumber || '').toString().trim();
+        if (userRawPhone === '+229 62639593' || userRawPhone === '22962639593' || userRawPhone === 'Non lié' || userRawPhone === 'Inconnu' || userRawPhone === 'Non configuré') {
+            userRawPhone = '';
+            if (user && (user.fullPhone === '+229 62639593' || user.fullPhone === '22962639593')) {
+                user.fullPhone = '';
+                user.phoneNumber = '';
+                try { localStorage.setItem('vendia_current_user', JSON.stringify(user)); } catch(e) {}
+            }
+        }
+
+        const hasPhone = !!userRawPhone && userRawPhone.length > 4;
+        const activePhone = hasPhone ? (userRawPhone.startsWith('+') ? userRawPhone : '+' + userRawPhone) : '';
 
         // 2. Header (En-tête supérieur)
         const headerNum = document.getElementById("header-connected-num");
         const headerBadge = document.getElementById("header-status-badge");
         const headerPill = document.getElementById("header-status-pill");
-        if (headerNum) headerNum.textContent = activePhone;
+
+        if (headerNum) {
+            headerNum.textContent = hasPhone ? activePhone : "WhatsApp non configuré";
+        }
+
         if (headerBadge) {
             if (isConnected) {
                 headerBadge.textContent = "Connecté";
@@ -4655,13 +4706,34 @@ function setupBillingAndAffiliate() {
                 if (headerPill) {
                     headerPill.style.borderColor = "rgba(37, 211, 102, 0.4)";
                     headerPill.style.background = "rgba(37, 211, 102, 0.1)";
+                    headerPill.title = `WhatsApp connecté : ${activePhone}`;
+                    headerPill.onclick = function() {
+                        if (typeof showSection === 'function') showSection('devices');
+                        else window.location.hash = '#view-devices';
+                    };
                 }
-            } else {
+            } else if (hasPhone) {
                 headerBadge.textContent = "À Connecter";
                 headerBadge.className = "status-badge-mini badge-amber";
                 if (headerPill) {
                     headerPill.style.borderColor = "rgba(245, 158, 11, 0.3)";
                     headerPill.style.background = "rgba(245, 158, 11, 0.08)";
+                    headerPill.title = `WhatsApp : ${activePhone} (En attente de connexion QR Code)`;
+                    headerPill.onclick = function(e) {
+                        if (typeof window.handleConnectClick === 'function') window.handleConnectClick(e);
+                    };
+                }
+            } else {
+                headerBadge.textContent = "Ajouter dans Paramètres";
+                headerBadge.className = "status-badge-mini badge-amber";
+                if (headerPill) {
+                    headerPill.style.borderColor = "rgba(245, 158, 11, 0.4)";
+                    headerPill.style.background = "rgba(245, 158, 11, 0.12)";
+                    headerPill.title = "Aucun numéro WhatsApp configuré. Cliquez pour l'ajouter dans vos paramètres.";
+                    headerPill.onclick = function() {
+                        if (typeof showSection === 'function') showSection('settings');
+                        else window.location.hash = '#view-settings';
+                    };
                 }
             }
         }
@@ -4670,13 +4742,15 @@ function setupBillingAndAffiliate() {
         const sidebarNum = document.getElementById("sidebar-connected-num");
         const sidebarBadge = document.getElementById("sidebar-status-badge");
         const navDevicesBadge = document.getElementById("nav-badge-devices");
-        if (sidebarNum) sidebarNum.textContent = isConnected ? "IA Active" : "Non lié";
+        if (sidebarNum) {
+            sidebarNum.textContent = isConnected ? (activePhone || "IA Active") : (hasPhone ? "En attente" : "Non configuré");
+        }
         if (sidebarBadge) {
-            sidebarBadge.textContent = isConnected ? "Connecté" : "Prêt";
+            sidebarBadge.textContent = isConnected ? "Connecté" : (hasPhone ? "Prêt" : "À configurer");
             sidebarBadge.className = isConnected ? "status-badge-mini badge-green" : "status-badge-mini";
         }
         if (navDevicesBadge) {
-            navDevicesBadge.textContent = isConnected ? "1 Actif" : "Prêt";
+            navDevicesBadge.textContent = isConnected ? "1 Actif" : (hasPhone ? "Prêt" : "0 Actif");
             navDevicesBadge.className = isConnected ? "badge badge-green" : "badge";
         }
 
@@ -4699,21 +4773,34 @@ function setupBillingAndAffiliate() {
         const cardNum = document.getElementById("main-card-num");
         const cardBadge = document.getElementById("main-card-status-badge");
         const cardLabel = document.getElementById("main-card-label");
-        if (cardNum) cardNum.textContent = activePhone;
+        if (cardNum) {
+            cardNum.textContent = hasPhone ? activePhone : "WhatsApp non configuré";
+        }
         if (cardBadge) {
             if (isConnected) {
                 cardBadge.textContent = "🟢 En Ligne & IA Active";
                 cardBadge.className = "badge badge-green";
-            } else if (status === 'QR_READY') {
-                cardBadge.textContent = "🟡 En attente de scan QR";
-                cardBadge.className = "badge badge-amber";
+            } else if (hasPhone) {
+                if (status === 'QR_READY') {
+                    cardBadge.textContent = "🟡 En attente de scan QR";
+                    cardBadge.className = "badge badge-amber";
+                } else {
+                    cardBadge.textContent = "🟡 En attente de connexion";
+                    cardBadge.className = "badge badge-amber";
+                }
             } else {
-                cardBadge.textContent = "🟡 En attente de connexion";
-                cardBadge.className = "badge badge-amber";
+                cardBadge.textContent = "⚪ Non configuré";
+                cardBadge.className = "badge badge-subtle";
             }
         }
         if (cardLabel) {
-            cardLabel.textContent = isConnected ? "Ligne Principale Vente (IA Active)" : "Ligne à synchroniser via QR Code";
+            if (isConnected) {
+                cardLabel.textContent = "Ligne Principale Vente (IA Active)";
+            } else if (hasPhone) {
+                cardLabel.textContent = "Ligne à synchroniser via QR Code";
+            } else {
+                cardLabel.innerHTML = 'Ajoutez votre numéro dans les <a href="#settings" onclick="if(typeof showSection===\'function\'){showSection(\'settings\');}" style="color: var(--whatsapp-green); text-decoration: underline; font-weight: 600;">Paramètres</a>';
+            }
         }
 
         // 5. Contrôle strict du bouton "Connecter un Numéro" (#btn-add-whatsapp-num)

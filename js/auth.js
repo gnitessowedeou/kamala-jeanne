@@ -390,7 +390,8 @@
         const appMeta = userObj?.app_metadata || {};
         const userFirst = profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1);
         const userLast = profile?.last_name || meta.last_name || "";
-        const userPhone = profile?.whatsapp_number || meta.whatsapp_number || "";
+        let userPhone = (profile?.whatsapp_number || meta.whatsapp_number || "").toString().trim();
+        if (userPhone === '+229 62639593' || userPhone === '22962639593') userPhone = "";
 
         const userCreatedAt = userObj?.created_at || profile?.created_at || new Date().toISOString();
         const activePlan = appMeta.plan || profile?.plan || 'trial';
@@ -409,7 +410,7 @@
           lastName: userLast,
           email: profile?.email || userObj?.email || cleanEmail,
           phoneCountry: "+225",
-          phoneNumber: userPhone.replace(/^\+\d+\s*/, ""),
+          phoneNumber: userPhone ? userPhone.replace(/^\+\d+\s*/, "") : "",
           fullPhone: userPhone,
           company: "Mon Entreprise",
           role: "Administrateur",
@@ -745,8 +746,13 @@
         const remainingCredits = typeof profile?.credits === 'number' ? profile.credits : (typeof serverUser?.credits === 'number' ? serverUser.credits : (isPaid ? maxTokens : 100));
         const userCreatedAt = userObj.created_at || profile?.created_at || serverUser?.createdAt || new Date().toISOString();
 
+        let oauthPhone = (profile?.whatsapp_number || (serverUser ? serverUser.fullPhone : "")).toString().trim();
+        if (oauthPhone === '+229 62639593' || oauthPhone === '22962639593' || oauthPhone === 'Non lié' || oauthPhone === 'Non configuré') oauthPhone = "";
+
         const loggedInUser = serverUser ? {
           ...serverUser,
+          fullPhone: oauthPhone,
+          phoneNumber: oauthPhone ? oauthPhone.replace(/^\+\d+\s*/, "") : "",
           provider: "google"
         } : {
           id: userObj.id,
@@ -754,8 +760,8 @@
           lastName: profile?.last_name || userLast,
           email: profile?.email || cleanEmail,
           phoneCountry: "+225",
-          phoneNumber: (profile?.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
-          fullPhone: profile?.whatsapp_number || "",
+          phoneNumber: oauthPhone ? oauthPhone.replace(/^\+\d+\s*/, "") : "",
+          fullPhone: oauthPhone,
           company: "Mon Entreprise",
           role: "Administrateur",
           avatarUrl: profile?.avatar_url || userAvatar,
@@ -827,6 +833,10 @@
       }
 
       this.saveCurrentUser(updated);
+      this.syncProfileUI(updated);
+      if (typeof window.applyWhatsAppState === 'function') {
+        window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', updated.fullPhone || '');
+      }
       return { success: true, user: updated };
     },
 
@@ -874,28 +884,28 @@
         }
 
         
-        // Synchronisation dynamique des limites et de l'état WhatsApp
-        if (typeof window.applyWhatsAppState === 'function') {
-            window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', user.fullPhone);
-        }
+      // 3. Statut WhatsApp connecté personnel
+      let userPhone = (user.fullPhone || user.whatsapp_number || user.phone || "").toString().trim();
+      if (userPhone === '+229 62639593' || userPhone === '22962639593' || userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré') {
+        userPhone = "";
+        user.fullPhone = "";
+        user.phoneNumber = "";
+      }
+      const hasPhone = !!userPhone && userPhone.length > 4;
+      const formattedPhone = hasPhone ? (userPhone.startsWith('+') ? userPhone : '+' + userPhone) : '';
 
-        const welcomeNames = document.querySelectorAll(".welcome-name");
+      const welcomeNames = document.querySelectorAll(".welcome-name");
       welcomeNames.forEach(el => {
         el.textContent = user.firstName || "Cher Partenaire";
       });
 
-      // 3. Statut WhatsApp connecté
       const headerNum = document.getElementById("header-connected-num");
       const sidebarNum = document.getElementById("sidebar-connected-num");
-      if (user.fullPhone && user.fullPhone.trim()) {
-        if (headerNum) headerNum.textContent = user.fullPhone;
-        if (sidebarNum) sidebarNum.textContent = user.fullPhone;
-      } else {
-        if (headerNum) headerNum.textContent = "WhatsApp";
-        if (sidebarNum) sidebarNum.textContent = "Non lié";
-      }
+      if (headerNum) headerNum.textContent = hasPhone ? formattedPhone : "WhatsApp non configuré";
+      if (sidebarNum) sidebarNum.textContent = hasPhone ? formattedPhone : "Non configuré";
+
       if (typeof window.applyWhatsAppState === 'function') {
-        window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', user.fullPhone);
+        window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', formattedPhone);
       }
 
       // 4. Champs de configuration Profil
@@ -904,7 +914,7 @@
       const setEmail = document.getElementById("settings-display-email");
       if (setEmail) setEmail.textContent = user.email || "En attente";
       const setPhone = document.getElementById("settings-display-phone");
-      if (setPhone) setPhone.textContent = user.fullPhone || "Non configuré";
+      if (setPhone) setPhone.textContent = hasPhone ? formattedPhone : "Non configuré";
 
       const teamLeadName = document.getElementById("team-lead-name");
       if (teamLeadName) teamLeadName.textContent = fullName;
@@ -985,12 +995,19 @@
           const usedTokens = Math.max(0, maxTokens - (profile.credits ?? maxTokens));
           const persistentCreatedAt = user.createdAt || profile.created_at || localStorage.getItem('vendia_user_registered_' + user.id);
 
+          // Récupération stricte du numéro personnel depuis Supabase (sans numéro par défaut)
+          let profilePhone = (profile.whatsapp_number || profile.phone || "").toString().trim();
+          if (profilePhone === '+229 62639593' || profilePhone === '22962639593' || profilePhone === 'Non lié' || profilePhone === 'Non configuré') {
+            profilePhone = "";
+          }
+
           const syncedUser = {
             ...user,
             createdAt: persistentCreatedAt || user.createdAt,
             firstName: profile.first_name || user.firstName,
             lastName: profile.last_name || user.lastName,
-            fullPhone: profile.whatsapp_number || user.fullPhone,
+            fullPhone: profilePhone,
+            phoneNumber: profilePhone ? profilePhone.replace(/^\+\d{1,4}/, '').trim() : "",
             avatarUrl: profile.avatar_url || user.avatarUrl,
             affiliateCode: profile.affiliate_code || user.affiliateCode,
             plan: {
