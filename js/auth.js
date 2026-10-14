@@ -391,7 +391,7 @@
         const userFirst = profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1);
         const userLast = profile?.last_name || meta.last_name || "";
         let userPhone = (profile?.whatsapp_number || meta.whatsapp_number || "").toString().trim();
-        if (userPhone === '+229 62639593' || userPhone === '22962639593') userPhone = "";
+        if (userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré' || userPhone === 'WhatsApp non configuré') userPhone = "";
 
         const userCreatedAt = userObj?.created_at || profile?.created_at || new Date().toISOString();
         const activePlan = appMeta.plan || profile?.plan || 'trial';
@@ -747,7 +747,7 @@
         const userCreatedAt = userObj.created_at || profile?.created_at || serverUser?.createdAt || new Date().toISOString();
 
         let oauthPhone = (profile?.whatsapp_number || (serverUser ? serverUser.fullPhone : "")).toString().trim();
-        if (oauthPhone === '+229 62639593' || oauthPhone === '22962639593' || oauthPhone === 'Non lié' || oauthPhone === 'Non configuré') oauthPhone = "";
+        if (oauthPhone === 'Non lié' || oauthPhone === 'Inconnu' || oauthPhone === 'Non configuré' || oauthPhone === 'WhatsApp non configuré') oauthPhone = "";
 
         const loggedInUser = serverUser ? {
           ...serverUser,
@@ -885,13 +885,11 @@
 
         
       // 3. Statut WhatsApp connecté personnel
-      let userPhone = (user.fullPhone || user.whatsapp_number || user.phone || "").toString().trim();
-      if (userPhone === '+229 62639593' || userPhone === '22962639593' || userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré') {
+      let userPhone = (user.fullPhone || user.whatsapp_number || user.phone || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
+      if (userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré' || userPhone === 'WhatsApp non configuré') {
         userPhone = "";
-        user.fullPhone = "";
-        user.phoneNumber = "";
       }
-      const hasPhone = !!userPhone && userPhone.length > 4;
+      const hasPhone = !!userPhone && userPhone.replace(/\D/g, '').length >= 6;
       const formattedPhone = hasPhone ? (userPhone.startsWith('+') ? userPhone : '+' + userPhone) : '';
 
       const welcomeNames = document.querySelectorAll(".welcome-name");
@@ -995,9 +993,9 @@
           const usedTokens = Math.max(0, maxTokens - (profile.credits ?? maxTokens));
           const persistentCreatedAt = user.createdAt || profile.created_at || localStorage.getItem('vendia_user_registered_' + user.id);
 
-          // Récupération stricte du numéro personnel depuis Supabase (sans numéro par défaut)
-          let profilePhone = (profile.whatsapp_number || profile.phone || "").toString().trim();
-          if (profilePhone === '+229 62639593' || profilePhone === '22962639593' || profilePhone === 'Non lié' || profilePhone === 'Non configuré') {
+          // Récupération stricte du numéro personnel depuis Supabase
+          let profilePhone = (profile.whatsapp_number || profile.phone || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
+          if (profilePhone === 'Non lié' || profilePhone === 'Inconnu' || profilePhone === 'Non configuré' || profilePhone === 'WhatsApp non configuré') {
             profilePhone = "";
           }
 

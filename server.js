@@ -288,8 +288,19 @@ function getChromiumExecutablePath() {
 const waClients = {};    // Stocke les sessions WhatsApp (ID Utilisateur -> Moteur)
 const waSessionsQR = {}; // Stocke les QR codes generes
 const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing Code à 8 caractères)
-const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
+
+function getClientPhone(client, userId) {
+  if (waNumbers[userId]) return waNumbers[userId];
+  if (client) {
+    if (client.info) {
+      if (client.info.wid && client.info.wid.user) return client.info.wid.user;
+      if (client.info.phone) return client.info.phone;
+      if (client.info.me && client.info.me.user) return client.info.me.user;
+    }
+  }
+  return null;
+}
 
 // Memoire contextuelle persistante & fenetre de session de 24h
 const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;  // 4 heures d'inactivite (Conforme Master Prompt)
@@ -644,6 +655,8 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   client.on('authenticated', () => {
     console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (scan validé) !`);
     waStatuses[userId] = 'AUTHENTICATED';
+    const detectedPhone = getClientPhone(client, userId);
+    if (detectedPhone) waNumbers[userId] = detectedPhone;
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
   });
@@ -651,6 +664,8 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   client.on('loading_screen', (percent, message) => {
     console.log(`[WA] Client ${userId} synchronisation: ${percent}% - ${message}`);
     waStatuses[userId] = 'AUTHENTICATED';
+    const detectedPhone = getClientPhone(client, userId);
+    if (detectedPhone) waNumbers[userId] = detectedPhone;
   });
 
   client.on('qr', async (qr) => {
@@ -670,14 +685,14 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   // Quand le client a scanné et est connecté
   // Gestion de la dconnexion et rinitialisation propre
   client.on('auth_failure', (msg) => {
-    console.error(`[WA] ?chec d'authentification pour ${userId} :`, msg);
+    console.error(`[WA] Échec d'authentification pour ${userId} :`, msg);
     waStatuses[userId] = 'DISCONNECTED';
     delete waClients[userId];
     delete waSessionsQR[userId];
   });
 
   client.on('disconnected', (reason) => {
-    console.log(`[WA] Client ${userId} dconnect :`, reason);
+    console.log(`[WA] Client ${userId} déconnecté :`, reason);
     waStatuses[userId] = 'DISCONNECTED';
     delete waClients[userId];
     delete waSessionsQR[userId];
@@ -685,12 +700,26 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     try { client.destroy(); } catch (e) {}
   });
 
-  client.on('ready', () => {
+  client.on('ready', async () => {
     waStatuses[userId] = 'CONNECTED';
-    waNumbers[userId] = client.info ? client.info.wid.user : null;
+    const detectedPhone = getClientPhone(client, userId);
+    if (detectedPhone) {
+      waNumbers[userId] = detectedPhone;
+    }
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
     console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
+
+    // Synchronisation automatique immédiate dans le profil Supabase
+    if (waNumbers[userId] && supabase) {
+      try {
+        const fullWaPhone = '+' + String(waNumbers[userId]).replace(/^\+/, '');
+        await supabase.from('profiles').update({ whatsapp_number: fullWaPhone }).eq('id', userId);
+        console.log(`💾 [WA] Profil Supabase synchronisé pour ${userId} : ${fullWaPhone}`);
+      } catch (err) {
+        console.warn(`[WA] Avertissement update Supabase:`, err.message);
+      }
+    }
   });
 
   // Deduplication des messages (evite de traiter 2 fois si message ET message_create se declenchent)
@@ -1008,12 +1037,23 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
       delete waPairingCodes[userId];
     });
 
-    client.on('ready', () => {
+    client.on('ready', async () => {
       waStatuses[userId] = 'CONNECTED';
-      waNumbers[userId] = client.info ? client.info.wid.user : null;
+      const detectedPhone = getClientPhone(client, userId) || cleanPhone;
+      if (detectedPhone) waNumbers[userId] = detectedPhone;
       delete waSessionsQR[userId];
       delete waPairingCodes[userId];
-      console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
+      console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp (Pairing) ! Numéro: ${waNumbers[userId]}`);
+
+      if (waNumbers[userId] && supabase) {
+        try {
+          const fullWaPhone = '+' + String(waNumbers[userId]).replace(/^\+/, '');
+          await supabase.from('profiles').update({ whatsapp_number: fullWaPhone }).eq('id', userId);
+          console.log(`💾 [WA] Profil Supabase synchronisé pour ${userId} : ${fullWaPhone}`);
+        } catch (err) {
+          console.warn(`[WA] Avertissement update Supabase:`, err.message);
+        }
+      }
     });
 
     client.on('auth_failure', (msg) => {
@@ -1052,7 +1092,11 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
 
 app.get('/api/whatsapp/status/:userId', authMiddleware, (req, res) => {
   const { userId } = req.params;
+  const client = waClients[userId];
   const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED');
+  const detectedPhone = getClientPhone(client, userId);
+  if (detectedPhone) waNumbers[userId] = detectedPhone;
+
   res.json({
     status: st,
     qr: waSessionsQR[userId] || null,

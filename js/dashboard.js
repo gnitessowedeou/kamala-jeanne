@@ -4004,8 +4004,8 @@ function setupProfileSystem() {
     if (emailEl) emailEl.textContent = user.email || "";
 
     const phoneEl = document.getElementById("settings-display-phone");
-    const cleanSettingsPhone = (user.fullPhone || user.phoneNumber || "").toString().trim();
-    const hasValidSettingsPhone = cleanSettingsPhone && cleanSettingsPhone !== '+229 62639593' && cleanSettingsPhone !== '22962639593' && cleanSettingsPhone !== 'Non lié' && cleanSettingsPhone !== 'Non configuré';
+    const cleanSettingsPhone = (user.fullPhone || user.phoneNumber || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
+    const hasValidSettingsPhone = cleanSettingsPhone && cleanSettingsPhone !== 'Non lié' && cleanSettingsPhone !== 'Non configuré' && cleanSettingsPhone.replace(/\D/g, '').length >= 6;
     if (phoneEl) phoneEl.textContent = hasValidSettingsPhone ? cleanSettingsPhone : "Non configuré";
 
     const roleEl = document.getElementById("settings-display-role");
@@ -4047,7 +4047,7 @@ function setupProfileSystem() {
     const inputPhone = document.getElementById("profile-phone-number");
     if (inputPhone) {
       const rawP = (user.phoneNumber || (user.fullPhone ? user.fullPhone.replace(/^\+\d+\s*/, '') : '')).toString().trim();
-      inputPhone.value = (rawP === '62639593' && (!user.fullPhone || user.fullPhone === '+229 62639593')) ? '' : rawP;
+      inputPhone.value = rawP;
     }
 
     const inputCompany = document.getElementById("profile-company");
@@ -4675,19 +4675,29 @@ function setupBillingAndAffiliate() {
 
         const connectedCount = isConnected ? 1 : 0;
 
-        // Récupération stricte du numéro personnel de l'utilisateur connecté (depuis Supabase / profil)
-        // Aucun numéro personnel par défaut ne doit être affiché
-        let userRawPhone = (phone || user?.fullPhone || user?.whatsapp_number || user?.phone || user?.phoneNumber || '').toString().trim();
-        if (userRawPhone === '+229 62639593' || userRawPhone === '22962639593' || userRawPhone === 'Non lié' || userRawPhone === 'Inconnu' || userRawPhone === 'Non configuré') {
-            userRawPhone = '';
-            if (user && (user.fullPhone === '+229 62639593' || user.fullPhone === '22962639593')) {
-                user.fullPhone = '';
-                user.phoneNumber = '';
+        // Si un numéro est retourné par la connexion active, le mémoriser et l'adopter immédiatement
+        if (phone && String(phone).replace(/\D/g, '').length >= 6) {
+            const cleanIncomingPhone = '+' + String(phone).replace(/^\+/, '').trim();
+            window.currentWhatsAppPhone = cleanIncomingPhone;
+            if (user) {
+                user.fullPhone = cleanIncomingPhone;
+                user.phoneNumber = cleanIncomingPhone.replace(/^\+\d{1,4}/, '').trim();
                 try { localStorage.setItem('vendia_current_user', JSON.stringify(user)); } catch(e) {}
             }
+            try { localStorage.setItem('vendia_connected_phone', cleanIncomingPhone); } catch(e) {}
         }
 
-        const hasPhone = !!userRawPhone && userRawPhone.length > 4;
+        // Récupération du numéro personnel :
+        // 1. Numéro en direct de la connexion active
+        // 2. Numéro mémorisé en session
+        // 3. Numéro du profil utilisateur (Supabase / local)
+        let userRawPhone = (phone || window.currentWhatsAppPhone || user?.fullPhone || user?.whatsapp_number || user?.phone || user?.phoneNumber || localStorage.getItem('vendia_connected_phone') || '').toString().trim();
+        if (userRawPhone === 'Non lié' || userRawPhone === 'Inconnu' || userRawPhone === 'Non configuré' || userRawPhone === 'WhatsApp non configuré') {
+            userRawPhone = '';
+        }
+
+        const digitsOnly = userRawPhone.replace(/\D/g, '');
+        const hasPhone = digitsOnly.length >= 6;
         const activePhone = hasPhone ? (userRawPhone.startsWith('+') ? userRawPhone : '+' + userRawPhone) : '';
 
         // 2. Header (En-tête supérieur)
@@ -4696,7 +4706,13 @@ function setupBillingAndAffiliate() {
         const headerPill = document.getElementById("header-status-pill");
 
         if (headerNum) {
-            headerNum.textContent = hasPhone ? activePhone : "WhatsApp non configuré";
+            if (isConnected) {
+                headerNum.textContent = activePhone || "Ligne Connectée";
+            } else if (hasPhone) {
+                headerNum.textContent = activePhone;
+            } else {
+                headerNum.textContent = "WhatsApp non configuré";
+            }
         }
 
         if (headerBadge) {
@@ -4706,7 +4722,7 @@ function setupBillingAndAffiliate() {
                 if (headerPill) {
                     headerPill.style.borderColor = "rgba(37, 211, 102, 0.4)";
                     headerPill.style.background = "rgba(37, 211, 102, 0.1)";
-                    headerPill.title = `WhatsApp connecté : ${activePhone}`;
+                    headerPill.title = `WhatsApp connecté : ${activePhone || 'Actif'}`;
                     headerPill.onclick = function() {
                         if (typeof showSection === 'function') showSection('devices');
                         else window.location.hash = '#view-devices';
@@ -4774,7 +4790,13 @@ function setupBillingAndAffiliate() {
         const cardBadge = document.getElementById("main-card-status-badge");
         const cardLabel = document.getElementById("main-card-label");
         if (cardNum) {
-            cardNum.textContent = hasPhone ? activePhone : "WhatsApp non configuré";
+            if (isConnected) {
+                cardNum.textContent = activePhone || "Ligne Connectée";
+            } else if (hasPhone) {
+                cardNum.textContent = activePhone;
+            } else {
+                cardNum.textContent = "WhatsApp non configuré";
+            }
         }
         if (cardBadge) {
             if (isConnected) {
@@ -4857,6 +4879,17 @@ function setupBillingAndAffiliate() {
             
             window.applyWhatsAppState(data.status, data.phone);
 
+            if (data.status === 'CONNECTED') {
+                if (data.phone) {
+                    try { localStorage.setItem('vendia_connected_phone', '+' + String(data.phone).replace(/^\+/, '')); } catch(e) {}
+                    if (window.SupabaseRest) {
+                        try { window.SupabaseRest.updateProfile(userId, { whatsapp_number: '+' + String(data.phone).replace(/^\+/, '') }); } catch(e) {}
+                    }
+                } else {
+                    setTimeout(() => syncWhatsAppStatus(), 1500);
+                }
+            }
+
             const qrModal = document.getElementById('qr-modal');
             const qrBox = document.getElementById('qr-canvas-box') || (qrModal && qrModal.querySelector('.qr-code-box'));
             if (qrModal && qrModal.classList.contains('active')) {
@@ -4884,6 +4917,17 @@ function setupBillingAndAffiliate() {
             const data = await res.json();
 
             window.applyWhatsAppState(data.status, data.phone);
+
+            if (data.status === 'CONNECTED') {
+                if (data.phone) {
+                    try { localStorage.setItem('vendia_connected_phone', '+' + String(data.phone).replace(/^\+/, '')); } catch(e) {}
+                    if (targetUserId && window.SupabaseRest) {
+                        try { window.SupabaseRest.updateProfile(targetUserId, { whatsapp_number: '+' + String(data.phone).replace(/^\+/, '') }); } catch(e) {}
+                    }
+                } else {
+                    setTimeout(() => syncWhatsAppStatus(), 1500);
+                }
+            }
 
             if (data.pairingCode && typeof window.renderPairingCode === 'function') {
                 window.renderPairingCode(data.pairingCode);
