@@ -1256,6 +1256,23 @@ app.post('/api/ai/config', authMiddleware, async (req, res) => {
 });
 
 
+function parseCycleDuration(cycle) {
+  const c = String(cycle || '').toLowerCase().trim();
+  if (c === '15days' || c === '15j' || c === '15jours' || c.includes('15')) {
+    return { ms: 15 * 24 * 60 * 60 * 1000, label: '15 jours', days: 15 };
+  }
+  if (c === 'quarterly' || c === '3months' || c === '3mois' || c === 'trimestriel' || c.includes('3m') || c.includes('3 m')) {
+    return { ms: 90 * 24 * 60 * 60 * 1000, label: '3 mois', days: 90 };
+  }
+  if (c === 'semi_annual' || c === '6months' || c === '6mois' || c === 'semestriel' || c.includes('6m') || c.includes('6 m')) {
+    return { ms: 180 * 24 * 60 * 60 * 1000, label: '6 mois', days: 180 };
+  }
+  if (c === 'annual' || c === 'yearly' || c === '1year' || c === '1an' || c === 'annuel' || c.includes('an')) {
+    return { ms: 365 * 24 * 60 * 60 * 1000, label: '1 an', days: 365 };
+  }
+  return { ms: 30 * 24 * 60 * 60 * 1000, label: '1 mois', days: 30 };
+}
+
 // ============================================================================
 // GESTION DU STATUT D'ABONNEMENT & ESSAI GRATUIT 7 JOURS
 // ============================================================================
@@ -1284,34 +1301,82 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
     const createdAtTime = new Date(createdAtStr).getTime();
     const nowTime = Date.now();
 
-    // Période exacte de 7 jours (7 * 24h * 3600s * 1000ms)
-    const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
-    const trialEndTime = createdAtTime + TRIAL_DURATION_MS;
-    const msLeft = trialEndTime - nowTime;
-    const isExpired = msLeft <= 0;
-
-    // Décompte individuel exact : Jour 7, Jour 6, Jour 5... jusqu'à Jour 0 (expiré)
-    const daysLeft = isExpired ? 0 : Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
-    const totalSecondsLeft = Math.max(0, Math.floor(msLeft / 1000));
-
-    const days = Math.max(0, Math.floor(msLeft / (24 * 60 * 60 * 1000)));
-    const hours = Math.max(0, Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
-    const minutes = Math.max(0, Math.floor((msLeft % (60 * 60 * 1000)) / (60 * 1000)));
-    const seconds = Math.max(0, Math.floor((msLeft % (60 * 1000)) / 1000));
-
     const appMeta = authUser?.app_metadata || {};
-    const paidPlan = (appMeta.plan && appMeta.plan !== 'trial') ? appMeta.plan : null;
-    const isPaidActive = paidPlan && appMeta.plan_status === 'active';
+    const rawPlan = appMeta.plan || profile?.plan;
+    const paidPlan = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired') ? rawPlan : null;
+    const rawStatus = appMeta.plan_status || profile?.plan_status || 'active';
+    const isPaidActive = !!paidPlan && (rawStatus === 'active');
+
+    let isExpired = false;
+    let daysLeft = 0;
+    let totalSecondsLeft = 0;
+    let days = 0, hours = 0, minutes = 0, seconds = 0;
+    let activatedAtStr = null;
+    let expiresAtStr = null;
+    let cycleInfo = { ms: 7 * 24 * 60 * 60 * 1000, label: '7 jours', days: 7 };
+
+    if (isPaidActive) {
+      // Abonnements payants : durée réelle (15 jours, 1 mois, 3 mois, etc.) et décompte automatique
+      cycleInfo = parseCycleDuration(appMeta.plan_cycle || profile?.plan_cycle || 'monthly');
+      activatedAtStr = appMeta.plan_activated_at || profile?.plan_activated_at || createdAtStr;
+      expiresAtStr = appMeta.plan_expires_at || profile?.plan_expires_at || new Date(new Date(activatedAtStr).getTime() + cycleInfo.ms).toISOString();
+
+      const expiresTime = new Date(expiresAtStr).getTime();
+      const msLeft = expiresTime - nowTime;
+      isExpired = msLeft <= 0;
+
+      totalSecondsLeft = Math.max(0, Math.floor(Math.max(0, msLeft) / 1000));
+      days = Math.max(0, Math.floor(Math.max(0, msLeft) / (24 * 60 * 60 * 1000)));
+      hours = Math.max(0, Math.floor((Math.max(0, msLeft) % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+      minutes = Math.max(0, Math.floor((Math.max(0, msLeft) % (60 * 60 * 1000)) / (60 * 1000)));
+      seconds = Math.max(0, Math.floor((Math.max(0, msLeft) % (60 * 1000)) / 1000));
+
+      daysLeft = isExpired ? 0 : Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+    } else {
+      // Essai gratuit : 7 jours dès l'inscription. Décompte de 7, 6, 5, 4, 3, 2, 1, 0 selon le temps écoulé
+      const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+      const trialEndTime = createdAtTime + TRIAL_DURATION_MS;
+      activatedAtStr = createdAtStr;
+      expiresAtStr = new Date(trialEndTime).toISOString();
+
+      const msLeft = trialEndTime - nowTime;
+      isExpired = msLeft <= 0;
+
+      totalSecondsLeft = Math.max(0, Math.floor(Math.max(0, msLeft) / 1000));
+      days = Math.max(0, Math.floor(Math.max(0, msLeft) / (24 * 60 * 60 * 1000)));
+      hours = Math.max(0, Math.floor((Math.max(0, msLeft) % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+      minutes = Math.max(0, Math.floor((Math.max(0, msLeft) % (60 * 60 * 1000)) / (60 * 1000)));
+      seconds = Math.max(0, Math.floor((Math.max(0, msLeft) % (60 * 1000)) / 1000));
+
+      if (isExpired) {
+        daysLeft = 0;
+      } else {
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        if (msLeft > 6 * oneDayMs) daysLeft = 7;
+        else if (msLeft > 5 * oneDayMs) daysLeft = 6;
+        else if (msLeft > 4 * oneDayMs) daysLeft = 5;
+        else if (msLeft > 3 * oneDayMs) daysLeft = 4;
+        else if (msLeft > 2 * oneDayMs) daysLeft = 3;
+        else if (msLeft > 1 * oneDayMs) daysLeft = 2;
+        else if (msLeft > 12 * 60 * 60 * 1000) daysLeft = 1;
+        else daysLeft = 0;
+      }
+    }
 
     const credits = typeof profile?.credits === 'number' ? profile.credits : 100;
 
     res.json({
       success: true,
       userId,
+      isPaid: isPaidActive,
+      plan: isPaidActive ? (isExpired ? 'expired' : paidPlan) : (isExpired ? 'expired' : 'trial'),
+      planStatus: isExpired ? 'expired' : 'active',
+      planCycle: isPaidActive ? (appMeta.plan_cycle || profile?.plan_cycle || 'monthly') : 'trial',
+      planCycleLabel: cycleInfo.label,
       createdAt: createdAtStr,
-      trialStart: createdAtStr,
-      trialEnd: new Date(trialEndTime).toISOString(),
-      isExpired: isPaidActive ? false : isExpired,
+      activatedAt: activatedAtStr,
+      expiresAt: expiresAtStr,
+      isExpired,
       daysLeft,
       totalSecondsLeft,
       countdown: {
@@ -1320,9 +1385,6 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
         minutes,
         seconds
       },
-      plan: isPaidActive ? paidPlan : (isExpired ? 'expired' : 'trial'),
-      planStatus: isPaidActive ? 'active' : (isExpired ? 'expired' : 'trial'),
-      planCycle: appMeta.plan_cycle || 'monthly',
       credits,
       serverTime: new Date().toISOString()
     });
@@ -1403,8 +1465,23 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
           paidAt: session.paid_at || new Date().toISOString()
         });
 
-        // 2. Recharger les crédits
-        await supabase.from('profiles').update({ credits }).eq('id', targetUserId);
+        const cycleInfo = parseCycleDuration(cycle);
+        const activatedAt = session.paid_at || new Date().toISOString();
+        const expiresAt = new Date(new Date(activatedAt).getTime() + cycleInfo.ms).toISOString();
+
+        // 2. Recharger les crédits et persister l'abonnement dans profiles
+        try {
+          await supabase.from('profiles').update({
+            credits,
+            plan: planTier,
+            plan_status: 'active',
+            plan_cycle: cycle,
+            plan_activated_at: activatedAt,
+            plan_expires_at: expiresAt
+          }).eq('id', targetUserId);
+        } catch (pUpdateErr) {
+          await supabase.from('profiles').update({ credits }).eq('id', targetUserId);
+        }
 
         // 3. Activer l'abonnement et persister la commande dans Supabase Auth (sécurisé)
         try {
@@ -1413,7 +1490,9 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
               plan: planTier,
               plan_status: 'active',
               plan_cycle: cycle,
-              plan_activated_at: new Date().toISOString(),
+              plan_cycle_label: cycleInfo.label,
+              plan_activated_at: activatedAt,
+              plan_expires_at: expiresAt,
               orders: existingOrders
             }
           });
@@ -1589,11 +1668,29 @@ app.post('/api/payments/webhook', async (req, res) => {
                         });
                     }
 
-                    // Mettre à jour les crédits sur le profil
-                    await supabase
-                        .from('profiles')
-                        .update({ credits: credits })
-                        .eq('id', userId);
+                    const cycleInfo = parseCycleDuration(cycle);
+                    const activatedAt = sessionData.paid_at || new Date().toISOString();
+                    const expiresAt = new Date(new Date(activatedAt).getTime() + cycleInfo.ms).toISOString();
+
+                    // Mettre à jour les crédits et l'abonnement sur le profil
+                    try {
+                        await supabase
+                            .from('profiles')
+                            .update({
+                                credits: credits,
+                                plan: planTier,
+                                plan_status: 'active',
+                                plan_cycle: cycle,
+                                plan_activated_at: activatedAt,
+                                plan_expires_at: expiresAt
+                            })
+                            .eq('id', userId);
+                    } catch (pErr) {
+                        await supabase
+                            .from('profiles')
+                            .update({ credits: credits })
+                            .eq('id', userId);
+                    }
 
                     // Activer officiellement le forfait payant dans Supabase Auth (sécurisé)
                     try {
@@ -1602,7 +1699,9 @@ app.post('/api/payments/webhook', async (req, res) => {
                                 plan: planTier,
                                 plan_status: 'active',
                                 plan_cycle: cycle,
-                                plan_activated_at: new Date().toISOString(),
+                                plan_cycle_label: cycleInfo.label,
+                                plan_activated_at: activatedAt,
+                                plan_expires_at: expiresAt,
                                 orders: existingOrders
                             }
                         });

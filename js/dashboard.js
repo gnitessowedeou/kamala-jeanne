@@ -386,143 +386,358 @@ let currentSubscriptionState = {
   trialDurationMs: 7 * 24 * 60 * 60 * 1000,
   plan: 'trial',
   planStatus: 'active',
-  credits: 88,
+  planCycle: 'monthly',
+  planCycleLabel: '1 mois',
+  planActivatedAt: null,
+  planExpiresAt: null,
+  credits: 100,
   maxCredits: 100,
   isExpired: false
 };
 
+function parseDashboardCycleDuration(cycle) {
+  const c = String(cycle || '').toLowerCase().trim();
+  if (c === '15days' || c === '15j' || c === '15jours' || c.includes('15')) {
+    return { ms: 15 * 24 * 60 * 60 * 1000, label: '15 jours', days: 15 };
+  }
+  if (c === 'quarterly' || c === '3months' || c === '3mois' || c === 'trimestriel' || c.includes('3m') || c.includes('3 m')) {
+    return { ms: 90 * 24 * 60 * 60 * 1000, label: '3 mois', days: 90 };
+  }
+  if (c === 'semi_annual' || c === '6months' || c === '6mois' || c === 'semestriel' || c.includes('6m') || c.includes('6 m')) {
+    return { ms: 180 * 24 * 60 * 60 * 1000, label: '6 mois', days: 180 };
+  }
+  if (c === 'annual' || c === 'yearly' || c === '1year' || c === '1an' || c === 'annuel' || c.includes('an')) {
+    return { ms: 365 * 24 * 60 * 60 * 1000, label: '1 an', days: 365 };
+  }
+  return { ms: 30 * 24 * 60 * 60 * 1000, label: '1 mois', days: 30 };
+}
+
 function getStoredUserCreatedAt() {
+  const currentUserId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+
   // 1. Depuis vendia_current_user dans localStorage
   try {
     const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
     if (u && (u.createdAt || u.created_at)) return u.createdAt || u.created_at;
   } catch(e) {}
 
-  // 2. Depuis le token d'authentification Supabase officiel dans localStorage (sb-*-auth-token)
+  // 2. Depuis le cache persistant par userId
+  if (currentUserId) {
+    try {
+      const cached = localStorage.getItem('vendia_user_registered_' + currentUserId);
+      if (cached) return cached;
+    } catch(e) {}
+  }
+
+  // 3. Depuis le token officiel Supabase Auth dans localStorage (sb-*-auth-token)
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
         const su = JSON.parse(localStorage.getItem(key) || '{}');
-        if (su && su.user && su.user.created_at) return su.user.created_at;
+        if (su && su.user && su.user.created_at) {
+          if (currentUserId) {
+            try { localStorage.setItem('vendia_user_registered_' + currentUserId, su.user.created_at); } catch(e) {}
+          }
+          return su.user.created_at;
+        }
       }
     }
   } catch(e) {}
 
-  // 3. Fallback dynamique et persistant : initialiser dès la première session et mémoriser
-  const nowIso = new Date().toISOString();
+  // 4. Fallback persistant : ne jamais écraser chaque seconde, mémoriser une seule fois
+  const guestKey = currentUserId ? ('vendia_reg_' + currentUserId) : 'vendia_guest_reg';
+  let savedDate = null;
   try {
-    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-    u.createdAt = nowIso;
-    localStorage.setItem('vendia_current_user', JSON.stringify(u));
+    savedDate = localStorage.getItem(guestKey);
   } catch(e) {}
-  return nowIso;
+  if (!savedDate) {
+    savedDate = new Date().toISOString();
+    try {
+      localStorage.setItem(guestKey, savedDate);
+      const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+      if (!u.createdAt && !u.created_at) {
+        u.createdAt = savedDate;
+        localStorage.setItem('vendia_current_user', JSON.stringify(u));
+      }
+    } catch(e) {}
+  }
+  return savedDate;
 }
 
 function updateTrialAndSubscriptionUI() {
-  const createdAtStr = currentSubscriptionState.createdAt || getStoredUserCreatedAt();
-  const createdTime = new Date(createdAtStr).getTime();
+  const rawPlan = currentSubscriptionState.plan;
+  const isPaid = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired' && currentSubscriptionState.planStatus === 'active');
   const now = Date.now();
-  const trialEndTime = createdTime + currentSubscriptionState.trialDurationMs;
-  const msLeft = trialEndTime - now;
-  const isPaid = (currentSubscriptionState.plan && currentSubscriptionState.plan !== 'trial' && currentSubscriptionState.plan !== 'expired');
-  const isExpired = !isPaid && (msLeft <= 0);
-
-  currentSubscriptionState.isExpired = isExpired;
-
-  // Calculs précis du temps restant
-  const totalSeconds = Math.max(0, Math.floor(msLeft / 1000));
-  const days = Math.max(0, Math.floor(msLeft / (24 * 60 * 60 * 1000)));
-  const hours = Math.max(0, Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
-  const minutes = Math.max(0, Math.floor((msLeft % (60 * 60 * 1000)) / (60 * 1000)));
-  const seconds = Math.max(0, Math.floor((msLeft % (60 * 1000)) / 1000));
-  
-  // Nombre de jours restants (arrondi supérieur)
-  const daysCeil = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
-
   const pad = (n) => String(n).padStart(2, '0');
-  const countdownFormatted = `${pad(days)} j ${pad(hours)} h ${pad(minutes)} min ${pad(seconds)} s`;
-  const tooltipFormatted = `Temps restant : ${pad(days)} j ${pad(hours)} h ${pad(minutes)} min • Cliquez pour choisir un forfait`;
 
-  // 1. BARRE SUPÉRIEURE (Header)
   const headerBadge = document.getElementById("header-trial-badge");
   const headerBtn = document.getElementById("btn-header-upgrade");
-  if (headerBtn) {
-    if (isPaid) {
-      headerBtn.title = `Forfait ${currentSubscriptionState.plan.toUpperCase()} Actif • Gérer mon abonnement`;
-    } else if (isExpired) {
-      headerBtn.title = "Votre période d'essai de 7 jours est expirée. Cliquez pour activer un forfait.";
-    } else {
-      headerBtn.title = tooltipFormatted;
-    }
-  }
+  const crownIcon = headerBtn ? headerBtn.querySelector("i.fa-crown, i.fa-solid") : null;
 
-  if (headerBadge) {
-    if (isPaid) {
-      headerBadge.textContent = `Forfait ${currentSubscriptionState.plan.toUpperCase()} · Actif`;
-      headerBadge.style.color = "var(--whatsapp-green)";
-      headerBadge.style.borderColor = "var(--whatsapp-green)";
-    } else if (isExpired) {
-      headerBadge.textContent = "Essai expiré";
-      headerBadge.style.color = "#f43f5e";
-      headerBadge.style.borderColor = "rgba(244, 63, 94, 0.4)";
-      headerBadge.style.background = "rgba(244, 63, 94, 0.15)";
-    } else {
-      if (daysCeil > 1) {
-        headerBadge.textContent = `Essai gratuit · ${daysCeil}j restants`;
-      } else if (daysCeil === 1 && days > 0) {
-        headerBadge.textContent = "Essai gratuit · 1j restant";
-      } else if (hours > 0) {
-        headerBadge.textContent = `Essai gratuit · ${hours}h restantes`;
-      } else {
-        headerBadge.textContent = "Essai gratuit · Expire aujourd'hui";
-      }
-      headerBadge.style.color = "#f59e0b";
-      headerBadge.style.borderColor = "rgba(245, 158, 11, 0.4)";
-      headerBadge.style.background = "rgba(245, 158, 11, 0.2)";
-    }
-  }
-
-  // 2. BARRE LATÉRALE GAUCHE (Menu Forfaits & Abonnement)
   const navBadge = document.getElementById("nav-badge-plan");
-  if (navBadge) {
-    if (isPaid) {
-      navBadge.textContent = "Actif";
-      navBadge.className = "badge badge-green";
-    } else if (isExpired) {
-      navBadge.textContent = "Expiré";
-      navBadge.className = "badge badge-rose";
-      navBadge.style.background = "rgba(244, 63, 94, 0.15)";
-      navBadge.style.color = "#f43f5e";
-    } else {
-      if (daysCeil > 1) {
-        navBadge.textContent = `Essai ${daysCeil}j`;
-      } else if (daysCeil === 1) {
-        navBadge.textContent = "Essai 1j";
-      } else {
-        navBadge.textContent = "< 24h";
-      }
-      navBadge.className = "badge badge-amber";
-      navBadge.style.background = "rgba(245, 158, 11, 0.2)";
-      navBadge.style.color = "#f59e0b";
-    }
-  }
-
-  // 3. BARRE LATÉRALE GAUCHE (Carte du bas de la sidebar)
   const sidebarPlanTitle = document.getElementById("sidebar-plan-name");
-  if (sidebarPlanTitle) {
-    if (isPaid) {
-      sidebarPlanTitle.textContent = `Formule ${currentSubscriptionState.plan.toUpperCase()} 👑`;
-    } else if (isExpired) {
-      sidebarPlanTitle.textContent = "Essai Expiré ⚠️";
-    } else {
-      sidebarPlanTitle.textContent = `Essai Gratuit (${daysCeil}j restants) 🦾`;
+
+  const billingStatusBadge = document.getElementById("billing-status-badge");
+  const billingTitleDisplay = document.getElementById("billing-title-display");
+  const billingSubtitleDisplay = document.getElementById("billing-subtitle-display");
+  const billingDaysLeft = document.getElementById("billing-days-left");
+  const billingCountdownTimer = document.getElementById("billing-countdown-timer");
+  const billingCreditsDisplay = document.getElementById("billing-credits-display");
+
+  if (isPaid) {
+    // =========================================================================
+    // CAS 1 : ABONNEMENT PAYANT (Durée réelle : 15 jours, 1 mois, 3 mois, etc.)
+    // =========================================================================
+    const cycleInfo = parseDashboardCycleDuration(currentSubscriptionState.planCycle);
+    const durationLabel = currentSubscriptionState.planCycleLabel || cycleInfo.label;
+    const planUpper = String(rawPlan).toUpperCase();
+    const planDisplay = (planUpper === 'PRO' ? 'Pro' : planUpper === 'BUSINESS' ? 'Business' : planUpper === 'BASIC' ? 'Basic' : planUpper);
+
+    const activatedTime = new Date(currentSubscriptionState.planActivatedAt || currentSubscriptionState.createdAt || getStoredUserCreatedAt()).getTime();
+    const expiresTime = currentSubscriptionState.planExpiresAt 
+      ? new Date(currentSubscriptionState.planExpiresAt).getTime() 
+      : (activatedTime + cycleInfo.ms);
+
+    const paidMsLeft = expiresTime - now;
+    const isPaidExpired = paidMsLeft <= 0;
+    currentSubscriptionState.isExpired = isPaidExpired;
+
+    const paidDays = Math.max(0, Math.floor(Math.max(0, paidMsLeft) / (24 * 60 * 60 * 1000)));
+    const paidHours = Math.max(0, Math.floor((Math.max(0, paidMsLeft) % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+    const paidMinutes = Math.max(0, Math.floor((Math.max(0, paidMsLeft) % (60 * 60 * 1000)) / (60 * 1000)));
+    const paidSeconds = Math.max(0, Math.floor((Math.max(0, paidMsLeft) % (60 * 1000)) / 1000));
+    const countdownFormatted = `${pad(paidDays)} j ${pad(paidHours)} h ${pad(paidMinutes)} min ${pad(paidSeconds)} s`;
+
+    const paidDaysRemaining = isPaidExpired ? 0 : Math.max(0, Math.ceil(paidMsLeft / (24 * 60 * 60 * 1000)));
+
+    // 1. Badge d'en-tête (Zone ciblée)
+    if (headerBadge) {
+      if (isPaidExpired) {
+        headerBadge.textContent = `Forfait ${planDisplay} expiré`;
+        headerBadge.style.color = "#f43f5e";
+        headerBadge.style.borderColor = "rgba(244, 63, 94, 0.4)";
+        headerBadge.style.background = "rgba(244, 63, 94, 0.15)";
+      } else {
+        let daysText = "";
+        if (paidDaysRemaining > 1) {
+          daysText = `${paidDaysRemaining}j restants`;
+        } else if (paidDaysRemaining === 1) {
+          daysText = "1j restant";
+        } else {
+          daysText = "0j restant";
+        }
+        headerBadge.textContent = `Forfait ${planDisplay} (${durationLabel}) · ${daysText}`;
+        headerBadge.style.color = "var(--whatsapp-green)";
+        headerBadge.style.borderColor = "rgba(37, 211, 102, 0.4)";
+        headerBadge.style.background = "rgba(37, 211, 102, 0.15)";
+      }
+    }
+
+    if (headerBtn) {
+      if (isPaidExpired) {
+        headerBtn.title = `Votre forfait ${planDisplay} (${durationLabel}) est expiré. Cliquez pour renouveler votre forfait.`;
+        headerBtn.style.borderColor = "rgba(244, 63, 94, 0.5)";
+      } else {
+        headerBtn.title = `Forfait ${planDisplay} (${durationLabel}) actif · Temps restant : ${countdownFormatted} • Gérer mon abonnement`;
+        headerBtn.style.borderColor = "rgba(37, 211, 102, 0.4)";
+      }
+    }
+
+    if (crownIcon) {
+      crownIcon.style.color = isPaidExpired ? "#f43f5e" : "var(--whatsapp-green)";
+    }
+
+    // 2. Navigation latérale
+    if (navBadge) {
+      navBadge.textContent = isPaidExpired ? "Expiré" : "Actif";
+      navBadge.className = isPaidExpired ? "badge badge-rose" : "badge badge-green";
+      navBadge.style.background = isPaidExpired ? "rgba(244, 63, 94, 0.15)" : "rgba(37, 211, 102, 0.15)";
+      navBadge.style.color = isPaidExpired ? "#f43f5e" : "var(--whatsapp-green)";
+    }
+
+    // 3. Bas de la sidebar
+    if (sidebarPlanTitle) {
+      sidebarPlanTitle.textContent = isPaidExpired 
+        ? `Forfait ${planDisplay} Expiré ⚠️` 
+        : `Formule ${planDisplay} (${durationLabel}) 👑`;
+    }
+
+    // 4. Vue Forfaits & Facturation
+    if (billingStatusBadge) {
+      billingStatusBadge.textContent = isPaidExpired 
+        ? `Formule ${planDisplay} Expirée` 
+        : `Formule ${planDisplay} Active (${durationLabel})`;
+      billingStatusBadge.style.background = isPaidExpired ? "rgba(244, 63, 94, 0.2)" : "rgba(37, 211, 102, 0.2)";
+      billingStatusBadge.style.color = isPaidExpired ? "#f43f5e" : "var(--whatsapp-green)";
+    }
+
+    if (billingTitleDisplay) {
+      billingTitleDisplay.textContent = isPaidExpired
+        ? `Votre forfait ${planDisplay} (${durationLabel}) est arrivé à expiration`
+        : `Votre formule ${planDisplay} (${durationLabel}) est active et opérationnelle`;
+    }
+
+    if (billingSubtitleDisplay) {
+      billingSubtitleDisplay.textContent = isPaidExpired
+        ? "Votre période d'abonnement est expirée. Cliquez sur un forfait ci-dessous pour renouveler votre accès et relancer vos agents commerciaux IA WhatsApp."
+        : "Vos agents commerciaux IA WhatsApp et tous vos tunnels de vente sont actifs sans aucune interruption.";
+    }
+
+    if (billingDaysLeft) {
+      billingDaysLeft.textContent = isPaidExpired 
+        ? "Abonnement expiré" 
+        : `${paidDaysRemaining} jour${paidDaysRemaining > 1 ? 's' : ''} restant${paidDaysRemaining > 1 ? 's' : ''} (${durationLabel})`;
+    }
+
+    if (billingCountdownTimer) {
+      billingCountdownTimer.textContent = isPaidExpired ? "00 j 00 h 00 min 00 s (Expiré)" : countdownFormatted;
+    }
+
+  } else {
+    // =========================================================================
+    // CAS 2 : ESSAI GRATUIT 7 JOURS (Décompte exact : 7, 6, 5, 4, 3, 2, 1, 0)
+    // =========================================================================
+    const createdAtStr = currentSubscriptionState.createdAt || getStoredUserCreatedAt();
+    const createdTime = new Date(createdAtStr).getTime();
+    const trialEndTime = createdTime + currentSubscriptionState.trialDurationMs;
+    const msLeft = trialEndTime - now;
+    const isExpired = msLeft <= 0;
+
+    currentSubscriptionState.isExpired = isExpired;
+
+    const days = Math.max(0, Math.floor(Math.max(0, msLeft) / (24 * 60 * 60 * 1000)));
+    const hours = Math.max(0, Math.floor((Math.max(0, msLeft) % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)));
+    const minutes = Math.max(0, Math.floor((Math.max(0, msLeft) % (60 * 60 * 1000)) / (60 * 1000)));
+    const seconds = Math.max(0, Math.floor((Math.max(0, msLeft) % (60 * 1000)) / 1000));
+    const countdownFormatted = `${pad(days)} j ${pad(hours)} h ${pad(minutes)} min ${pad(seconds)} s`;
+
+    // Calcul individuel du jour restant selon le temps réellement écoulé :
+    // 7 jours restants, puis 6, 5, 4, 3, 2, 1, et enfin 0 selon le temps écoulé
+    let daysRemaining = 0;
+    if (msLeft > 0) {
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      if (msLeft > 6 * oneDayMs) {
+        daysRemaining = 7;
+      } else if (msLeft > 5 * oneDayMs) {
+        daysRemaining = 6;
+      } else if (msLeft > 4 * oneDayMs) {
+        daysRemaining = 5;
+      } else if (msLeft > 3 * oneDayMs) {
+        daysRemaining = 4;
+      } else if (msLeft > 2 * oneDayMs) {
+        daysRemaining = 3;
+      } else if (msLeft > 1 * oneDayMs) {
+        daysRemaining = 2;
+      } else if (msLeft > 12 * 60 * 60 * 1000) {
+        daysRemaining = 1;
+      } else {
+        daysRemaining = 0;
+      }
+    }
+
+    // 1. Badge d'en-tête (Zone ciblée)
+    if (headerBadge) {
+      if (isExpired) {
+        headerBadge.textContent = "Essai gratuit expiré";
+        headerBadge.style.color = "#f43f5e";
+        headerBadge.style.borderColor = "rgba(244, 63, 94, 0.4)";
+        headerBadge.style.background = "rgba(244, 63, 94, 0.15)";
+      } else {
+        if (daysRemaining > 1) {
+          headerBadge.textContent = `Essai gratuit · ${daysRemaining}j restants`;
+        } else if (daysRemaining === 1) {
+          headerBadge.textContent = "Essai gratuit · 1j restant";
+        } else {
+          headerBadge.textContent = "Essai gratuit · 0j restant";
+        }
+        headerBadge.style.color = "#f59e0b";
+        headerBadge.style.borderColor = "rgba(245, 158, 11, 0.4)";
+        headerBadge.style.background = "rgba(245, 158, 11, 0.2)";
+      }
+    }
+
+    if (headerBtn) {
+      if (isExpired) {
+        headerBtn.title = "Votre période d'essai de 7 jours est expirée. Cliquez pour choisir un forfait.";
+        headerBtn.style.borderColor = "rgba(244, 63, 94, 0.5)";
+      } else {
+        headerBtn.title = `Essai gratuit (7 jours) · ${daysRemaining}j restant(s) [${countdownFormatted}]. Cliquez pour choisir un forfait.`;
+        headerBtn.style.borderColor = "rgba(245, 158, 11, 0.4)";
+      }
+    }
+
+    if (crownIcon) {
+      crownIcon.style.color = isExpired ? "#f43f5e" : "#f59e0b";
+    }
+
+    // 2. Navigation latérale
+    if (navBadge) {
+      if (isExpired) {
+        navBadge.textContent = "Expiré";
+        navBadge.className = "badge badge-rose";
+        navBadge.style.background = "rgba(244, 63, 94, 0.15)";
+        navBadge.style.color = "#f43f5e";
+      } else {
+        navBadge.textContent = daysRemaining > 1 ? `Essai ${daysRemaining}j` : (daysRemaining === 1 ? "Essai 1j" : "< 24h");
+        navBadge.className = "badge badge-amber";
+        navBadge.style.background = "rgba(245, 158, 11, 0.2)";
+        navBadge.style.color = "#f59e0b";
+      }
+    }
+
+    // 3. Bas de la sidebar
+    if (sidebarPlanTitle) {
+      if (isExpired) {
+        sidebarPlanTitle.textContent = "Essai Gratuit Expiré ⚠️";
+      } else {
+        sidebarPlanTitle.textContent = `Essai Gratuit (${daysRemaining}j restants) 🦾`;
+      }
+    }
+
+    // 4. Vue Forfaits & Facturation
+    if (billingStatusBadge) {
+      if (isExpired) {
+        billingStatusBadge.textContent = "Essai Gratuit Expiré";
+        billingStatusBadge.style.background = "rgba(244, 63, 94, 0.2)";
+        billingStatusBadge.style.color = "#f43f5e";
+      } else {
+        billingStatusBadge.textContent = `Essai Gratuit Actif (${daysRemaining} Jours restants)`;
+        billingStatusBadge.style.background = "rgba(37, 211, 102, 0.15)";
+        billingStatusBadge.style.color = "var(--whatsapp-green)";
+      }
+    }
+
+    if (billingTitleDisplay) {
+      billingTitleDisplay.textContent = isExpired
+        ? "Votre période d'essai de 7 jours est expirée"
+        : "Votre période d'essai de 7 jours est en cours";
+    }
+
+    if (billingSubtitleDisplay) {
+      billingSubtitleDisplay.textContent = isExpired
+        ? "Votre période gratuite est terminée. Choisissez un forfait ci-dessous pour réactiver vos agents commerciaux IA et continuer à encaisser des ventes 24h/24."
+        : "Testez toutes les fonctionnalités en illimité pendant vos 7 jours d'essai gratuit.";
+    }
+
+    if (billingDaysLeft) {
+      if (isExpired) {
+        billingDaysLeft.textContent = "Essai gratuit expiré";
+      } else {
+        billingDaysLeft.textContent = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} restant${daysRemaining > 1 ? 's' : ''}`;
+      }
+    }
+
+    if (billingCountdownTimer) {
+      billingCountdownTimer.textContent = isExpired ? "00 j 00 h 00 min 00 s (Expiré)" : countdownFormatted;
     }
   }
 
   // Crédits dans la sidebar
   const credits = currentSubscriptionState.credits;
-  const maxCredits = isPaid ? (currentSubscriptionState.plan === 'basic' ? 1000 : currentSubscriptionState.plan === 'pro' ? 3000 : 10000) : 100;
+  const maxCredits = isPaid 
+    ? (rawPlan === 'basic' ? 1000 : rawPlan === 'pro' ? 3000 : 10000) 
+    : 100;
   const usedCredits = Math.max(0, maxCredits - credits);
   const pct = maxCredits > 0 ? ((usedCredits / maxCredits) * 100).toFixed(1) : "0.0";
 
@@ -535,83 +750,66 @@ function updateTrialAndSubscriptionUI() {
   if (subTokensUsed) subTokensUsed.textContent = `${usedCredits} crédit${usedCredits > 1 ? 's' : ''}`;
   if (subTokensMax) subTokensMax.textContent = `Max ${maxCredits.toLocaleString('fr-FR')} crédits`;
 
-  // 4. GRANDE CARTE VERTE DANS LA VUE FORFAITS (#view-billing)
-  const billingStatusBadge = document.getElementById("billing-status-badge");
-  const billingTitleDisplay = document.getElementById("billing-title-display");
-  const billingSubtitleDisplay = document.getElementById("billing-subtitle-display");
-  const billingDaysLeft = document.getElementById("billing-days-left");
-  const billingCountdownTimer = document.getElementById("billing-countdown-timer");
-  const billingCreditsDisplay = document.getElementById("billing-credits-display");
-
-  if (billingStatusBadge) {
-    if (isPaid) {
-      billingStatusBadge.textContent = `Formule ${currentSubscriptionState.plan.toUpperCase()} Active`;
-      billingStatusBadge.style.background = "rgba(37, 211, 102, 0.2)";
-      billingStatusBadge.style.color = "var(--whatsapp-green)";
-    } else if (isExpired) {
-      billingStatusBadge.textContent = "Essai Gratuit Expiré";
-      billingStatusBadge.style.background = "rgba(244, 63, 94, 0.2)";
-      billingStatusBadge.style.color = "#f43f5e";
-    } else {
-      billingStatusBadge.textContent = `Essai Gratuit Actif (${daysCeil} Jours restants)`;
-      billingStatusBadge.style.background = "rgba(37, 211, 102, 0.15)";
-      billingStatusBadge.style.color = "var(--whatsapp-green)";
-    }
-  }
-
-  if (billingTitleDisplay) {
-    if (isPaid) {
-      billingTitleDisplay.textContent = `Votre formule ${currentSubscriptionState.plan.toUpperCase()} est active et opérationnelle`;
-    } else if (isExpired) {
-      billingTitleDisplay.textContent = "Votre période d'essai de 7 jours est expirée";
-    } else {
-      billingTitleDisplay.textContent = "Votre période d'essai de 7 jours est en cours";
-    }
-  }
-
-  if (billingSubtitleDisplay) {
-    if (isPaid) {
-      billingSubtitleDisplay.textContent = "Vos agents commerciaux IA WhatsApp et tous vos tunnels de vente sont actifs sans aucune interruption.";
-    } else if (isExpired) {
-      billingSubtitleDisplay.textContent = "Votre période gratuite est terminée. Choisissez un forfait permanent ci-dessous pour réactiver vos agents IA et continuer à encaisser des ventes 24h/24.";
-    }
-  }
-
-  if (billingDaysLeft) {
-    if (isPaid) {
-      billingDaysLeft.textContent = "Abonnement actif";
-    } else if (isExpired) {
-      billingDaysLeft.textContent = "Essai gratuit expiré";
-    } else {
-      if (daysCeil > 1) {
-        billingDaysLeft.textContent = `${daysCeil} jours restants`;
-      } else if (daysCeil === 1 && days > 0) {
-        billingDaysLeft.textContent = "1 jour restant";
-      } else {
-        billingDaysLeft.textContent = "Expire aujourd'hui";
-      }
-    }
-  }
-
-  if (billingCountdownTimer) {
-    if (isPaid) {
-      billingCountdownTimer.textContent = "Illimité • Actif 24/7";
-    } else if (isExpired) {
-      billingCountdownTimer.textContent = "00 j 00 h 00 min 00 s (Expiré)";
-    } else {
-      billingCountdownTimer.textContent = countdownFormatted;
-    }
-  }
-
   if (billingCreditsDisplay) {
     billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} restants sur ${maxCredits} inclus</strong>`;
   }
 }
 
 async function syncSubscriptionStatusFromServer() {
-  const userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+  const userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
   if (!userId) return;
 
+  // 1. Synchronisation instantanée depuis la session Supabase locale (sb-*-auth-token)
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const su = JSON.parse(localStorage.getItem(key) || '{}');
+        if (su && su.user) {
+          if (su.user.created_at && !currentSubscriptionState.createdAt) {
+            currentSubscriptionState.createdAt = su.user.created_at;
+          }
+          const appMeta = su.user.app_metadata || {};
+          if (appMeta.plan && appMeta.plan !== 'trial' && appMeta.plan !== 'free') {
+            currentSubscriptionState.plan = appMeta.plan;
+            currentSubscriptionState.planStatus = appMeta.plan_status || 'active';
+            currentSubscriptionState.planCycle = appMeta.plan_cycle || 'monthly';
+            currentSubscriptionState.planActivatedAt = appMeta.plan_activated_at || null;
+            currentSubscriptionState.planExpiresAt = appMeta.plan_expires_at || null;
+          }
+          break;
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 2. Synchronisation directe depuis Supabase REST (table profiles)
+  if (window.SupabaseRest) {
+    try {
+      const profile = await window.SupabaseRest.getProfile(userId);
+      if (profile) {
+        if (profile.created_at) {
+          currentSubscriptionState.createdAt = profile.created_at;
+          try { localStorage.setItem('vendia_user_registered_' + userId, profile.created_at); } catch(e) {}
+        }
+        if (profile.plan && profile.plan !== 'trial' && profile.plan !== 'free') {
+          currentSubscriptionState.plan = profile.plan;
+          currentSubscriptionState.planStatus = profile.plan_status || 'active';
+          if (profile.plan_cycle) currentSubscriptionState.planCycle = profile.plan_cycle;
+          if (profile.plan_activated_at) currentSubscriptionState.planActivatedAt = profile.plan_activated_at;
+          if (profile.plan_expires_at) currentSubscriptionState.planExpiresAt = profile.plan_expires_at;
+        }
+        if (typeof profile.credits === 'number') {
+          currentSubscriptionState.credits = profile.credits;
+        }
+        updateTrialAndSubscriptionUI();
+      }
+    } catch (pErr) {
+      console.warn("[SUBSCRIPTION] Notice lecture directe Supabase:", pErr);
+    }
+  }
+
+  // 3. Synchronisation via l'API Backend (/api/user/subscription/:userId)
   try {
     const res = await fetch(API_URL + '/api/user/subscription/' + encodeURIComponent(userId), {
       headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
@@ -622,6 +820,10 @@ async function syncSubscriptionStatusFromServer() {
         if (data.createdAt) currentSubscriptionState.createdAt = data.createdAt;
         if (data.plan) currentSubscriptionState.plan = data.plan;
         if (data.planStatus) currentSubscriptionState.planStatus = data.planStatus;
+        if (data.planCycle) currentSubscriptionState.planCycle = data.planCycle;
+        if (data.planCycleLabel) currentSubscriptionState.planCycleLabel = data.planCycleLabel;
+        if (data.activatedAt) currentSubscriptionState.planActivatedAt = data.activatedAt;
+        if (data.expiresAt) currentSubscriptionState.planExpiresAt = data.expiresAt;
         if (typeof data.credits === 'number') currentSubscriptionState.credits = data.credits;
         currentSubscriptionState.isExpired = !!data.isExpired;
 
@@ -630,7 +832,12 @@ async function syncSubscriptionStatusFromServer() {
           u.createdAt = data.createdAt;
           u.plan = {
             ...(u.plan || {}),
-            name: data.plan === 'pro' ? 'Formule Pro 👑' : data.plan === 'business' ? 'Formule Business 💎' : data.plan === 'basic' ? 'Formule Basic ⚡' : 'Essai Gratuit 7j 🦾',
+            type: data.plan,
+            status: data.planStatus,
+            cycle: data.planCycle,
+            activatedAt: data.activatedAt,
+            expiresAt: data.expiresAt,
+            name: data.isPaid ? `Formule ${data.plan.toUpperCase()}` : 'Essai Gratuit 7j 🦾',
             daysLeft: data.daysLeft,
             tokensMax: (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100),
             tokensUsed: Math.max(0, (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100) - data.credits)
@@ -689,8 +896,11 @@ async function handlePaymentReturnCallback() {
         const d = await res.json();
         
         if (d && d.verified && d.success) {
+          const pendingCycle = localStorage.getItem('vendia_pending_cycle') || 'monthly';
           currentSubscriptionState.plan = d.plan || tier;
           currentSubscriptionState.planStatus = 'active';
+          currentSubscriptionState.planCycle = pendingCycle;
+          currentSubscriptionState.planActivatedAt = new Date().toISOString();
           if (typeof d.credits === 'number') currentSubscriptionState.credits = d.credits;
           
           localStorage.removeItem('vendia_pending_session');

@@ -355,9 +355,21 @@
         }
 
         const meta = userObj?.user_metadata || {};
+        const appMeta = userObj?.app_metadata || {};
         const userFirst = profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1);
         const userLast = profile?.last_name || meta.last_name || "";
         const userPhone = profile?.whatsapp_number || meta.whatsapp_number || "";
+
+        const userCreatedAt = userObj?.created_at || profile?.created_at || new Date().toISOString();
+        const activePlan = appMeta.plan || profile?.plan || 'trial';
+        const planStatus = appMeta.plan_status || profile?.plan_status || 'active';
+        const planCycle = appMeta.plan_cycle || profile?.plan_cycle || 'monthly';
+        const planActivatedAt = appMeta.plan_activated_at || profile?.plan_activated_at || null;
+        const planExpiresAt = appMeta.plan_expires_at || profile?.plan_expires_at || null;
+
+        const isPaid = (activePlan && activePlan !== 'trial' && activePlan !== 'free' && activePlan !== 'expired' && planStatus === 'active');
+        const maxTokens = isPaid ? (activePlan === 'basic' ? 1000 : activePlan === 'pro' ? 3000 : 10000) : 100;
+        const remainingCredits = typeof profile?.credits === 'number' ? profile.credits : (isPaid ? maxTokens : 100);
 
         const loggedInUser = {
           id: userId,
@@ -372,16 +384,23 @@
           avatarUrl: profile?.avatar_url || meta.avatar_url || "",
           provider: "supabase",
           plan: {
-            name: "Essai Gratuit 7j 🦾",
-            badge: "ESSAI",
-            tokensUsed: 0,
-            tokensMax: 100,
-            daysLeft: 7
+            name: isPaid ? `Formule ${activePlan.toUpperCase()}` : "Essai Gratuit 7j 🦾",
+            type: activePlan,
+            status: planStatus,
+            cycle: planCycle,
+            activatedAt: planActivatedAt,
+            expiresAt: planExpiresAt,
+            badge: isPaid ? activePlan.toUpperCase() : "ESSAI",
+            tokensUsed: Math.max(0, maxTokens - remainingCredits),
+            tokensMax: maxTokens
           },
-          createdAt: userObj?.created_at || profile?.created_at || new Date().toISOString()
+          createdAt: userCreatedAt
         };
 
         this.saveCurrentUser(loggedInUser);
+        try {
+          localStorage.setItem('vendia_user_registered_' + userId, userCreatedAt);
+        } catch(e) {}
         return { success: true, user: loggedInUser };
       } catch (err) {
         console.error("Erreur connexion Supabase:", err);
@@ -505,6 +524,14 @@
           }
         }
 
+        const oauthMeta = userObj.app_metadata || {};
+        const activePlan = oauthMeta.plan || profile?.plan || 'pro';
+        const planStatus = oauthMeta.plan_status || profile?.plan_status || 'active';
+        const planCycle = oauthMeta.plan_cycle || profile?.plan_cycle || 'monthly';
+        const isPaid = (activePlan && activePlan !== 'trial' && activePlan !== 'free' && activePlan !== 'expired' && planStatus === 'active');
+        const maxTokens = isPaid ? (activePlan === 'basic' ? 1000 : activePlan === 'pro' ? 3000 : 10000) : 100;
+        const userCreatedAt = userObj.created_at || profile?.created_at || new Date().toISOString();
+
         const loggedInUser = {
           id: userObj.id,
           firstName: profile?.first_name || userFirst,
@@ -518,16 +545,23 @@
           avatarUrl: profile?.avatar_url || userAvatar,
           provider: "google",
           plan: {
-            name: "Formule Pro 🚀",
-            badge: "PRO",
+            name: isPaid ? `Formule ${activePlan.toUpperCase()}` : "Formule Pro 🚀",
+            type: activePlan,
+            status: planStatus,
+            cycle: planCycle,
+            activatedAt: oauthMeta.plan_activated_at || profile?.plan_activated_at || null,
+            expiresAt: oauthMeta.plan_expires_at || profile?.plan_expires_at || null,
+            badge: isPaid ? activePlan.toUpperCase() : "PRO",
             tokensUsed: 0,
-            tokensMax: 3000,
-            daysLeft: 7
+            tokensMax: maxTokens
           },
-          createdAt: userObj.created_at || new Date().toISOString()
+          createdAt: userCreatedAt
         };
 
         this.saveCurrentUser(loggedInUser);
+        try {
+          localStorage.setItem('vendia_user_registered_' + userObj.id, userCreatedAt);
+        } catch(e) {}
 
         // Nettoyer le hash des jetons dans l'URL pour la sécurité
         if (window.history && window.history.replaceState) {
@@ -737,29 +771,37 @@
       try {
         const profile = await SupabaseRest.getProfile(user.id);
         if (profile) {
+          const profilePlan = profile.plan || user.plan?.type;
+          const isPaid = (profilePlan && profilePlan !== 'trial' && profilePlan !== 'free' && profilePlan !== 'expired' && (profile.plan_status === 'active' || user.plan?.status === 'active'));
+          const maxTokens = (profilePlan === 'basic' ? 1000 : profilePlan === 'pro' ? 3000 : profilePlan === 'business' ? 10000 : 100);
+          const usedTokens = Math.max(0, maxTokens - (profile.credits ?? maxTokens));
+          const persistentCreatedAt = user.createdAt || profile.created_at || localStorage.getItem('vendia_user_registered_' + user.id);
+
           const syncedUser = {
             ...user,
+            createdAt: persistentCreatedAt || user.createdAt,
             firstName: profile.first_name || user.firstName,
             lastName: profile.last_name || user.lastName,
             fullPhone: profile.whatsapp_number || user.fullPhone,
             avatarUrl: profile.avatar_url || user.avatarUrl,
-              affiliateCode: profile.affiliate_code || user.affiliateCode,
+            affiliateCode: profile.affiliate_code || user.affiliateCode,
             plan: {
               ...(user.plan || {}),
-              tokensMax: (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100),
-              tokensUsed: Math.max(0, (profile.plan === 'basic' ? 1000 : profile.plan === 'pro' ? 3000 : profile.plan === 'business' ? 10000 : 100) - (profile.credits || 0)),
-              
-              daysLeft: (() => {
-                  if (profile.created_at) {
-                      const diff = Math.floor((new Date() - new Date(profile.created_at)) / (1000 * 60 * 60 * 24));
-                      return Math.max(0, 7 - diff);
-                  }
-                  return user.plan?.daysLeft || 7;
-              })()
+              type: profilePlan || user.plan?.type || 'trial',
+              status: profile.plan_status || user.plan?.status || 'active',
+              cycle: profile.plan_cycle || user.plan?.cycle || 'monthly',
+              activatedAt: profile.plan_activated_at || user.plan?.activatedAt || null,
+              expiresAt: profile.plan_expires_at || user.plan?.expiresAt || null,
+              name: isPaid ? `Formule ${(profilePlan || 'pro').toUpperCase()}` : "Essai Gratuit 7j 🦾",
+              tokensMax: maxTokens,
+              tokensUsed: usedTokens
             }
           };
           this.saveCurrentUser(syncedUser);
           this.syncProfileUI(syncedUser);
+          if (typeof updateTrialAndSubscriptionUI === 'function') {
+            updateTrialAndSubscriptionUI();
+          }
         }
       } catch (err) {
         // En cas de coupure réseau, la session locale persiste
