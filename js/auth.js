@@ -451,11 +451,27 @@
      * 5b. CONNEXION SOCIALE OAUTH (GOOGLE, FACEBOOK) VIA SUPABASE REST
      * ==============================================================================
      */
-    async signInWithOAuth(provider = "google") {
+    async signInWithOAuth(provider = "google", mode = null) {
       try {
+        let authMode = mode;
+        if (!authMode) {
+          const tabLogin = document.getElementById("tab-btn-login");
+          if (tabLogin && tabLogin.classList.contains("active")) {
+            authMode = "login";
+          } else {
+            authMode = sessionStorage.getItem("vendia_auth_mode") || localStorage.getItem("vendia_auth_mode") || "signup";
+          }
+        }
+
+        try {
+          localStorage.setItem("vendia_auth_mode", authMode);
+          sessionStorage.setItem("vendia_auth_mode", authMode);
+        } catch(e) {}
+
         const origin = window.location.origin;
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
-        const redirectTo = `${origin}${basePath}dashboard.html`;
+        // Redirection EXCLUSIVE vers index.html avec le mode explicite
+        const redirectTo = `${origin}${basePath}index.html?oauth_mode=${encodeURIComponent(authMode)}`;
         const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirectTo)}`;
         window.location.href = authUrl;
         return { success: true, redirecting: true };
@@ -474,9 +490,15 @@
         const errorDesc = params.get("error_description") || params.get("error");
         if (errorDesc) {
           console.error("Erreur retour OAuth:", errorDesc);
-          this.showToast("Erreur de connexion Google : " + decodeURIComponent(errorDesc.replace(/\+/g, " ")), "error");
+          const decodedErr = decodeURIComponent(errorDesc.replace(/\+/g, " "));
+          if (typeof window.showAuthAlert === "function") {
+            window.showAuthAlert("Erreur Google : " + decodedErr, "error");
+            if (typeof window.openAuthModal === "function") window.openAuthModal("login");
+          } else {
+            this.showToast("Erreur de connexion : " + decodedErr, "error");
+          }
           if (window.history && window.history.replaceState) {
-            window.history.replaceState(null, null, window.location.pathname + window.location.search);
+            window.history.replaceState(null, null, window.location.pathname);
           }
           return false;
         }
@@ -498,14 +520,25 @@
         const userFirst = parts[0] || meta.first_name || (cleanEmail ? cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1) : "Utilisateur");
         const userLast = parts.slice(1).join(" ") || meta.last_name || "";
         const userAvatar = meta.avatar_url || meta.picture || "";
-        const authMode = localStorage.getItem("vendia_auth_mode") || "signup";
-        try { localStorage.removeItem("vendia_auth_mode"); } catch(e) {}
+
+        // Récupération stricte du mode d'authentification (URL > sessionStorage > localStorage)
+        const urlParams = new URLSearchParams(window.location.search);
+        let authMode = urlParams.get("oauth_mode") || sessionStorage.getItem("vendia_auth_mode") || localStorage.getItem("vendia_auth_mode") || "signup";
+        try {
+          sessionStorage.removeItem("vendia_auth_mode");
+          localStorage.removeItem("vendia_auth_mode");
+        } catch(e) {}
+
+        // Nettoyage immédiat du hash dans l'URL pour la sécurité des tokens
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, null, window.location.pathname);
+        }
 
         let profile = null;
         try {
           profile = await SupabaseRest.getProfile(userObj.id, accessToken);
         } catch (pErr) {
-          console.warn("Lecture profil OAuth Supabase:", pErr);
+          console.warn("Lecture profil OAuth Supabase (ID):", pErr);
         }
 
         // Si le profil n'est pas trouvé par ID, vérifier par email
@@ -515,21 +548,34 @@
             if (Array.isArray(rows) && rows.length > 0) {
               profile = rows[0];
             }
-          } catch(e) {}
+          } catch(e) {
+            console.warn("Lecture profil OAuth Supabase (Email):", e);
+          }
         }
 
-        // RÈGLE STRICTE : Si l'utilisateur a cliqué sur "Se connecter" (login) mais n'a aucun compte au préalable
+        // ==============================================================================
+        // RÈGLE STRICTE DEMANDÉE PAR L'UTILISATEUR :
+        // Si l'utilisateur clique sur "Se connecter" (login) avec une adresse e-mail
+        // qui n'a pas encore de compte dans la base de données :
+        // 1. REFUSER CATÉGORIQUEMENT L'ACCÈS AU DASHBOARD
+        // 2. RÉVOQUER LE TOKEN SUPABASE ET SUPPRIMER TOUTE SESSION
+        // 3. OUVRIR AUTOMATIQUEMENT LE FORMULAIRE D'INSCRIPTION (MODAL SIGNUP)
+        // 4. PRÉ-REMPLIR LES CHAMPS AVEC LES INFORMATIONS DU COMPTE GOOGLE
+        // 5. AFFICHER LE MESSAGE D'ERREUR ROUGE TRÈS VISIBLE
+        // ==============================================================================
         if (authMode === "login" && !profile) {
-          console.warn("[AUTH OAUTH] Compte inexistant lors d'une tentative de connexion Google.");
+          console.warn("[AUTH OAUTH] Compte inexistant lors de la connexion Google avec l'email :", cleanEmail);
+
+          // Révoquer le token et effacer toute session locale
           SupabaseRest.setToken(null);
-          try { localStorage.removeItem("vendia_current_user"); } catch(e) {}
+          try { localStorage.removeItem(STORAGE_KEY_USER); } catch(e) {}
+          try { localStorage.removeItem(STORAGE_KEY_TOKEN); } catch(e) {}
 
-          if (window.history && window.history.replaceState) {
-            window.history.replaceState(null, null, window.location.pathname);
-          }
+          const errorMsg = `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
 
+          // Mémoriser en sessionStorage pour robustesse supplémentaire
           try {
-            sessionStorage.setItem("vendia_oauth_error", `Aucun compte n'a été trouvé avec l'adresse ${cleanEmail}. Veuillez d'abord vous inscrire pour bénéficier de vos 7 jours d'essai gratuit.`);
+            sessionStorage.setItem("vendia_oauth_error", errorMsg);
             sessionStorage.setItem("vendia_prefill_signup", JSON.stringify({
               firstName: userFirst,
               lastName: userLast,
@@ -537,8 +583,29 @@
             }));
           } catch(e) {}
 
-          const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
-          window.location.href = `${window.location.origin}${basePath}index.html?auth=signup`;
+          // Si on est sur dashboard.html (par précaution extrême), renvoyer immédiatement vers index.html
+          if (window.location.pathname.includes("dashboard.html")) {
+            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
+            window.location.replace(`${window.location.origin}${basePath}index.html?auth=signup`);
+            return false;
+          }
+
+          // Nous sommes sur index.html : afficher immédiatement le formulaire d'inscription
+          if (typeof window.openAuthModal === "function") {
+            window.openAuthModal("signup");
+          }
+          if (typeof window.showAuthAlert === "function") {
+            window.showAuthAlert(errorMsg, "error");
+          }
+
+          // Pré-remplir les champs avec les données retournées par Google
+          const inputFirst = document.getElementById("signup-firstname");
+          const inputLast = document.getElementById("signup-lastname");
+          const inputEmail = document.getElementById("signup-email");
+          if (inputFirst && userFirst) inputFirst.value = userFirst;
+          if (inputLast && userLast) inputLast.value = userLast;
+          if (inputEmail && cleanEmail) inputEmail.value = cleanEmail;
+
           return false;
         }
 
@@ -557,7 +624,7 @@
               created_at: userObj.created_at || new Date().toISOString()
             }, accessToken);
           } catch (upsertErr) {
-            console.warn("Création profil OAuth:", upsertErr);
+            console.warn("Création profil OAuth Supabase:", upsertErr);
           }
         }
 
@@ -601,16 +668,8 @@
           localStorage.setItem('vendia_user_registered_' + userObj.id, userCreatedAt);
         } catch(e) {}
 
-        // Nettoyer le hash des jetons dans l'URL pour la sécurité
-        if (window.history && window.history.replaceState) {
-          window.history.replaceState(null, null, window.location.pathname + window.location.search);
-        }
-
-        // Si l'utilisateur arrive sur index.html via le callback, rediriger vers le dashboard
-        if (!window.location.pathname.includes("dashboard.html")) {
-          window.location.href = "dashboard.html";
-        }
-
+        // Redirection vers le dashboard pour l'utilisateur authentifié avec succès
+        window.location.replace("dashboard.html");
         return true;
       } catch (err) {
         console.error("Erreur traitement callback OAuth:", err);

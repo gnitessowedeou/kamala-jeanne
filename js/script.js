@@ -347,7 +347,10 @@ function initAuthModal() {
 
   const setMode = (mode) => {
     currentAuthMode = mode;
-    try { localStorage.setItem("vendia_auth_mode", mode); } catch(e) {}
+    try {
+      localStorage.setItem("vendia_auth_mode", mode);
+      sessionStorage.setItem("vendia_auth_mode", mode);
+    } catch(e) {}
     hideAlert();
     if (mode === "signup") {
       if (tabSignup) tabSignup.classList.add("active");
@@ -391,6 +394,12 @@ function initAuthModal() {
     document.body.style.overflow = "";
     hideAlert();
   };
+
+  // Exposer les méthodes globalement pour AuthEngine
+  window.openAuthModal = openAuthModal;
+  window.showAuthAlert = showAlert;
+  window.hideAuthAlert = hideAlert;
+  window.setAuthMode = setMode;
 
   if (closeBtn) closeBtn.addEventListener("click", closeAuthModal);
   modal.addEventListener("click", (e) => {
@@ -557,8 +566,12 @@ function initAuthModal() {
       hideAlert();
       btnGoogle.disabled = true;
       btnGoogle.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Google...</span>';
-      try { localStorage.setItem("vendia_auth_mode", currentAuthMode || "signup"); } catch(e) {}
-      const res = await window.AuthEngine.signInWithOAuth("google");
+      const mode = currentAuthMode || (tabLogin && tabLogin.classList.contains("active") ? "login" : "signup");
+      try {
+        localStorage.setItem("vendia_auth_mode", mode);
+        sessionStorage.setItem("vendia_auth_mode", mode);
+      } catch(e) {}
+      const res = await window.AuthEngine.signInWithOAuth("google", mode);
       if (!res.success && res.error) {
         btnGoogle.disabled = false;
         btnGoogle.innerHTML = '<i class="fa-brands fa-google auth-social-icon"></i><span>Continuer avec Google</span>';
@@ -575,8 +588,12 @@ function initAuthModal() {
       hideAlert();
       btnFacebook.disabled = true;
       btnFacebook.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Facebook...</span>';
-      try { localStorage.setItem("vendia_auth_mode", currentAuthMode || "signup"); } catch(e) {}
-      const res = await window.AuthEngine.signInWithOAuth("facebook");
+      const mode = currentAuthMode || (tabLogin && tabLogin.classList.contains("active") ? "login" : "signup");
+      try {
+        localStorage.setItem("vendia_auth_mode", mode);
+        sessionStorage.setItem("vendia_auth_mode", mode);
+      } catch(e) {}
+      const res = await window.AuthEngine.signInWithOAuth("facebook", mode);
       if (!res.success && res.error) {
         btnFacebook.disabled = false;
         btnFacebook.innerHTML = '<i class="fa-brands fa-facebook auth-social-icon"></i><span>Continuer avec Facebook</span>';
@@ -585,10 +602,11 @@ function initAuthModal() {
     });
   }
 
-  // Gestion automatique de la redirection vers l'inscription si tentative de connexion Google sans compte
+  // Gestion automatique de l'alerte et de l'inscription si tentative de connexion Google sans compte
   try {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("auth") === "signup") {
+    const hasOAuthErr = sessionStorage.getItem("vendia_oauth_error");
+    if (urlParams.get("auth") === "signup" || hasOAuthErr) {
       openAuthModal("signup");
       const err = sessionStorage.getItem("vendia_oauth_error");
       if (err) {

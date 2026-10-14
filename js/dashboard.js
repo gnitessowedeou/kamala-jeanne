@@ -57,19 +57,20 @@ try {
 // AUTHENTICATION GUARD
 // ==============================================================================
 (function() {
-    // Si l'utilisateur revient d'une authentification Google/OAuth avec son jeton dans l'URL
+    // Si l'URL contient des jetons OAuth, rediriger immédiatement vers index.html pour validation stricte
     if (
         (window.location.hash && (window.location.hash.includes('access_token=') || window.location.hash.includes('refresh_token='))) ||
         (window.location.search && window.location.search.includes('code='))
     ) {
-        return; // Ne pas rejeter, laisser AuthEngine traiter le jeton
+        window.location.replace('index.html' + window.location.search + window.location.hash);
+        return;
     }
     let u = null;
     try {
         u = JSON.parse(localStorage.getItem('vendia_current_user'));
     } catch(e) {}
-    if (!u || !u.id || u.id.startsWith('usr_guest')) {
-        window.location.href = 'index.html';
+    if (!u || !u.id || (typeof u.id === 'string' && u.id.startsWith('usr_guest'))) {
+        window.location.replace('index.html');
     }
 })();
 
@@ -934,6 +935,15 @@ window.initTrialCountdownEngine = initTrialCountdownEngine;
 
 
 function initDashboard() {
+  let u = null;
+  try {
+    u = JSON.parse(localStorage.getItem('vendia_current_user'));
+  } catch(e) {}
+  if (!u || !u.id || (typeof u.id === 'string' && u.id.startsWith('usr_guest'))) {
+    window.location.replace('index.html');
+    return;
+  }
+
   setupNavigation();
   setupMobileSidebar();
   setupModals();

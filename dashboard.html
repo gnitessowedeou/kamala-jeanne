@@ -20,8 +20,27 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261013_v2">
-  <link rel="stylesheet" href="css/auth.css?v=20261012_v16">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261014_v10">
+  <link rel="stylesheet" href="css/auth.css?v=20261014_v10">
+
+  <!-- Auth Guard synchrone : interdiction absolue d'accès sans compte enregistré -->
+  <script>
+    (function() {
+      try {
+        var u = JSON.parse(localStorage.getItem('vendia_current_user') || 'null');
+        var hasValidUser = u && u.id && typeof u.id === 'string' && !u.id.startsWith('usr_guest');
+        if (!hasValidUser) {
+          if (window.location.hash && (window.location.hash.indexOf('access_token=') !== -1 || window.location.hash.indexOf('refresh_token=') !== -1)) {
+            window.location.replace('index.html' + window.location.search + window.location.hash);
+          } else {
+            window.location.replace('index.html');
+          }
+        }
+      } catch(e) {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
 </head>
 <body>
 
@@ -3610,8 +3629,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261012_v6"></script>
-  <script src="js/dashboard.js?v=20261013_v2"></script>
+  <script src="js/auth.js?v=20261014_v10"></script>
+  <script src="js/dashboard.js?v=20261014_v10"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
