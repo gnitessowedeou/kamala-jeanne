@@ -515,9 +515,9 @@
               email: cleanEmail,
               whatsapp_number: "",
               avatar_url: userAvatar,
-              plan: "pro",
-              credits: 3000,
-              created_at: new Date().toISOString()
+              plan: "trial",
+              credits: 100,
+              created_at: userObj.created_at || new Date().toISOString()
             }, accessToken);
           } catch (upsertErr) {
             console.warn("Création profil OAuth:", upsertErr);
@@ -525,11 +525,12 @@
         }
 
         const oauthMeta = userObj.app_metadata || {};
-        const activePlan = oauthMeta.plan || profile?.plan || 'pro';
+        const activePlan = oauthMeta.plan || profile?.plan || 'trial';
         const planStatus = oauthMeta.plan_status || profile?.plan_status || 'active';
         const planCycle = oauthMeta.plan_cycle || profile?.plan_cycle || 'monthly';
         const isPaid = (activePlan && activePlan !== 'trial' && activePlan !== 'free' && activePlan !== 'expired' && planStatus === 'active');
         const maxTokens = isPaid ? (activePlan === 'basic' ? 1000 : activePlan === 'pro' ? 3000 : 10000) : 100;
+        const remainingCredits = typeof profile?.credits === 'number' ? profile.credits : (isPaid ? maxTokens : 100);
         const userCreatedAt = userObj.created_at || profile?.created_at || new Date().toISOString();
 
         const loggedInUser = {
@@ -545,14 +546,14 @@
           avatarUrl: profile?.avatar_url || userAvatar,
           provider: "google",
           plan: {
-            name: isPaid ? `Formule ${activePlan.toUpperCase()}` : "Formule Pro 🚀",
+            name: isPaid ? `Formule ${activePlan.toUpperCase()}` : "Essai Gratuit 7j 🦾",
             type: activePlan,
             status: planStatus,
             cycle: planCycle,
             activatedAt: oauthMeta.plan_activated_at || profile?.plan_activated_at || null,
             expiresAt: oauthMeta.plan_expires_at || profile?.plan_expires_at || null,
-            badge: isPaid ? activePlan.toUpperCase() : "PRO",
-            tokensUsed: 0,
+            badge: isPaid ? activePlan.toUpperCase() : "ESSAI",
+            tokensUsed: Math.max(0, maxTokens - remainingCredits),
             tokensMax: maxTokens
           },
           createdAt: userCreatedAt
