@@ -343,7 +343,11 @@ function initAuthModal() {
     if (alertBox) alertBox.className = "auth-alert";
   };
 
+  let currentAuthMode = "signup";
+
   const setMode = (mode) => {
+    currentAuthMode = mode;
+    try { localStorage.setItem("vendia_auth_mode", mode); } catch(e) {}
     hideAlert();
     if (mode === "signup") {
       if (tabSignup) tabSignup.classList.add("active");
@@ -553,6 +557,7 @@ function initAuthModal() {
       hideAlert();
       btnGoogle.disabled = true;
       btnGoogle.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Google...</span>';
+      try { localStorage.setItem("vendia_auth_mode", currentAuthMode || "signup"); } catch(e) {}
       const res = await window.AuthEngine.signInWithOAuth("google");
       if (!res.success && res.error) {
         btnGoogle.disabled = false;
@@ -570,6 +575,7 @@ function initAuthModal() {
       hideAlert();
       btnFacebook.disabled = true;
       btnFacebook.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Redirection vers Facebook...</span>';
+      try { localStorage.setItem("vendia_auth_mode", currentAuthMode || "signup"); } catch(e) {}
       const res = await window.AuthEngine.signInWithOAuth("facebook");
       if (!res.success && res.error) {
         btnFacebook.disabled = false;
@@ -578,5 +584,34 @@ function initAuthModal() {
       }
     });
   }
+
+  // Gestion automatique de la redirection vers l'inscription si tentative de connexion Google sans compte
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("auth") === "signup") {
+      openAuthModal("signup");
+      const err = sessionStorage.getItem("vendia_oauth_error");
+      if (err) {
+        showAlert(err, "error");
+        sessionStorage.removeItem("vendia_oauth_error");
+      }
+      const prefillStr = sessionStorage.getItem("vendia_prefill_signup");
+      if (prefillStr) {
+        try {
+          const prefill = JSON.parse(prefillStr);
+          const inputFirst = document.getElementById("signup-firstname");
+          const inputLast = document.getElementById("signup-lastname");
+          const inputEmail = document.getElementById("signup-email");
+          if (inputFirst && prefill.firstName) inputFirst.value = prefill.firstName;
+          if (inputLast && prefill.lastName) inputLast.value = prefill.lastName;
+          if (inputEmail && prefill.email) inputEmail.value = prefill.email;
+        } catch(pe) {}
+        sessionStorage.removeItem("vendia_prefill_signup");
+      }
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.pathname);
+      }
+    }
+  } catch(e) {}
 }
 

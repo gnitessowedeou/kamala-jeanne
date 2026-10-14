@@ -498,6 +498,8 @@
         const userFirst = parts[0] || meta.first_name || (cleanEmail ? cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1) : "Utilisateur");
         const userLast = parts.slice(1).join(" ") || meta.last_name || "";
         const userAvatar = meta.avatar_url || meta.picture || "";
+        const authMode = localStorage.getItem("vendia_auth_mode") || "signup";
+        try { localStorage.removeItem("vendia_auth_mode"); } catch(e) {}
 
         let profile = null;
         try {
@@ -506,6 +508,41 @@
           console.warn("Lecture profil OAuth Supabase:", pErr);
         }
 
+        // Si le profil n'est pas trouvé par ID, vérifier par email
+        if (!profile && cleanEmail) {
+          try {
+            const rows = await SupabaseRest.request(`/rest/v1/profiles?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, "GET", null, accessToken);
+            if (Array.isArray(rows) && rows.length > 0) {
+              profile = rows[0];
+            }
+          } catch(e) {}
+        }
+
+        // RÈGLE STRICTE : Si l'utilisateur a cliqué sur "Se connecter" (login) mais n'a aucun compte au préalable
+        if (authMode === "login" && !profile) {
+          console.warn("[AUTH OAUTH] Compte inexistant lors d'une tentative de connexion Google.");
+          SupabaseRest.setToken(null);
+          try { localStorage.removeItem("vendia_current_user"); } catch(e) {}
+
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname);
+          }
+
+          try {
+            sessionStorage.setItem("vendia_oauth_error", `Aucun compte n'a été trouvé avec l'adresse ${cleanEmail}. Veuillez d'abord vous inscrire pour bénéficier de vos 7 jours d'essai gratuit.`);
+            sessionStorage.setItem("vendia_prefill_signup", JSON.stringify({
+              firstName: userFirst,
+              lastName: userLast,
+              email: cleanEmail
+            }));
+          } catch(e) {}
+
+          const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
+          window.location.href = `${window.location.origin}${basePath}index.html?auth=signup`;
+          return false;
+        }
+
+        // Si l'utilisateur est sur inscription (signup) et n'a pas encore de profil, on le crée en Essai 7j
         if (!profile) {
           try {
             await SupabaseRest.upsertProfile({
