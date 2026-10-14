@@ -4793,6 +4793,14 @@ function setupBillingAndAffiliate() {
                         else window.location.hash = '#view-devices';
                     };
                 }
+            } else if (status === 'RECONNECTING') {
+                headerBadge.textContent = "Reconnexion 24/7...";
+                headerBadge.className = "status-badge-mini badge-amber";
+                if (headerPill) {
+                    headerPill.style.borderColor = "rgba(245, 158, 11, 0.4)";
+                    headerPill.style.background = "rgba(245, 158, 11, 0.12)";
+                    headerPill.title = "Reconnexion automatique 24/7 en cours...";
+                }
             } else if (hasPhone) {
                 headerBadge.textContent = "À Connecter";
                 headerBadge.className = "status-badge-mini badge-amber";
@@ -4868,7 +4876,10 @@ function setupBillingAndAffiliate() {
                 cardBadge.textContent = "🟢 En Ligne & IA Active";
                 cardBadge.className = "badge badge-green";
             } else if (hasPhone) {
-                if (status === 'QR_READY') {
+                if (status === 'RECONNECTING') {
+                    cardBadge.textContent = "🟡 Reconnexion 24/7...";
+                    cardBadge.className = "badge badge-amber";
+                } else if (status === 'QR_READY') {
                     cardBadge.textContent = "🟡 En attente de scan QR";
                     cardBadge.className = "badge badge-amber";
                 } else {
