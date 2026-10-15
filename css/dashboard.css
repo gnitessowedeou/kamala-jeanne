@@ -6129,3 +6129,37 @@ body.modal-open-lock {
   }
 }
 
+/* Compact Country Code Selectors (Mobile Money, Profil, Inscription, WhatsApp) */
+.phone-input-group {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+.country-code-select {
+  width: 110px !important;
+  min-width: 95px !important;
+  max-width: 40% !important;
+  flex-shrink: 0 !important;
+  padding: 10px 6px 10px 10px !important;
+  background: rgba(16, 24, 40, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  font-family: inherit !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  outline: none !important;
+}
+
+.country-code-select:focus {
+  border-color: var(--whatsapp-green, #00c968) !important;
+}
+
+.country-code-select option {
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+

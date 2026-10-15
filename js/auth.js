@@ -1085,15 +1085,58 @@
     }
   };
 
+  // Gestionnaire de sélecteur de pays compact (Indicateur seul affiché, pays complets déroulés au clic)
+  function initCompactCountrySelectors() {
+    const selects = document.querySelectorAll('.country-code-select');
+    selects.forEach(sel => {
+      Array.from(sel.options).forEach(opt => {
+        if (!opt.dataset.full) {
+          opt.dataset.full = opt.text;
+          const parts = opt.text.split('·');
+          opt.dataset.short = parts[0].trim();
+        }
+      });
+
+      const updateDisplay = () => {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && opt.dataset.short) opt.text = opt.dataset.short;
+      };
+
+      const restoreFull = () => {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && opt.dataset.full) opt.text = opt.dataset.full;
+      };
+
+      updateDisplay();
+
+      if (!sel.dataset.compactEvents) {
+        sel.dataset.compactEvents = 'true';
+        sel.addEventListener('mousedown', restoreFull);
+        sel.addEventListener('focus', restoreFull);
+        sel.addEventListener('touchstart', restoreFull, { passive: true });
+        sel.addEventListener('keydown', restoreFull);
+        sel.addEventListener('change', updateDisplay);
+        sel.addEventListener('blur', updateDisplay);
+      }
+    });
+  }
+
   // Expose to window
   window.AuthEngine = AuthEngine;
   window.SupabaseRest = SupabaseRest;
+  window.initCompactCountrySelectors = initCompactCountrySelectors;
 
   // Initialisation au chargement du DOM
   document.addEventListener("DOMContentLoaded", async () => {
+    initCompactCountrySelectors();
     await AuthEngine.handleOAuthCallback();
     AuthEngine.syncProfileUI();
     AuthEngine.checkSession();
+  });
+
+  // Re-synchronisation automatique si un modal ou formulaire s'ouvre
+  document.addEventListener("click", () => {
+    setTimeout(initCompactCountrySelectors, 60);
   });
 
 })(window);
