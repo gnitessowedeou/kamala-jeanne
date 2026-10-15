@@ -1948,6 +1948,11 @@ function setupCurrencyToggle() {
       const currentPeriod = activePill ? activePill.getAttribute("data-period") : "14";
       updateChartPeriod(currentPeriod);
 
+      // Mettre à jour les Statistiques & ROI selon la devise choisie
+      if (typeof updateAnalyticsStats === "function") {
+        updateAnalyticsStats(currentAnalyticsPeriod, false);
+      }
+
       showToast(`Devise d'affichage basculée sur : ${currentCurrency}`, "info");
     });
   });
@@ -2091,6 +2096,9 @@ async function loadOverviewRealData() {
     if (typeof renderRecentInteractions === "function") {
       renderRecentInteractions();
     }
+    if (typeof updateAnalyticsStats === "function") {
+      updateAnalyticsStats(currentAnalyticsPeriod, false);
+    }
   } catch (err) {
     console.warn("[Overview] Erreur chargement données réelles:", err);
   }
@@ -2146,6 +2154,9 @@ async function syncWhatsAppInbox() {
       renderOverviewRecentChats();
       renderActivityFeed();
       renderKpis();
+      if (typeof updateAnalyticsStats === "function") {
+        updateAnalyticsStats(currentAnalyticsPeriod, false);
+      }
     }
   } catch(e) {}
 }
@@ -5875,6 +5886,7 @@ window.handleSaveContact = async function(e) {
 
 // ==============================================================================
 // GESTION DYNAMIQUE DES ANALYTICS & ROI ([Ce Mois] [Trimestre] [Cette Année])
+// 100% calculé en temps réel selon les données authentiques de l'utilisateur
 // ==============================================================================
 let currentAnalyticsPeriod = 'month';
 
@@ -5888,79 +5900,277 @@ window.setAnalyticsPeriod = function(period, btnEl) {
   }
   if (btnEl) btnEl.classList.add("active");
 
-  updateAnalyticsStats(period);
+  updateAnalyticsStats(period, true);
 };
 
-function updateAnalyticsStats(period) {
-  const kpiData = {
-    month: {
-      roi: "x4.8",
-      roiNote: "Rentabilité record ce mois-ci",
-      avgCart: currentCurrency === 'USD' ? "$2.45" : "1 450 XOF",
-      convTime: "3.8 min",
-      costPerMsg: "$0.00",
-      hourlyLabels: ["8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h"],
-      ordersData: [4, 12, 18, 14, 22, 35, 28, 15],
-      msgData: [15, 45, 68, 55, 82, 120, 95, 40]
-    },
-    quarter: {
-      roi: "x8.2",
-      roiNote: "Progression de +34% sur le trimestre",
-      avgCart: currentCurrency === 'USD' ? "$2.60" : "1 580 XOF",
-      convTime: "3.2 min",
-      costPerMsg: "$0.00",
-      hourlyLabels: ["8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h"],
-      ordersData: [12, 36, 54, 42, 66, 105, 84, 45],
-      msgData: [45, 135, 204, 165, 246, 360, 285, 120]
-    },
-    year: {
-      roi: "x14.5",
-      roiNote: "Impact annuel direct de votre agent IA",
-      avgCart: currentCurrency === 'USD' ? "$2.50" : "1 520 XOF",
-      convTime: "2.9 min",
-      costPerMsg: "$0.00",
-      hourlyLabels: ["8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h"],
-      ordersData: [48, 144, 216, 168, 264, 420, 336, 180],
-      msgData: [180, 540, 816, 660, 984, 1440, 1140, 480]
+function updateAnalyticsStats(period, userTriggered = false) {
+  const user = (window.AuthEngine ? window.AuthEngine.getCurrentUser() : null) || {};
+  const userId = user.id || getAppUserId();
+
+  // 1. Récupération des contacts réels du CRM
+  let contacts = [];
+  if (Array.isArray(MOCK_DATA.contacts) && MOCK_DATA.contacts.length > 0) {
+    contacts = MOCK_DATA.contacts;
+  } else {
+    try {
+      const raw = localStorage.getItem('vendia_contacts_cache');
+      if (raw) contacts = JSON.parse(raw) || [];
+    } catch(e) {}
+  }
+
+  // 2. Récupération des conversations WhatsApp réelles
+  const chats = Array.isArray(MOCK_DATA.conversations) ? MOCK_DATA.conversations : [];
+
+  // 3. Récupération des commandes réelles de l'utilisateur
+  let userOrders = [];
+  if (Array.isArray(user.orders)) {
+    userOrders = user.orders;
+  } else if (user.app_metadata && Array.isArray(user.app_metadata.orders)) {
+    userOrders = user.app_metadata.orders;
+  } else {
+    try {
+      const rawOrders = localStorage.getItem('vendia_user_orders_' + userId);
+      if (rawOrders) userOrders = JSON.parse(rawOrders) || [];
+    } catch(e) {}
+  }
+
+  // 4. Filtrage temporel selon la période sélectionnée
+  const now = new Date();
+  let filterStartDate = null;
+  if (period === 'month') {
+    filterStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (period === 'quarter') {
+    filterStartDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  } else if (period === 'year') {
+    filterStartDate = new Date(now.getFullYear(), 0, 1);
+  }
+
+  const periodLabel = period === 'month' ? 'ce mois' : period === 'quarter' ? 'ce trimestre' : 'cette année';
+
+  // Filtrer les contacts selon la période
+  const filteredContacts = contacts.filter(c => {
+    if (!filterStartDate) return true;
+    const cDate = c.created_at || c.updated_at ? new Date(c.created_at || c.updated_at) : null;
+    return !cDate || isNaN(cDate.getTime()) || cDate >= filterStartDate;
+  });
+
+  // Filtrer les commandes selon la période
+  const filteredOrders = userOrders.filter(o => {
+    if (!filterStartDate) return true;
+    const oDate = o.paidAt || o.createdAt ? new Date(o.paidAt || o.createdAt) : null;
+    return !oDate || isNaN(oDate.getTime()) || oDate >= filterStartDate;
+  });
+
+  // 5. Calcul des métriques réelles de conversion et de ventes
+  const convertedContacts = filteredContacts.filter(c => 
+    c.status === 'client' || c.status === 'won' || (c.orders_count && Number(c.orders_count) > 0)
+  );
+
+  let totalOrdersCount = filteredOrders.length;
+  let totalRevenueXof = 0;
+
+  filteredOrders.forEach(o => {
+    const amt = Number(o.amount) || 0;
+    totalRevenueXof += (o.currency === 'USD' ? amt * 615 : amt);
+  });
+
+  convertedContacts.forEach(c => {
+    const ordersNum = Number(c.orders_count) || 1;
+    if (filteredOrders.length === 0) totalOrdersCount += ordersNum;
+    const spent = Number(c.total_spent || c.revenue || 0);
+    totalRevenueXof += spent;
+  });
+
+  // A. Panier Moyen (Calcul dynamique selon devise choisie)
+  let avgCartFormatted = currentCurrency === 'USD' ? "$0.00" : "0 XOF";
+  let avgCartNote = "En attente de commandes";
+
+  if (totalOrdersCount > 0 && totalRevenueXof > 0) {
+    const avgCartXof = Math.round(totalRevenueXof / totalOrdersCount);
+    const avgCartUsd = (avgCartXof / 615).toFixed(2);
+    avgCartFormatted = currentCurrency === 'USD' 
+      ? `$${avgCartUsd}` 
+      : `${avgCartXof.toLocaleString('fr-FR')} XOF`;
+    avgCartNote = `Basé sur ${totalOrdersCount} commande${totalOrdersCount > 1 ? 's' : ''} (${periodLabel})`;
+  }
+
+  // B. Retour sur Investissement (ROI)
+  let roiFormatted = "x0.0";
+  let roiNote = "Calculé dès vos premières ventes";
+
+  if (totalRevenueXof > 0) {
+    const baseCost = user.plan?.cost || 14900;
+    const periodMultiplier = period === 'quarter' ? 3 : period === 'year' ? 12 : 1;
+    const totalCost = baseCost * periodMultiplier;
+    const rawRoi = (totalRevenueXof / Math.max(1, totalCost)).toFixed(1);
+    roiFormatted = `x${rawRoi}`;
+    roiNote = totalRevenueXof >= totalCost 
+      ? `Rentabilité confirmée (${periodLabel})` 
+      : `En cours d'amortissement (${periodLabel})`;
+  }
+
+  // C. Temps Moyen de Conversion
+  let convTimeFormatted = "0 min";
+  let convTimeNote = "Du premier message au paiement";
+
+  if (convertedContacts.length > 0) {
+    let totalMinutes = 0;
+    let counted = 0;
+    convertedContacts.forEach(c => {
+      if (c.created_at && c.updated_at) {
+        const start = new Date(c.created_at).getTime();
+        const end = new Date(c.updated_at).getTime();
+        if (end > start) {
+          const diffMin = Math.round((end - start) / (1000 * 60));
+          if (diffMin > 0 && diffMin < 1440 * 7) {
+            totalMinutes += diffMin;
+            counted++;
+          }
+        }
+      }
+    });
+
+    if (counted > 0) {
+      const avgMin = Math.round((totalMinutes / counted) * 10) / 10;
+      convTimeFormatted = avgMin >= 60 ? `${Math.round(avgMin / 60)}h` : `${avgMin} min`;
+      convTimeNote = `Moyenne sur ${counted} conversion${counted > 1 ? 's' : ''}`;
     }
-  };
+  }
 
-  const selected = kpiData[period] || kpiData.month;
+  // D. Coût Moyen par Message
+  const costPerMsgFormatted = "$0.00";
+  const costPerMsgNote = "Tarification officielle Meta (1 000 conv. offertes/mois)";
 
-  // Mise à jour des cartes KPI
+  // E. Mise à jour du DOM sur la vue Analytics
   const viewEl = document.getElementById("view-analytics");
   if (viewEl) {
     const kpiCards = viewEl.querySelectorAll(".kpi-card");
     if (kpiCards.length >= 4) {
       // 1. ROI
       const roiVal = kpiCards[0].querySelector(".kpi-value");
-      const roiNote = kpiCards[0].querySelector(".kpi-note");
-      if (roiVal) roiVal.textContent = selected.roi;
-      if (roiNote) roiNote.textContent = selected.roiNote;
+      const roiNoteEl = kpiCards[0].querySelector(".kpi-note");
+      if (roiVal) roiVal.textContent = roiFormatted;
+      if (roiNoteEl) roiNoteEl.textContent = roiNote;
 
       // 2. Panier Moyen
       const cartVal = kpiCards[1].querySelector(".kpi-value");
-      if (cartVal) cartVal.textContent = selected.avgCart;
+      const cartNoteEl = kpiCards[1].querySelector(".kpi-note");
+      if (cartVal) cartVal.textContent = avgCartFormatted;
+      if (cartNoteEl) cartNoteEl.textContent = avgCartNote;
 
       // 3. Temps de Conversion
       const timeVal = kpiCards[2].querySelector(".kpi-value");
-      if (timeVal) timeVal.textContent = selected.convTime;
+      const timeNoteEl = kpiCards[2].querySelector(".kpi-note");
+      if (timeVal) timeVal.textContent = convTimeFormatted;
+      if (timeNoteEl) timeNoteEl.textContent = convTimeNote;
 
       // 4. Coût par Message
       const costVal = kpiCards[3].querySelector(".kpi-value");
-      if (costVal) costVal.textContent = selected.costPerMsg;
+      const costNoteEl = kpiCards[3].querySelector(".kpi-note");
+      if (costVal) costVal.textContent = costPerMsgFormatted;
+      if (costNoteEl) costNoteEl.textContent = costPerMsgNote;
+    }
+
+    // F. Origine du Trafic WhatsApp (Mise à jour dynamique selon les tags des prospects réels)
+    const paymentItems = viewEl.querySelectorAll(".payment-list .payment-item");
+    if (paymentItems.length >= 4) {
+      let srcWidget = 0, srcAds = 0, srcRecovery = 0, srcDirect = 0;
+      const totalSources = filteredContacts.length;
+
+      filteredContacts.forEach(c => {
+        const tag = String(c.tag || c.source || '').toLowerCase();
+        if (tag.includes('widget') || tag.includes('site')) srcWidget++;
+        else if (tag.includes('ad') || tag.includes('pub') || tag.includes('meta') || tag.includes('facebook') || tag.includes('instagram')) srcAds++;
+        else if (tag.includes('panier') || tag.includes('abandon') || tag.includes('relance')) srcRecovery++;
+        else srcDirect++;
+      });
+
+      const pWidget = totalSources > 0 ? Math.round((srcWidget / totalSources) * 100) : 0;
+      const pAds = totalSources > 0 ? Math.round((srcAds / totalSources) * 100) : 0;
+      const pRecovery = totalSources > 0 ? Math.round((srcRecovery / totalSources) * 100) : 0;
+      const pDirect = totalSources > 0 ? Math.max(0, 100 - pWidget - pAds - pRecovery) : 0;
+
+      const pData = [
+        { pct: pWidget },
+        { pct: pAds },
+        { pct: pRecovery },
+        { pct: pDirect }
+      ];
+
+      paymentItems.forEach((item, idx) => {
+        if (pData[idx]) {
+          const strongEl = item.querySelector("strong");
+          const barEl = item.querySelector(".payment-progress-bar");
+          if (strongEl) strongEl.textContent = `${pData[idx].pct}%`;
+          if (barEl) barEl.style.width = `${pData[idx].pct}%`;
+        }
+      });
     }
   }
 
-  // Mise à jour du graphique Chart.js
+  // G. Graphique d'Activité par Tranche Horaire (100% réel)
+  const hourlyLabels = ["08h", "10h", "12h", "14h", "16h", "18h", "20h", "22h", "00h"];
+  const ordersByHour = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const msgsByHour = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+  function getHourSlot(hour) {
+    if (hour >= 8 && hour < 10) return 0;
+    if (hour >= 10 && hour < 12) return 1;
+    if (hour >= 12 && hour < 14) return 2;
+    if (hour >= 14 && hour < 16) return 3;
+    if (hour >= 16 && hour < 18) return 4;
+    if (hour >= 18 && hour < 20) return 5;
+    if (hour >= 20 && hour < 22) return 6;
+    if (hour >= 22 && hour < 24) return 7;
+    return 8;
+  }
+
+  chats.forEach(chat => {
+    if (Array.isArray(chat.messages)) {
+      chat.messages.forEach(m => {
+        if (m.timestamp) {
+          const d = new Date(m.timestamp);
+          if (!isNaN(d.getTime())) {
+            if (!filterStartDate || d >= filterStartDate) {
+              msgsByHour[getHourSlot(d.getHours())]++;
+            }
+          }
+        }
+      });
+    } else if (chat.timestamp) {
+      const d = new Date(chat.timestamp);
+      if (!isNaN(d.getTime())) {
+        if (!filterStartDate || d >= filterStartDate) {
+          msgsByHour[getHourSlot(d.getHours())]++;
+        }
+      }
+    }
+  });
+
+  filteredOrders.forEach(o => {
+    const d = o.paidAt || o.createdAt ? new Date(o.paidAt || o.createdAt) : null;
+    if (d && !isNaN(d.getTime())) {
+      ordersByHour[getHourSlot(d.getHours())]++;
+    }
+  });
+
+  convertedContacts.forEach(c => {
+    const d = c.updated_at ? new Date(c.updated_at) : null;
+    if (d && !isNaN(d.getTime())) {
+      ordersByHour[getHourSlot(d.getHours())] += (Number(c.orders_count) || 1);
+    }
+  });
+
   if (hourlyChartInstance) {
-    hourlyChartInstance.data.labels = selected.hourlyLabels;
-    hourlyChartInstance.data.datasets[0].data = selected.ordersData;
-    hourlyChartInstance.data.datasets[1].data = selected.msgData;
+    hourlyChartInstance.data.labels = hourlyLabels;
+    hourlyChartInstance.data.datasets[0].data = ordersByHour;
+    hourlyChartInstance.data.datasets[1].data = msgsByHour;
     hourlyChartInstance.update();
   }
 
-  showToast(`Statistiques actualisées pour : ${period === 'month' ? 'Ce Mois' : period === 'quarter' ? 'Le Trimestre' : 'Cette Année'}`, "info");
+  if (userTriggered) {
+    showToast(`Statistiques actualisées pour : ${period === 'month' ? 'Ce Mois' : period === 'quarter' ? 'Le Trimestre' : 'Cette Année'}`, "info");
+  }
 }
 
 
