@@ -4277,16 +4277,53 @@
 }
 
 /* 6. Plan Modal (#plan-modal) */
+/* 6. Plan Modal (#plan-modal) — Ultra-Premium SaaS Design */
 #plan-modal .modal-dialog {
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
+  max-width: 820px;
+  width: 95%;
+  max-height: 92vh;
   overflow: hidden;
+  border-radius: 20px;
+  background: #0b111e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 45px rgba(37, 211, 102, 0.12);
 }
 
-#plan-modal .modal-header,
-#plan-modal .modal-footer {
+#plan-modal .modal-header {
+  padding: 20px 24px;
+  background: rgba(14, 21, 37, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+}
+
+#plan-modal .modal-header .modal-title {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+#plan-modal .modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+#plan-modal .modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: rotate(90deg);
 }
 
 #plan-modal #form-subscribe-plan {
@@ -4301,39 +4338,62 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  padding: 22px 26px;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+#plan-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+#plan-modal .modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+#plan-modal .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+#plan-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 211, 102, 0.45);
 }
 
 body.modal-open-lock {
   overflow: hidden !important;
 }
 
+/* Plan Cards Grid */
 .plan-modal-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 14px;
 }
 
 .plan-select-card {
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 14px;
-  background: rgba(15, 23, 42, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 16px 14px;
+  background: linear-gradient(180deg, rgba(20, 29, 49, 0.65) 0%, rgba(13, 19, 33, 0.85) 100%);
+  backdrop-filter: blur(12px);
   cursor: pointer;
   position: relative;
-  transition: all 0.2s ease;
-  display: block;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .plan-select-card:hover {
   border-color: rgba(37, 211, 102, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 20px rgba(37, 211, 102, 0.1);
 }
 
 .plan-select-card.selected {
   border-color: var(--whatsapp-green) !important;
-  background: rgba(37, 211, 102, 0.08) !important;
-  box-shadow: 0 0 15px rgba(37, 211, 102, 0.15);
+  background: linear-gradient(180deg, rgba(37, 211, 102, 0.12) 0%, rgba(13, 22, 34, 0.95) 100%) !important;
+  box-shadow: 0 0 25px rgba(37, 211, 102, 0.22), inset 0 0 14px rgba(37, 211, 102, 0.05) !important;
 }
 
 .plan-select-card input[type="radio"] {
@@ -4342,85 +4402,199 @@ body.modal-open-lock {
 
 .plan-badge-popular {
   position: absolute;
-  top: -9px;
-  right: 10px;
-  background: var(--whatsapp-green);
-  color: #080c14;
-  font-size: 9px;
+  top: -11px;
+  right: 12px;
+  background: linear-gradient(135deg, #25D366, #10b981);
+  color: #051a0c;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  box-shadow: 0 3px 12px rgba(37, 211, 102, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  z-index: 2;
 }
 
 .plan-select-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-height: 26px;
 }
 
 .plan-select-name {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.plan-select-top .badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.plan-select-top .badge-gray {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.plan-select-top .badge-green {
+  background: rgba(37, 211, 102, 0.15);
+  color: #25d366;
+  border: 1px solid rgba(37, 211, 102, 0.35);
+}
+
+.plan-select-top .badge-purple {
+  background: rgba(168, 85, 247, 0.16);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.35);
 }
 
 .plan-select-price {
-  margin: 8px 0;
-  font-size: 18px;
-  color: var(--whatsapp-green);
+  margin: 8px 0 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.plan-select-price .plan-price-amount {
+  font-size: 21px;
   font-weight: 800;
+  color: var(--whatsapp-green);
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.plan-select-price .plan-price-curr {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--whatsapp-green);
 }
 
 .plan-select-price small {
   font-size: 11px;
-  color: #64748b;
-  font-weight: 400;
+  color: #94a3b8;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .plan-select-features {
   list-style: none;
-  padding: 0;
+  padding: 10px 0 0 0;
   margin: 0;
   font-size: 11.5px;
-  color: #94a3b8;
+  color: #cbd5e1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.cycle-selector-row {
+.plan-select-features li {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.35;
+}
+
+.plan-select-features li strong {
+  color: #ffffff;
+}
+
+.plan-select-features li::before {
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--whatsapp-green);
+  font-size: 9.5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Cycle Selector Segmented Switch */
+.cycle-selector-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(11, 17, 29, 0.85);
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .cycle-pill {
-  flex: 1;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.6);
-  color: #cbd5e1;
-  font-size: 12.5px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   text-align: center;
   transition: all 0.2s ease;
+  user-select: none;
 }
 
 .cycle-pill input[type="radio"] {
   display: none;
 }
 
-.cycle-pill.active {
-  border-color: var(--whatsapp-green);
-  background: rgba(37, 211, 102, 0.1);
-  color: #ffffff;
+.cycle-pill:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.03);
 }
 
+.cycle-pill.active {
+  background: linear-gradient(180deg, rgba(37, 211, 102, 0.16) 0%, rgba(37, 211, 102, 0.06) 100%);
+  border-color: rgba(37, 211, 102, 0.45);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 12px rgba(37, 211, 102, 0.12);
+}
+
+.cycle-pill strong {
+  background: rgba(37, 211, 102, 0.18);
+  color: #25d366 !important;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  white-space: nowrap;
+}
+
+/* Payment Methods Grid */
 .payment-methods-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -4428,13 +4602,19 @@ body.modal-open-lock {
 }
 
 .pay-method-card {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 10px 14px;
-  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 11px 15px;
+  background: linear-gradient(180deg, rgba(18, 27, 45, 0.6) 0%, rgba(12, 18, 31, 0.75) 100%);
   cursor: pointer;
   transition: all 0.2s ease;
   display: block;
+}
+
+.pay-method-card:hover {
+  border-color: rgba(37, 211, 102, 0.35);
+  background: rgba(22, 32, 53, 0.8);
+  transform: translateY(-1px);
 }
 
 .pay-method-card input[type="radio"] {
@@ -4442,8 +4622,9 @@ body.modal-open-lock {
 }
 
 .pay-method-card.active {
-  border-color: var(--whatsapp-green);
-  background: rgba(37, 211, 102, 0.08);
+  border-color: var(--whatsapp-green) !important;
+  background: linear-gradient(180deg, rgba(37, 211, 102, 0.12) 0%, rgba(12, 21, 33, 0.85) 100%) !important;
+  box-shadow: 0 0 18px rgba(37, 211, 102, 0.15);
 }
 
 .pay-method-card:last-child:nth-child(odd) {
@@ -4453,56 +4634,147 @@ body.modal-open-lock {
 .pay-method-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .pay-method-icon-box {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 15px;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .pay-method-text {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .pay-method-text strong {
-  font-size: 13px;
+  font-size: 13.5px;
   color: #ffffff;
+  font-weight: 600;
 }
 
 .pay-method-text small {
-  font-size: 10.5px;
-  color: #64748b;
+  font-size: 11px;
+  color: #94a3b8;
 }
 
+/* Payment Summary Box */
 .payment-summary-box {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 14px 18px;
-  margin-top: 16px;
+  background: linear-gradient(180deg, rgba(16, 25, 42, 0.85) 0%, rgba(10, 16, 28, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-top: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .payment-summary-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 13px;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+  color: #94a3b8;
+}
+
+.payment-summary-row strong,
+.payment-summary-row span[id] {
+  color: #f1f5f9;
+  font-weight: 600;
 }
 
 .payment-summary-row.total-highlight {
   margin-top: 10px;
   padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.payment-summary-row.total-highlight strong {
+  color: var(--whatsapp-green) !important;
+  font-size: 20px !important;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  text-shadow: 0 0 14px rgba(37, 211, 102, 0.35);
+}
+
+#plan-modal .modal-footer {
+  padding: 16px 26px;
+  background: rgba(12, 18, 31, 0.95);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+#plan-modal .modal-footer .btn-secondary-glass {
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#plan-modal .modal-footer .btn-secondary-glass:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+#plan-modal .modal-footer .btn-primary-glow {
+  padding: 11px 26px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 0 20px rgba(37, 211, 102, 0.35);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+#plan-modal .modal-footer .btn-primary-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px rgba(37, 211, 102, 0.5);
+}
+
+/* Plan Modal Phone Input */
+#plan-modal .form-control {
+  background: rgba(16, 24, 40, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  padding: 11px 16px !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+  transition: all 0.2s ease !important;
+  outline: none !important;
+}
+
+#plan-modal .form-control:focus {
+  border-color: var(--whatsapp-green) !important;
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.18) !important;
+  background: rgba(18, 28, 46, 0.95) !important;
+}
+
+#plan-modal .form-control::placeholder {
+  color: #64748b !important;
 }
 
 /* 7. Responsive Rules for Billing and Affiliate */

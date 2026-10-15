@@ -19,9 +19,9 @@
   <link rel="apple-touch-icon" href="images/logo.png">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261015_v39">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v39">
-  <link rel="stylesheet" href="css/auth.css?v=20261015_v39">
+  <link rel="stylesheet" href="css/style.css?v=20261015_v40">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v40">
+  <link rel="stylesheet" href="css/auth.css?v=20261015_v40">
 
   <!-- Auth Guard synchrone : interdiction absolue d'accès sans compte enregistré -->
   <script>
@@ -2835,15 +2835,15 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
        MODAL 5: SOUSCRIPTION / CHOIX DU FORFAIT (#plan-modal)
        ========================================================================== -->
   <div class="modal-backdrop" id="plan-modal" role="dialog" aria-modal="true" aria-labelledby="modal-plan-title">
-    <div class="modal-dialog" style="max-width: 680px;">
+    <div class="modal-dialog" style="max-width: 820px;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="brand-icon-box" style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center;">
+          <div class="brand-icon-box" style="width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(37, 211, 102, 0.15)); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);">
             <i class="fa-solid fa-crown" style="color: #f59e0b; font-size: 18px;"></i>
           </div>
           <div>
             <h3 class="modal-title" id="modal-plan-title">Choisir / Activer un Forfait VANDIA</h3>
-            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Maintenez votre commercial WhatsApp IA actif 24h/24 sans coupure</p>
+            <p style="font-size: 12.5px; color: #94a3b8; margin: 2px 0 0;">Maintenez votre commercial WhatsApp IA actif 24h/24 sans coupure</p>
           </div>
         </div>
         <button class="modal-close-btn" data-close-modal="plan-modal" onclick="closePlanModal()" aria-label="Fermer la modale">
@@ -2852,11 +2852,11 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       </div>
 
       <form id="form-subscribe-plan">
-        <div class="modal-body" style="padding: 20px 24px;">
+        <div class="modal-body" style="padding: 18px 24px;">
           
           <!-- Plan Selection Options -->
-          <div style="margin-bottom: 20px;">
-            <label class="form-label" style="margin-bottom: 10px;">Sélectionnez votre formule :</label>
+          <div style="margin-bottom: 16px;">
+            <label class="form-label" style="margin-bottom: 8px;">Sélectionnez votre formule :</label>
             <div class="plan-modal-grid">
               
               <label class="plan-select-card" for="modal-plan-basic">
@@ -2904,7 +2904,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
                     <span class="badge badge-purple">15 000 crédits</span>
                   </div>
                   <div class="plan-select-price">
-                    <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois (50 $)</small>
+                    <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois <span style="opacity: 0.7; font-size: 11px;">(50$)</span></small>
                   </div>
                   <ul class="plan-select-features">
                     <li><strong>5 Agents IA Omnicanal illimités</strong></li>
@@ -2918,8 +2918,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
 
           <!-- Billing Period Selector -->
-          <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label">Fréquence de facturation :</label>
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="margin-bottom: 6px;">Fréquence de facturation :</label>
             <div class="cycle-selector-row">
               <label class="cycle-pill active">
                 <input type="radio" name="modal_cycle" value="monthly" checked>
@@ -2933,8 +2933,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
 
           <!-- Payment Method Selector -->
-          <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label">Moyen de paiement préféré :</label>
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="margin-bottom: 6px;">Moyen de paiement préféré :</label>
             <div class="payment-methods-grid">
               
               <label class="pay-method-card active">
@@ -3006,7 +3006,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </div>
 
           <!-- Phone Number / Account Input for Payment -->
-          <div class="form-group" id="pay-phone-group" style="margin-bottom: 20px;">
+          <div class="form-group" id="pay-phone-group" style="margin-bottom: 16px;">
             <label class="form-label" for="modal-pay-phone">Numéro de débit Mobile Money / Wave :</label>
             <div class="phone-input-group">
               <select class="country-code-select" id="modal-pay-country" aria-label="Indicatif pays de paiement">
