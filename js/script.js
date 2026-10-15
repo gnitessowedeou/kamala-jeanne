@@ -729,7 +729,10 @@ function initLanguageSelector() {
         updateSelectorsUI(selectedLang);
         wraps.forEach(w => w.classList.remove('open'));
 
-        // Déclenche la traduction automatique de la page
+        // Déclenche la traduction instantanée native de toute la plateforme
+        if (window.VendiaI18n) {
+          window.VendiaI18n.setLanguage(selectedLang);
+        }
         applyPageTranslation(selectedLang);
       });
     });
@@ -746,7 +749,9 @@ function initLanguageSelector() {
 
   // Applique la langue sauvegardée au démarrage
   updateSelectorsUI(savedLang);
-  if (savedLang !== 'fr') {
+  if (window.VendiaI18n) {
+    window.VendiaI18n.setLanguage(savedLang, false);
+  } else if (savedLang !== 'fr') {
     applyPageTranslation(savedLang);
   }
 }
