@@ -4243,10 +4243,57 @@ function setupBillingAndAffiliate() {
   const planModal = document.getElementById("plan-modal");
   const payoutModal = document.getElementById("payout-modal");
 
+  // Helper to reset plan modal to Step 1 with user info prefill
+  function resetPlanModalToStep1() {
+    const step1 = document.getElementById("plan-modal-step-1");
+    const step2 = document.getElementById("plan-modal-step-2");
+    const titleEl = document.getElementById("modal-plan-title");
+    const subEl = document.getElementById("modal-plan-subtitle");
+    if (step1) {
+      step1.style.display = "block";
+      step1.classList.remove("step-hidden");
+    }
+    if (step2) {
+      step2.style.display = "none";
+      step2.classList.add("step-hidden");
+    }
+    if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIA";
+    if (subEl) subEl.textContent = "Étape 1/2 : Choisissez votre formule et vos coordonnées";
+
+    // Pre-fill user details from localStorage if available
+    try {
+      const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+      if (u) {
+        const emailInput = document.getElementById("modal-customer-email");
+        const fnameInput = document.getElementById("modal-customer-firstname");
+        const lnameInput = document.getElementById("modal-customer-lastname");
+        const phoneInput = document.getElementById("modal-customer-phone");
+        const countrySelect = document.getElementById("modal-customer-country");
+
+        if (emailInput && !emailInput.value) emailInput.value = u.email || "";
+        if (fnameInput && !fnameInput.value) {
+          fnameInput.value = u.first_name || u.firstName || (u.full_name ? u.full_name.split(' ')[0] : "");
+        }
+        if (lnameInput && !lnameInput.value) {
+          lnameInput.value = u.last_name || u.lastName || (u.full_name ? u.full_name.split(' ').slice(1).join(' ') : "");
+        }
+        if (phoneInput && !phoneInput.value && u.phone) {
+          phoneInput.value = u.phone.replace(/^\+\d{1,4}\s*/, "");
+        }
+        if (countrySelect && u.country_code) {
+          countrySelect.value = u.country_code;
+        }
+      }
+    } catch(e) {}
+  }
+  window.resetPlanModalToStep1 = resetPlanModalToStep1;
+
   // Helper to open plan modal with specific pre-selected tier
   function openPlanModal(preselectedTier = "pro") {
     if (!planModal) return;
     
+    resetPlanModalToStep1();
+
     // Select the radio and update styling
     const targetRadio = document.querySelector(`input[name="modal_plan_tier"][value="${preselectedTier}"]`);
     if (targetRadio) {
@@ -4349,6 +4396,10 @@ function setupBillingAndAffiliate() {
     const titleEl = document.getElementById("summary-plan-title");
     const cycleEl = document.getElementById("summary-plan-cycle");
     const amountEl = document.getElementById("summary-total-amount");
+    const step1PlanRecap = document.getElementById("step1-plan-recap");
+    const step1PriceRecap = document.getElementById("step1-price-recap");
+    const step2RecapTitle = document.getElementById("step2-recap-title");
+    const submitBtnText = document.getElementById("btn-submit-plan-text");
 
     const isAnnual = selectedCycle === "annual";
 
@@ -4362,17 +4413,30 @@ function setupBillingAndAffiliate() {
     if (cardBizAmount) cardBizAmount.textContent = isAnnual ? "24 000" : "30 000";
 
     let planName = "Formule Pro 👑 (2 Agents IA)";
+    let simplePlanName = "Formule Pro 🚀";
     let baseMonthly = 14900;
     let annualDiscountedMonthly = 11920;
 
     if (selectedTier === "basic") {
       planName = "Formule Basic ⚡ (1 Agent IA)";
+      simplePlanName = "Formule Basic 🦾";
       baseMonthly = 7900;
       annualDiscountedMonthly = 6320;
     } else if (selectedTier === "business" || selectedTier === "enterprise") {
       planName = "Formule Business 🚀 (5 Agents IA)";
+      simplePlanName = "Formule Business 💎";
       baseMonthly = 30000;
       annualDiscountedMonthly = 24000;
+    }
+
+    const finalPrice = isAnnual ? (annualDiscountedMonthly * 12) : baseMonthly;
+    const formattedPrice = finalPrice.toLocaleString("fr-FR") + " FCFA";
+
+    if (step1PlanRecap) step1PlanRecap.textContent = simplePlanName;
+    if (step1PriceRecap) step1PriceRecap.textContent = formattedPrice + (isAnnual ? " / an (-20%)" : " / mois");
+
+    if (step2RecapTitle) {
+      step2RecapTitle.textContent = simplePlanName + " (" + formattedPrice + (isAnnual ? " / an" : " / mois") + ")";
     }
 
     if (titleEl) titleEl.textContent = planName;
@@ -4381,9 +4445,161 @@ function setupBillingAndAffiliate() {
     }
 
     if (amountEl) {
-      const finalPrice = isAnnual ? (annualDiscountedMonthly * 12) : baseMonthly;
-      amountEl.textContent = finalPrice.toLocaleString("fr-FR") + " FCFA" + (isAnnual ? " / an (-20%)" : " / mois");
+      amountEl.textContent = formattedPrice + (isAnnual ? " / an (-20%)" : " / mois");
     }
+
+    if (submitBtnText) {
+      submitBtnText.textContent = "Confirmer & Payer " + formattedPrice;
+    }
+  }
+
+  // Navigation Étape 1 -> Étape 2 (Bouton Continuer vers le Paiement)
+  const btnGotoStep2 = document.getElementById("btn-goto-step-2");
+  if (btnGotoStep2) {
+    btnGotoStep2.addEventListener("click", () => {
+      const lnameInput = document.getElementById("modal-customer-lastname");
+      const fnameInput = document.getElementById("modal-customer-firstname");
+      const emailInput = document.getElementById("modal-customer-email");
+      const phoneInput = document.getElementById("modal-customer-phone");
+      const countrySelect = document.getElementById("modal-customer-country");
+
+      const lname = lnameInput ? lnameInput.value.trim() : "";
+      const fname = fnameInput ? fnameInput.value.trim() : "";
+      const email = emailInput ? emailInput.value.trim() : "";
+      const phone = phoneInput ? phoneInput.value.trim() : "";
+
+      if (!lname) {
+        if (lnameInput) lnameInput.focus();
+        if (typeof showToast === 'function') showToast("Veuillez renseigner votre Nom.", "info");
+        return;
+      }
+      if (!fname) {
+        if (fnameInput) fnameInput.focus();
+        if (typeof showToast === 'function') showToast("Veuillez renseigner votre Prénom.", "info");
+        return;
+      }
+      if (!email || !email.includes("@")) {
+        if (emailInput) emailInput.focus();
+        if (typeof showToast === 'function') showToast("Veuillez renseigner une adresse email valide.", "info");
+        return;
+      }
+      if (!phone || phone.length < 5) {
+        if (phoneInput) phoneInput.focus();
+        if (typeof showToast === 'function') showToast("Veuillez renseigner votre numéro de téléphone / WhatsApp.", "info");
+        return;
+      }
+
+      // Synchroniser vers le numéro de débit étape 2
+      const payPhone = document.getElementById("modal-pay-phone");
+      const payCountry = document.getElementById("modal-pay-country");
+      if (payPhone) payPhone.value = phone;
+      if (payCountry && countrySelect) payCountry.value = countrySelect.value;
+
+      // Mettre à jour le récapitulatif client étape 2
+      const step2Customer = document.getElementById("step2-recap-customer");
+      if (step2Customer) {
+        step2Customer.textContent = "Client : " + fname + " " + lname + " • " + email;
+      }
+
+      // Basculer vers l'Étape 2
+      const step1 = document.getElementById("plan-modal-step-1");
+      const step2 = document.getElementById("plan-modal-step-2");
+      const titleEl = document.getElementById("modal-plan-title");
+      const subEl = document.getElementById("modal-plan-subtitle");
+
+      if (step1) {
+        step1.style.display = "none";
+        step1.classList.add("step-hidden");
+      }
+      if (step2) {
+        step2.style.display = "block";
+        step2.classList.remove("step-hidden");
+      }
+      if (titleEl) titleEl.textContent = "Finaliser votre Paiement";
+      if (subEl) subEl.textContent = "Étape 2/2 : Sélectionnez votre pays et moyen de paiement";
+
+      const step2Body = step2 ? step2.querySelector(".modal-body") : null;
+      if (step2Body) step2Body.scrollTop = 0;
+    });
+  }
+
+  // Navigation Étape 2 -> Étape 1 (Boutons Retour et Modifier)
+  function backToStep1() {
+    const step1 = document.getElementById("plan-modal-step-1");
+    const step2 = document.getElementById("plan-modal-step-2");
+    const titleEl = document.getElementById("modal-plan-title");
+    const subEl = document.getElementById("modal-plan-subtitle");
+
+    if (step2) {
+      step2.style.display = "none";
+      step2.classList.add("step-hidden");
+    }
+    if (step1) {
+      step1.style.display = "block";
+      step1.classList.remove("step-hidden");
+    }
+    if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIA";
+    if (subEl) subEl.textContent = "Étape 1/2 : Choisissez votre formule et vos coordonnées";
+  }
+
+  const btnBackStep1 = document.getElementById("btn-back-to-step-1");
+  if (btnBackStep1) btnBackStep1.addEventListener("click", backToStep1);
+
+  const btnEditStep1 = document.getElementById("btn-edit-step1");
+  if (btnEditStep1) btnEditStep1.addEventListener("click", backToStep1);
+
+  // Sélecteur dynamique de pays pour adapter les méthodes de paiement
+  const paymentCountrySelect = document.getElementById("modal-payment-country-select");
+  if (paymentCountrySelect) {
+    paymentCountrySelect.addEventListener("change", function() {
+      const country = this.value;
+      const payCountrySelect = document.getElementById("modal-pay-country");
+      const waveRadio = document.querySelector('input[name="modal_pay_method"][value="wave"]');
+      const orangeRadio = document.querySelector('input[name="modal_pay_method"][value="orange"]');
+      const mtnRadio = document.querySelector('input[name="modal_pay_method"][value="mtn"]');
+      const moovRadio = document.querySelector('input[name="modal_pay_method"][value="moov"]');
+      const cardRadio = document.querySelector('input[name="modal_pay_method"][value="card"]');
+
+      function selectMethod(radio) {
+        if (radio) {
+          radio.checked = true;
+          document.querySelectorAll(".pay-method-card").forEach(c => c.classList.remove("active"));
+          const parent = radio.closest(".pay-method-card");
+          if (parent) parent.classList.add("active");
+        }
+      }
+
+      if (country === "CI") {
+        if (payCountrySelect) payCountrySelect.value = "+225";
+        selectMethod(waveRadio);
+      } else if (country === "SN") {
+        if (payCountrySelect) payCountrySelect.value = "+221";
+        selectMethod(waveRadio);
+      } else if (country === "BJ") {
+        if (payCountrySelect) payCountrySelect.value = "+229";
+        selectMethod(mtnRadio);
+      } else if (country === "TG") {
+        if (payCountrySelect) payCountrySelect.value = "+228";
+        selectMethod(moovRadio);
+      } else if (country === "BF") {
+        if (payCountrySelect) payCountrySelect.value = "+226";
+        selectMethod(orangeRadio);
+      } else if (country === "ML") {
+        if (payCountrySelect) payCountrySelect.value = "+223";
+        selectMethod(orangeRadio);
+      } else if (country === "CM") {
+        if (payCountrySelect) payCountrySelect.value = "+237";
+        selectMethod(mtnRadio);
+      } else if (country === "NE") {
+        if (payCountrySelect) payCountrySelect.value = "+227";
+        selectMethod(moovRadio);
+      } else if (country === "GN") {
+        if (payCountrySelect) payCountrySelect.value = "+224";
+        selectMethod(orangeRadio);
+      } else if (country === "OTHER") {
+        selectMethod(cardRadio);
+      }
+    });
   }
 
   // Plan radio cards click
@@ -4480,7 +4696,7 @@ function setupBillingAndAffiliate() {
       
       const submitBtn = document.getElementById("btn-submit-plan-order");
       const submitText = document.getElementById("btn-submit-plan-text");
-      const originalText = submitText ? submitText.textContent : "Confirmer & Activer mon Forfait";
+      const originalText = submitText ? submitText.textContent : "Confirmer & Payer mon Forfait";
       
       if (submitBtn) submitBtn.disabled = true;
       if (submitText) submitText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Redirection vers la passerelle sécurisée...';
@@ -4492,22 +4708,27 @@ function setupBillingAndAffiliate() {
         const phoneInput = document.getElementById("modal-pay-phone");
         const countrySelect = document.getElementById("modal-pay-country");
 
+        const fnameInput = document.getElementById("modal-customer-firstname");
+        const lnameInput = document.getElementById("modal-customer-lastname");
+        const emailInput = document.getElementById("modal-customer-email");
+
         const selectedTier = selectedPlanRadio ? selectedPlanRadio.value : "pro";
         const isAnnual = selectedCycleRadio ? (selectedCycleRadio.value === "annual") : false;
         const method = selectedMethodRadio ? selectedMethodRadio.value : "wave";
         const phone = (countrySelect ? countrySelect.value : "") + (phoneInput ? phoneInput.value.trim() : "");
 
+        const fname = fnameInput ? fnameInput.value.trim() : "";
+        const lname = lnameInput ? lnameInput.value.trim() : "";
+        const customerName = (fname + ' ' + lname).trim() || "Client VANDIA";
+        const email = (emailInput ? emailInput.value.trim() : "") || "client@vendia.ai";
+
         let monthlyAmount = selectedTier === 'basic' ? 7900 : selectedTier === 'pro' ? 14900 : 30000;
         let totalAmount = isAnnual ? Math.round((monthlyAmount * 0.8) * 12) : monthlyAmount;
         
         let userId = null;
-        let email = null;
-        let customerName = null;
         try {
           const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
           if (u && u.id) userId = u.id;
-          if (u && u.email) email = u.email;
-          if (u && (u.firstName || u.lastName)) customerName = (u.firstName + ' ' + u.lastName).trim();
         } catch(e) {}
         
         const res = await fetch(API_URL + '/api/payments/create-session', {
@@ -4539,13 +4760,13 @@ function setupBillingAndAffiliate() {
           if (submitText) submitText.textContent = "Ouverture du paiement SasPay...";
           window.location.href = checkoutUrl;
         } else {
-          showToast("Erreur: " + (data.error || "Impossible de générer le lien de paiement"), "info");
+          if (typeof showToast === 'function') showToast("Erreur: " + (data.error || "Impossible de générer le lien de paiement"), "info");
           if (submitBtn) submitBtn.disabled = false;
           if (submitText) submitText.textContent = originalText;
         }
       } catch (err) {
         console.error("Erreur paiement:", err);
-        showToast("Erreur de connexion au serveur de paiement", "info");
+        if (typeof showToast === 'function') showToast("Erreur de connexion au serveur de paiement", "info");
         if (submitBtn) submitBtn.disabled = false;
         if (submitText) submitText.textContent = originalText;
       }

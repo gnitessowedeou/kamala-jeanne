@@ -2852,225 +2852,339 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       </div>
 
       <form id="form-subscribe-plan">
-        <div class="modal-body" style="padding: 18px 24px;">
-          
-          <!-- Plan Selection Options -->
-          <div style="margin-bottom: 16px;">
-            <label class="form-label" style="margin-bottom: 8px;">Sélectionnez votre formule :</label>
-            <div class="plan-modal-grid">
-              
-              <label class="plan-select-card" for="modal-plan-basic">
-                <input type="radio" name="modal_plan_tier" id="modal-plan-basic" value="basic">
-                <div class="plan-select-content">
-                  <div class="plan-select-top">
-                    <span class="plan-select-name">🦾 Basic</span>
-                    <span class="badge badge-gray">Essentiel</span>
+        <!-- ==========================================
+             ÉTAPE 1 : CHOIX DU FORFAIT & COORDONNÉES
+             ========================================== -->
+        <div id="plan-modal-step-1" class="plan-modal-step">
+          <div class="modal-body" style="padding: 18px 24px;">
+            
+            <!-- Plan Selection Options -->
+            <div style="margin-bottom: 16px;">
+              <label class="form-label" style="margin-bottom: 8px;">Sélectionnez votre formule :</label>
+              <div class="plan-modal-grid">
+                
+                <label class="plan-select-card" for="modal-plan-basic">
+                  <input type="radio" name="modal_plan_tier" id="modal-plan-basic" value="basic">
+                  <div class="plan-select-content">
+                    <div class="plan-select-top">
+                      <span class="plan-select-name">🦾 Basic</span>
+                      <span class="badge badge-gray">Essentiel</span>
+                    </div>
+                    <div class="plan-select-price">
+                      <strong class="plan-price-amount" data-plan="basic">7 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
+                    </div>
+                    <ul class="plan-select-features">
+                      <li>1 Agent IA Commercial</li>
+                      <li>2 500 crédits IA/mois</li>
+                      <li>Paiements Wave &amp; MoMo</li>
+                    </ul>
                   </div>
-                  <div class="plan-select-price">
-                    <strong class="plan-price-amount" data-plan="basic">7 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
-                  </div>
-                  <ul class="plan-select-features">
-                    <li>1 Agent IA Commercial</li>
-                    <li>2 500 crédits IA/mois</li>
-                    <li>Paiements Wave &amp; MoMo</li>
-                  </ul>
-                </div>
-              </label>
+                </label>
 
-              <label class="plan-select-card selected" for="modal-plan-pro">
-                <div class="plan-badge-popular">POPULAIRE</div>
-                <input type="radio" name="modal_plan_tier" id="modal-plan-pro" value="pro" checked>
-                <div class="plan-select-content">
-                  <div class="plan-select-top">
-                    <span class="plan-select-name">🚀 Pro</span>
-                    <span class="badge badge-green">-50% à vie</span>
+                <label class="plan-select-card selected" for="modal-plan-pro">
+                  <div class="plan-badge-popular">POPULAIRE</div>
+                  <input type="radio" name="modal_plan_tier" id="modal-plan-pro" value="pro" checked>
+                  <div class="plan-select-content">
+                    <div class="plan-select-top">
+                      <span class="plan-select-name">🚀 Pro</span>
+                      <span class="badge badge-green">-50% à vie</span>
+                    </div>
+                    <div class="plan-select-price">
+                      <strong class="plan-price-amount" data-plan="pro">14 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
+                    </div>
+                    <ul class="plan-select-features">
+                      <li><strong>2 Agents IA (WhatsApp + Instagram)</strong></li>
+                      <li>6 000 crédits IA/mois</li>
+                      <li>Jusqu'à 10 collaborateurs</li>
+                    </ul>
                   </div>
-                  <div class="plan-select-price">
-                    <strong class="plan-price-amount" data-plan="pro">14 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
-                  </div>
-                  <ul class="plan-select-features">
-                    <li><strong>2 Agents IA (WhatsApp + Instagram)</strong></li>
-                    <li>6 000 crédits IA/mois</li>
-                    <li>Jusqu'à 10 collaborateurs</li>
-                  </ul>
-                </div>
-              </label>
+                </label>
 
-              <label class="plan-select-card" for="modal-plan-business">
-                <input type="radio" name="modal_plan_tier" id="modal-plan-business" value="business">
-                <div class="plan-select-content">
-                  <div class="plan-select-top">
-                    <span class="plan-select-name">💎 Business</span>
-                    <span class="badge badge-purple">15 000 crédits</span>
+                <label class="plan-select-card" for="modal-plan-business">
+                  <input type="radio" name="modal_plan_tier" id="modal-plan-business" value="business">
+                  <div class="plan-select-content">
+                    <div class="plan-select-top">
+                      <span class="plan-select-name">💎 Business</span>
+                      <span class="badge badge-purple">15 000 crédits</span>
+                    </div>
+                    <div class="plan-select-price">
+                      <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois <span style="opacity: 0.7; font-size: 11px;">(50$)</span></small>
+                    </div>
+                    <ul class="plan-select-features">
+                      <li><strong>5 Agents IA Omnicanal illimités</strong></li>
+                      <li>15 000 crédits IA/mois</li>
+                      <li>Account Manager VIP dédié</li>
+                    </ul>
                   </div>
-                  <div class="plan-select-price">
-                    <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois <span style="opacity: 0.7; font-size: 11px;">(50$)</span></small>
-                  </div>
-                  <ul class="plan-select-features">
-                    <li><strong>5 Agents IA Omnicanal illimités</strong></li>
-                    <li>15 000 crédits IA/mois</li>
-                    <li>Account Manager VIP dédié</li>
-                  </ul>
-                </div>
-              </label>
+                </label>
 
+              </div>
             </div>
+
+            <!-- Billing Period Selector -->
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label" style="margin-bottom: 6px;">Fréquence de facturation :</label>
+              <div class="cycle-selector-row">
+                <label class="cycle-pill active">
+                  <input type="radio" name="modal_cycle" value="monthly" checked>
+                  <span>Facturation Mensuelle (Sans engagement)</span>
+                </label>
+                <label class="cycle-pill">
+                  <input type="radio" name="modal_cycle" value="annual">
+                  <span>Facturation Annuelle <strong style="color: var(--whatsapp-green);">(-20% d'économie)</strong></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Customer Contact Information -->
+            <div class="form-group" style="margin-top: 18px; margin-bottom: 12px; background: rgba(16, 25, 42, 0.6); padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08);">
+              <label class="form-label" style="margin-bottom: 12px; font-size: 13px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-user-shield" style="color: var(--whatsapp-green);"></i> Vos coordonnées pour l'activation du forfait :
+              </label>
+
+              <div class="customer-fields-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-lastname">Nom *</label>
+                  <input type="text" class="form-control" id="modal-customer-lastname" placeholder="Ex: Kouassi" required>
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-firstname">Prénom *</label>
+                  <input type="text" class="form-control" id="modal-customer-firstname" placeholder="Ex: Jean-Marc" required>
+                </div>
+              </div>
+
+              <div class="customer-fields-grid" style="display: grid; grid-template-columns: 1fr 1.1fr; gap: 12px;">
+                <div>
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-email">Adresse Email *</label>
+                  <input type="email" class="form-control" id="modal-customer-email" placeholder="contact@entreprise.com" required>
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-phone">Numéro WhatsApp / Téléphone *</label>
+                  <div class="phone-input-group">
+                    <select class="country-code-select" id="modal-customer-country" aria-label="Indicatif pays">
+                      <option value="+225" selected>🇨🇮 +225</option>
+                      <option value="+229">🇧🇯 +229</option>
+                      <option value="+226">🇧🇫 +226</option>
+                      <option value="+221">🇸🇳 +221</option>
+                      <option value="+228">🇹🇬 +228</option>
+                      <option value="+223">🇲🇱 +223</option>
+                      <option value="+227">🇳🇪 +227</option>
+                      <option value="+224">🇬🇳 +224</option>
+                      <option value="+237">🇨🇲 +237</option>
+                      <option value="+241">🇬🇦 +241</option>
+                      <option value="+242">🇨🇬 +242</option>
+                      <option value="+243">🇨🇩 +243</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+1">🇺🇸 +1</option>
+                    </select>
+                    <input type="tel" class="form-control" id="modal-customer-phone" placeholder="07 89 45 12 30" required style="flex: 1;">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 1 Summary Pill -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: linear-gradient(180deg, rgba(16, 25, 42, 0.85) 0%, rgba(10, 16, 28, 0.95) 100%); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12.5px; color: #94a3b8;">Forfait sélectionné :</span>
+                <strong id="step1-plan-recap" style="color: #ffffff; font-size: 13.5px;">Formule Pro 🚀</strong>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12.5px; color: #94a3b8;">Total :</span>
+                <strong id="step1-price-recap" style="color: var(--whatsapp-green); font-size: 17px; font-weight: 800;">14 900 FCFA</strong>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Billing Period Selector -->
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label class="form-label" style="margin-bottom: 6px;">Fréquence de facturation :</label>
-            <div class="cycle-selector-row">
-              <label class="cycle-pill active">
-                <input type="radio" name="modal_cycle" value="monthly" checked>
-                <span>Facturation Mensuelle (Sans engagement)</span>
-              </label>
-              <label class="cycle-pill">
-                <input type="radio" name="modal_cycle" value="annual">
-                <span>Facturation Annuelle <strong style="color: var(--whatsapp-green);">(-20% d'économie)</strong></span>
-              </label>
-            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary-glass" data-close-modal="plan-modal">Annuler</button>
+            <button type="button" class="btn-primary-glow" id="btn-goto-step-2">
+              <span>Continuer vers le Paiement</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
-
-          <!-- Payment Method Selector -->
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label class="form-label" style="margin-bottom: 6px;">Moyen de paiement préféré :</label>
-            <div class="payment-methods-grid">
-              
-              <label class="pay-method-card active">
-                <input type="radio" name="modal_pay_method" value="wave" checked>
-                <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #1dc4e9; border: 1px solid rgba(255,255,255,0.2);">
-                    <img src="images/wave.png" alt="Wave" style="width: 100%; height: 100%; object-fit: contain;">
-                  </div>
-                  <div class="pay-method-text">
-                    <strong>Wave</strong>
-                    <small>Sénégal, Côte d'Ivoire</small>
-                  </div>
-                </div>
-              </label>
-
-              <label class="pay-method-card">
-                <input type="radio" name="modal_pay_method" value="orange">
-                <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #000; border: 1px solid rgba(255,102,0,0.35);">
-                    <img src="images/orange_money.png" alt="Orange Money" style="width: 100%; height: 100%; object-fit: contain;">
-                  </div>
-                  <div class="pay-method-text">
-                    <strong>Orange Money</strong>
-                    <small>Tous pays UEMOA</small>
-                  </div>
-                </div>
-              </label>
-
-              <label class="pay-method-card">
-                <input type="radio" name="modal_pay_method" value="mtn">
-                <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #ffcc00; border: 1px solid rgba(255,204,0,0.45);">
-                    <img src="images/mtn_momo.png" alt="MTN MoMo" style="width: 100%; height: 100%; object-fit: contain;">
-                  </div>
-                  <div class="pay-method-text">
-                    <strong>MTN MoMo</strong>
-                    <small>Bénin, CI, Cameroun</small>
-                  </div>
-                </div>
-              </label>
-
-              <label class="pay-method-card">
-                <input type="radio" name="modal_pay_method" value="moov">
-                <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #005ca9; border: 1px solid rgba(255,255,255,0.18);">
-                    <img src="images/moov_africa.png" alt="Moov Africa" style="width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <div class="pay-method-text">
-                    <strong>Moov Africa</strong>
-                    <small>Bénin, Togo, CI, BF</small>
-                  </div>
-                </div>
-              </label>
-
-              <label class="pay-method-card">
-                <input type="radio" name="modal_pay_method" value="card">
-                <div class="pay-method-inner">
-                  <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #0033cc; border: 1px solid rgba(255,255,255,0.2);">
-                    <img src="images/visa.png" alt="Carte Bancaire" style="width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <div class="pay-method-text">
-                    <strong>Carte Bancaire</strong>
-                    <small>Visa, Mastercard</small>
-                  </div>
-                </div>
-              </label>
-
-            </div>
-          </div>
-
-          <!-- Phone Number / Account Input for Payment -->
-          <div class="form-group" id="pay-phone-group" style="margin-bottom: 16px;">
-            <label class="form-label" for="modal-pay-phone">Numéro de débit Mobile Money / Wave :</label>
-            <div class="phone-input-group">
-              <select class="country-code-select" id="modal-pay-country" aria-label="Indicatif pays de paiement">
-                <option value="+225" selected>🇨🇮 +225 · Côte d'Ivoire</option>
-                <option value="+229">🇧🇯 +229 · Bénin</option>
-                <option value="+226">🇧🇫 +226 · Burkina Faso</option>
-                <option value="+221">🇸🇳 +221 · Sénégal</option>
-                <option value="+228">🇹🇬 +228 · Togo</option>
-                <option value="+223">🇲🇱 +223 · Mali</option>
-                <option value="+227">🇳🇪 +227 · Niger</option>
-                <option value="+224">🇬🇳 +224 · Guinée</option>
-                <option value="+245">🇬🇼 +245 · Guinée-Bissau</option>
-                <option value="+234">🇳🇬 +234 · Nigeria</option>
-                <option value="+233">🇬🇭 +233 · Ghana</option>
-                <option value="+220">🇬🇲 +220 · Gambie</option>
-                <option value="+231">🇱🇷 +231 · Liberia</option>
-                <option value="+232">🇸🇱 +232 · Sierra Leone</option>
-                <option value="+238">🇨🇻 +238 · Cap-Vert</option>
-                <option value="+222">🇲🇷 +222 · Mauritanie</option>
-                <option value="+237">🇨🇲 +237 · Cameroun</option>
-                <option value="+242">🇨🇬 +242 · Congo-Brazzaville</option>
-                <option value="+243">🇨🇩 +243 · RD Congo</option>
-                <option value="+241">🇬🇦 +241 · Gabon</option>
-              </select>
-              <input type="tel" class="form-control" id="modal-pay-phone" placeholder="07 89 45 12 30" required style="flex: 1;">
-            </div>
-            <small style="color: #64748b; font-size: 11.5px; margin-top: 5px; display: block;">
-              Une notification de validation de paiement instantané s'affichera directement sur votre téléphone.
-            </small>
-          </div>
-
-          <!-- Total Summary Box -->
-          <div class="payment-summary-box">
-            <div class="payment-summary-row">
-              <span style="color: #94a3b8;">Forfait sélectionné :</span>
-              <strong id="summary-plan-title" style="color: #ffffff;">Formule Pro 🚀</strong>
-            </div>
-            <div class="payment-summary-row">
-              <span style="color: #94a3b8;">Cycle de facturation :</span>
-              <span id="summary-plan-cycle" style="color: #ffffff;">Mensuel (renouvelable)</span>
-            </div>
-            <div class="payment-summary-row total-highlight">
-              <span>Total à régler aujourd'hui :</span>
-              <strong id="summary-total-amount" style="color: var(--whatsapp-green); font-size: 18px;">14 900 FCFA</strong>
-            </div>
-          </div>
-
-          <!-- Trust Badges -->
-          <div style="display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 14px; color: #64748b; font-size: 11.5px; text-align: center;">
-            <span><i class="fa-solid fa-lock" style="color: var(--whatsapp-green);"></i> Paiement 100% sécurisé</span>
-            <span>•</span>
-            <span><i class="fa-solid fa-clock-rotate-left"></i> Activation instantanée &lt; 30s</span>
-            <span>•</span>
-            <span><i class="fa-solid fa-ban"></i> Annulable à tout moment</span>
-          </div>
-
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary-glass" data-close-modal="plan-modal">Annuler</button>
-          <button type="submit" class="btn-primary-glow" id="btn-submit-plan-order">
-            <i class="fa-solid fa-check"></i>
-            <span id="btn-submit-plan-text">Confirmer &amp; Activer mon Forfait</span>
-          </button>
+        <!-- ==========================================
+             ÉTAPE 2 : PAYS & MODE DE PAIEMENT
+             ========================================== -->
+        <div id="plan-modal-step-2" class="plan-modal-step step-hidden" style="display: none;">
+          <div class="modal-body" style="padding: 18px 24px;">
+
+            <!-- Recap Banner -->
+            <div style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(16, 25, 42, 0.8)); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 14px; font-weight: 700; color: #ffffff;" id="step2-recap-title">Formule Pro 🚀 (14 900 FCFA / mois)</div>
+                <div style="font-size: 12px; color: #cbd5e1; margin-top: 2px;" id="step2-recap-customer">Client : Jean-Marc Kouassi • contact@entreprise.com</div>
+              </div>
+              <button type="button" id="btn-edit-step1" style="background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); color: #25d366; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                <i class="fa-solid fa-pen-to-square"></i> Modifier
+              </button>
+            </div>
+
+            <!-- Country Selector -->
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label" style="margin-bottom: 6px;" for="modal-payment-country-select">
+                <i class="fa-solid fa-globe" style="color: var(--whatsapp-green);"></i> Sélectionnez votre pays :
+              </label>
+              <select class="form-control" id="modal-payment-country-select" style="background: rgba(16, 24, 40, 0.95); font-weight: 600; color: #ffffff;">
+                <option value="CI" selected>🇨🇮 Côte d'Ivoire (Wave, Orange Money, MTN MoMo, Moov, Carte)</option>
+                <option value="SN">🇸🇳 Sénégal (Wave, Orange Money, Carte Bancaire)</option>
+                <option value="BJ">🇧🇯 Bénin (MTN MoMo, Moov Africa, Carte Bancaire)</option>
+                <option value="TG">🇹🇬 Togo (Moov Africa, Carte Bancaire)</option>
+                <option value="BF">🇧🇫 Burkina Faso (Orange Money, Moov Africa, Carte Bancaire)</option>
+                <option value="ML">🇲🇱 Mali (Orange Money, Carte Bancaire)</option>
+                <option value="CM">🇨🇲 Cameroun (MTN MoMo, Orange Money, Carte Bancaire)</option>
+                <option value="NE">🇳🇪 Niger (Airtel, Moov, Carte Bancaire)</option>
+                <option value="GN">🇬🇳 Guinée (Orange Money, Carte Bancaire)</option>
+                <option value="OTHER">🌍 International / Autre pays (Carte Bancaire Visa, Mastercard)</option>
+              </select>
+            </div>
+
+            <!-- Payment Method Selector -->
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label" style="margin-bottom: 6px;">Mode de paiement préféré :</label>
+              <div class="payment-methods-grid">
+                
+                <label class="pay-method-card active" data-method-card="wave">
+                  <input type="radio" name="modal_pay_method" value="wave" checked>
+                  <div class="pay-method-inner">
+                    <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #1dc4e9; border: 1px solid rgba(255,255,255,0.2);">
+                      <img src="images/wave.png" alt="Wave" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <div class="pay-method-text">
+                      <strong>Wave</strong>
+                      <small>Sénégal, Côte d'Ivoire</small>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="pay-method-card" data-method-card="orange">
+                  <input type="radio" name="modal_pay_method" value="orange">
+                  <div class="pay-method-inner">
+                    <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #000; border: 1px solid rgba(255,102,0,0.35);">
+                      <img src="images/orange_money.png" alt="Orange Money" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <div class="pay-method-text">
+                      <strong>Orange Money</strong>
+                      <small>Tous pays UEMOA</small>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="pay-method-card" data-method-card="mtn">
+                  <input type="radio" name="modal_pay_method" value="mtn">
+                  <div class="pay-method-inner">
+                    <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #ffcc00; border: 1px solid rgba(255,204,0,0.45);">
+                      <img src="images/mtn_momo.png" alt="MTN MoMo" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <div class="pay-method-text">
+                      <strong>MTN MoMo</strong>
+                      <small>Bénin, CI, Cameroun</small>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="pay-method-card" data-method-card="moov">
+                  <input type="radio" name="modal_pay_method" value="moov">
+                  <div class="pay-method-inner">
+                    <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #005ca9; border: 1px solid rgba(255,255,255,0.18);">
+                      <img src="images/moov_africa.png" alt="Moov Africa" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div class="pay-method-text">
+                      <strong>Moov Africa</strong>
+                      <small>Bénin, Togo, CI, BF</small>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="pay-method-card" data-method-card="card">
+                  <input type="radio" name="modal_pay_method" value="card">
+                  <div class="pay-method-inner">
+                    <div class="pay-method-icon-box" style="padding: 0; overflow: hidden; background: #0033cc; border: 1px solid rgba(255,255,255,0.2);">
+                      <img src="images/visa.png" alt="Carte Bancaire" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div class="pay-method-text">
+                      <strong>Carte Bancaire</strong>
+                      <small>Visa, Mastercard</small>
+                    </div>
+                  </div>
+                </label>
+
+              </div>
+            </div>
+
+            <!-- Phone Number / Account Input for Payment -->
+            <div class="form-group" id="pay-phone-group" style="margin-bottom: 16px;">
+              <label class="form-label" for="modal-pay-phone">Numéro de débit Mobile Money / Wave :</label>
+              <div class="phone-input-group">
+                <select class="country-code-select" id="modal-pay-country" aria-label="Indicatif pays de paiement">
+                  <option value="+225" selected>🇨🇮 +225 · Côte d'Ivoire</option>
+                  <option value="+229">🇧🇯 +229 · Bénin</option>
+                  <option value="+226">🇧🇫 +226 · Burkina Faso</option>
+                  <option value="+221">🇸🇳 +221 · Sénégal</option>
+                  <option value="+228">🇹🇬 +228 · Togo</option>
+                  <option value="+223">🇲🇱 +223 · Mali</option>
+                  <option value="+227">🇳🇪 +227 · Niger</option>
+                  <option value="+224">🇬🇳 +224 · Guinée</option>
+                  <option value="+245">🇬🇼 +245 · Guinée-Bissau</option>
+                  <option value="+234">🇳🇬 +234 · Nigeria</option>
+                  <option value="+233">🇬🇭 +233 · Ghana</option>
+                  <option value="+220">🇬🇲 +220 · Gambie</option>
+                  <option value="+231">🇱🇷 +231 · Liberia</option>
+                  <option value="+232">🇸🇱 +232 · Sierra Leone</option>
+                  <option value="+238">🇨🇻 +238 · Cap-Vert</option>
+                  <option value="+222">🇲🇷 +222 · Mauritanie</option>
+                  <option value="+237">🇨🇲 +237 · Cameroun</option>
+                  <option value="+242">🇨🇬 +242 · Congo-Brazzaville</option>
+                  <option value="+243">🇨🇩 +243 · RD Congo</option>
+                  <option value="+241">🇬🇦 +241 · Gabon</option>
+                </select>
+                <input type="tel" class="form-control" id="modal-pay-phone" placeholder="07 89 45 12 30" required style="flex: 1;">
+              </div>
+              <small style="color: #64748b; font-size: 11.5px; margin-top: 5px; display: block;">
+                Une notification de validation de paiement instantané s'affichera directement sur votre téléphone.
+              </small>
+            </div>
+
+            <!-- Total Summary Box -->
+            <div class="payment-summary-box">
+              <div class="payment-summary-row">
+                <span style="color: #94a3b8;">Forfait sélectionné :</span>
+                <strong id="summary-plan-title" style="color: #ffffff;">Formule Pro 🚀</strong>
+              </div>
+              <div class="payment-summary-row">
+                <span style="color: #94a3b8;">Cycle de facturation :</span>
+                <span id="summary-plan-cycle" style="color: #ffffff;">Mensuel (renouvelable)</span>
+              </div>
+              <div class="payment-summary-row total-highlight">
+                <span>Total à régler aujourd'hui :</span>
+                <strong id="summary-total-amount" style="color: var(--whatsapp-green); font-size: 18px;">14 900 FCFA</strong>
+              </div>
+            </div>
+
+            <!-- Trust Badges -->
+            <div style="display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 14px; color: #64748b; font-size: 11.5px; text-align: center;">
+              <span><i class="fa-solid fa-lock" style="color: var(--whatsapp-green);"></i> Paiement 100% sécurisé</span>
+              <span>•</span>
+              <span><i class="fa-solid fa-clock-rotate-left"></i> Activation instantanée &lt; 30s</span>
+              <span>•</span>
+              <span><i class="fa-solid fa-ban"></i> Annulable à tout moment</span>
+            </div>
+
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary-glass" id="btn-back-to-step-1">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Retour</span>
+            </button>
+            <button type="submit" class="btn-primary-glow" id="btn-submit-plan-order">
+              <i class="fa-solid fa-check"></i>
+              <span id="btn-submit-plan-text">Confirmer &amp; Activer mon Forfait</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -3629,10 +3743,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261015_v38"></script>
+  <script src="js/i18n.js?v=20261015_v41"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261015_v38"></script>
-  <script src="js/dashboard.js?v=20261015_v38"></script>
+  <script src="js/auth.js?v=20261015_v41"></script>
+  <script src="js/dashboard.js?v=20261015_v41"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -3661,6 +3775,9 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
     window.openPlanModal = function(tier) {
       tier = tier || "pro";
+      if (typeof window.resetPlanModalToStep1 === "function") {
+        window.resetPlanModalToStep1();
+      }
       var modal = document.getElementById("plan-modal");
       if (modal) {
         modal.classList.add("active");
