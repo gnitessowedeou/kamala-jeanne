@@ -50,18 +50,53 @@ function getSessionDir(userId) {
 
 // Nettoyage préventif des verrous résiduels Chromium après redémarrage ou crash
 function cleanupChromiumLocks(sessionPath) {
-  if (!fs.existsSync(sessionPath)) return;
-  const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+  if (!sessionPath) return;
+  const lockFiles = [
+    'SingletonLock',
+    'SingletonCookie',
+    'SingletonSocket',
+    'DevToolsActivePort'
+  ];
+
+  // 1. Suppression forcée directe de tous les verrous (gère liens symboliques morts et sockets)
   for (const lockFile of lockFiles) {
     const lockPath = path.join(sessionPath, lockFile);
     try {
-      if (fs.existsSync(lockPath)) {
-        fs.unlinkSync(lockPath);
-        console.log(`[STORAGE] Verrou résiduel Chromium purgé : ${lockFile}`);
-      }
+      fs.rmSync(lockPath, { force: true, recursive: true });
+      console.log(`[STORAGE] Verrou résiduel Chromium purgé : ${lockFile}`);
     } catch (e) {}
   }
+
+  // 2. Scan récursif pour éliminer tout lien symbolique ou verrou résiduel
+  try {
+    if (fs.existsSync(sessionPath)) {
+      const entries = fs.readdirSync(sessionPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const full = path.join(sessionPath, entry.name);
+        if (entry.name.startsWith('Singleton') || entry.name === 'DevToolsActivePort') {
+          try {
+            fs.rmSync(full, { force: true, recursive: true });
+            console.log(`[STORAGE] Verrou récursif purgé : ${full}`);
+          } catch(e) {}
+        } else if (entry.isDirectory() && entry.name !== 'Default' && entry.name !== 'IndexedDB') {
+          cleanupChromiumLocks(full);
+        }
+      }
+    }
+  } catch (e) {}
 }
+
+// Purge automatique globale au démarrage du serveur pour tous les profils existants
+try {
+  if (fs.existsSync(AUTH_BASE_DIR)) {
+    const entries = fs.readdirSync(AUTH_BASE_DIR);
+    for (const d of entries) {
+      if (d.startsWith('session-')) {
+        cleanupChromiumLocks(path.join(AUTH_BASE_DIR, d));
+      }
+    }
+  }
+} catch (e) {}
 
 // === S�CURIT� : D�SACTIVER X-POWERED-BY & RESTRICTION CORS ===
 app.disable('x-powered-by');
@@ -331,7 +366,6 @@ const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing C
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
 const waHeartbeats = {}; // Intervalles keep-alive Chromium / WebSocket WhatsApp
-const waErrors = {};     // Stocke les erreurs d'initialisation exactes
 
 function getClientPhone(client, userId) {
   if (waNumbers[userId] && String(waNumbers[userId]).replace(/\D/g, '').length >= 6) {
@@ -921,7 +955,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     console.warn(`[WA/GUARD] Appel authStrategy.logout() intercepté pour ${userId}. Les fichiers de session restent protégés et conservés sur disque.`);
   };
 
-  // Flags Puppeteer stables et éprouvés pour conteneur Docker / Linux
+  // Flags Puppeteer ultra-optimisés : empêchent Chromium de suspendre les timers et WebSockets en arrière-plan
   const clientOptions = {
     authStrategy,
     takeoverOnConflict: true,
@@ -934,14 +968,34 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
+        '--no-zygote',
         '--disable-gpu',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
+        '--disable-renderer-backgrounding',
+        '--disable-breakpad',
+        '--disable-component-update',
+        '--disable-default-apps',
+        '--disable-extensions',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService,NetworkServiceInProcess',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--mute-audio'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
-    }
+    },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
   };
+
+  if (cleanPhone && cleanPhone.length >= 8 && !hasExistingSession) {
+    clientOptions.pairWithPhoneNumber = {
+      phoneNumber: cleanPhone,
+      showNotification: true,
+      intervalMs: 180000
+    };
+    console.log(`[WA] Client ${userId} configuré pour code d'association (+${cleanPhone})`);
+  }
 
   const client = new Client(clientOptions);
   waClients[userId] = client;
@@ -1123,10 +1177,22 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
   client.on('message', handleAnyMessageEvent);
   client.on('message_create', handleAnyMessageEvent);
 
-  client.initialize().catch(err => {
-    console.error(`[WA] Erreur initialize client ${userId}:`, err);
+  client.initialize().catch(async (err) => {
+    console.error(`[WA] Erreur initialize client ${userId}:`, err.message);
+    if (err.message && (err.message.includes('Singleton') || err.message.includes('locked the profile') || err.message.includes('Code: 21'))) {
+      console.log(`[WA] Verrou résiduel Chromium détecté pour ${userId}. Purge et relance automatique...`);
+      cleanupChromiumLocks(authDir);
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        await client.initialize();
+        console.log(`[WA] Initialisation réussie après purge pour ${userId}`);
+        return;
+      } catch (retryErr) {
+        console.error(`[WA] Échec seconde tentative initialize:`, retryErr.message);
+      }
+    }
     waStatuses[userId] = 'ERROR';
-    waErrors[userId] = err.message || String(err);
+    waSessionsQR[userId] = err.message;
     delete waClients[userId];
   });
 
@@ -1208,8 +1274,7 @@ app.get('/api/whatsapp/debug/:userId', authMiddleware, async (req, res) => {
     phone: waNumbers[userId] || null,
     clientInfo: client && client.info ? client.info : null,
     pageUrl,
-    pageTitle,
-    lastError: waErrors[userId] || null
+    pageTitle
   });
 });
 
@@ -1277,16 +1342,16 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const authDir = getSessionDir(userId);
   const hasExistingSession = fs.existsSync(authDir);
 
-  // Si pas de client actif en mémoire mais session existante sur disque et pas d'erreur persistante
-  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING' && waStatuses[userId] !== 'ERROR') {
+  // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer silencieusement
+  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING') {
     createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(() => {});
+    waStatuses[userId] = 'RECONNECTING';
   }
 
-  // Statut réel fidèle à l'état réel de Chromium
-  let st = waStatuses[userId] || (hasExistingSession ? 'STARTING' : 'DISCONNECTED');
-  if (st !== 'CONNECTED') {
-    if (waPairingCodes[userId]) st = 'CODE_READY';
-    else if (waSessionsQR[userId]) st = 'QR_READY';
+  let st = waStatuses[userId] || (hasExistingSession ? 'CONNECTED' : 'DISCONNECTED');
+  // Pendant la reconnexion automatique en tâche de fond, maintenir 'CONNECTED' pour ne pas paniquer le frontend
+  if (st === 'AUTHENTICATED' || st === 'RECONNECTING') {
+    st = 'CONNECTED';
   }
 
   let detectedPhone = getClientPhone(client, userId);
@@ -1311,7 +1376,7 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
     qr: waSessionsQR[userId] || null,
     pairingCode: waPairingCodes[userId] || null,
     phone: waNumbers[userId] ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
-    error: waStatuses[userId] === 'ERROR' ? (waErrors[userId] || 'Erreur d\'initialisation WhatsApp') : null
+    error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null
   });
 });
 
