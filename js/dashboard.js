@@ -2464,8 +2464,14 @@ function renderRecentInteractions() {
   if (contacts.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          Aucune interaction client pour l'instant. Votre agent commercial attend vos premiers prospects.
+        <td colspan="4" style="text-align: center; padding: 36px 16px; border: none; background: transparent;">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; max-width: 440px; margin: 0 auto;">
+            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(37, 211, 102, 0.12); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 20px;">
+              <i class="fa-solid fa-comments"></i>
+            </div>
+            <div style="font-size: 14px; font-weight: 700; color: #f1f5f9;">Aucune interaction client pour l'instant</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; text-align: center;">Votre commercial IA VANDIAS est actif et accueillera vos prospects WhatsApp automatiquement dès le premier message reçu.</div>
+          </div>
         </td>
       </tr>
     `;
@@ -3904,13 +3910,271 @@ function setupActionButtons() {
     });
   }
 
-  // Notification bell button
-  const notifBtn = document.getElementById("btn-notifications");
-  if (notifBtn) {
-    notifBtn.addEventListener("click", () => {
-      showToast("Toutes vos notifications sont à jour (0 non lue).", "info");
+  // =============================================================================
+  // SYSTÈME DE NOTIFICATIONS DYNAMIQUES & PERSONNALISÉES PAR UTILISATEUR
+  // =============================================================================
+  function initUserNotifications() {
+    const notifContainer = document.getElementById("notif-dropdown-container");
+    const notifBtn = document.getElementById("btn-notifications");
+    const notifDropdown = document.getElementById("notifications-dropdown");
+    const notifBadge = document.getElementById("header-notif-count");
+    const notifPill = document.getElementById("notif-unread-pill");
+    const notifList = document.getElementById("notif-dropdown-list");
+    const markAllBtn = document.getElementById("btn-mark-all-read");
+
+    if (!notifBtn || !notifDropdown) return;
+
+    function getCurrentUserSafe() {
+      let u = {};
+      try {
+        u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+      } catch(e) {}
+      return u;
+    }
+
+    function getUserIdSafe() {
+      if (typeof getAppUserId === 'function') {
+        try {
+          const id = getAppUserId();
+          if (id) return id;
+        } catch(e) {}
+      }
+      const u = getCurrentUserSafe();
+      return u.id || 'default_user';
+    }
+
+    function getReadNotifsKey() {
+      return 'vendia_notifs_read_' + getUserIdSafe();
+    }
+
+    function getReadNotifs() {
+      try {
+        return JSON.parse(localStorage.getItem(getReadNotifsKey()) || '[]');
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function saveReadNotif(notifId) {
+      const list = getReadNotifs();
+      if (!list.includes(notifId)) {
+        list.push(notifId);
+        try {
+          localStorage.setItem(getReadNotifsKey(), JSON.stringify(list));
+        } catch(e) {}
+      }
+    }
+
+    function markAllRead() {
+      const notifs = buildUserNotificationsList();
+      const allIds = notifs.map(n => n.id);
+      try {
+        localStorage.setItem(getReadNotifsKey(), JSON.stringify(allIds));
+      } catch(e) {}
+      renderNotifications();
+      if (typeof showToast === 'function') {
+        showToast("Toutes vos notifications sont marquées comme lues.", "success");
+      }
+    }
+
+    function buildUserNotificationsList() {
+      const u = getCurrentUserSafe();
+      const userId = getUserIdSafe();
+      const notifs = [];
+
+      // 1. Notification de Bienvenue & Espace Client
+      const userName = (u.firstName ? `${u.firstName}` : (u.name || 'Partenaire')).trim();
+      notifs.push({
+        id: `welcome_${userId}`,
+        title: `Bienvenue ${userName} !`,
+        body: "Votre cockpit commercial VANDIAS AI est opérationnel. Vos conversations WhatsApp génèrent désormais des ventes de manière autonome.",
+        time: "Récemment",
+        icon: "fa-solid fa-sparkles",
+        iconBg: "rgba(37, 211, 102, 0.15)",
+        iconColor: "#25d366",
+        action: () => showView("overview", "Vue d'ensemble")
+      });
+
+      // 2. Notification Statut de Connexion WhatsApp
+      const isWaConnected = (window.currentWhatsAppStatus === 'CONNECTED' || window.currentWhatsAppStatus === 'RECONNECTING');
+      const waPhone = window.currentWhatsAppPhone || u.fullPhone || u.whatsapp_number || localStorage.getItem('vendia_connected_phone') || "";
+      
+      if (isWaConnected && waPhone) {
+        notifs.push({
+          id: `wa_connected_${userId}_${waPhone.replace(/\D/g, '')}`,
+          title: "Ligne WhatsApp Active & Prête",
+          body: `Votre numéro ${waPhone} est connecté. L'agent IA répond automatiquement à tous vos prospects.`,
+          time: "En continu",
+          icon: "fa-brands fa-whatsapp",
+          iconBg: "rgba(37, 211, 102, 0.2)",
+          iconColor: "#25d366",
+          action: () => showView("overview", "Vue d'ensemble")
+        });
+      } else {
+        notifs.push({
+          id: `wa_pending_${userId}`,
+          title: "Connectez votre numéro WhatsApp",
+          body: "Scannez votre QR code officiel Meta pour lier votre ligne et activer vos tunnels de vente.",
+          time: "Action requise",
+          icon: "fa-solid fa-qrcode",
+          iconBg: "rgba(245, 158, 11, 0.15)",
+          iconColor: "#f59e0b",
+          action: () => {
+            const qrBtn = document.getElementById("btn-link-qr") || document.getElementById("btn-banner-link-num");
+            if (qrBtn) qrBtn.click();
+            else if (typeof openWhatsAppQRModal === 'function') openWhatsAppQRModal();
+          }
+        });
+      }
+
+      // 3. Notification Forfait & Période d'Essai
+      let trialDays = 7;
+      if (typeof currentSubscriptionState !== 'undefined' && currentSubscriptionState.daysRemaining !== undefined) {
+        trialDays = currentSubscriptionState.daysRemaining;
+      }
+      const planName = (u.plan && u.plan.name) ? u.plan.name : "Essai Gratuit";
+      notifs.push({
+        id: `trial_status_${userId}`,
+        title: `${planName} (${trialDays}j restants)`,
+        body: "Accès illimité à l'IA autonome, tunnels de vente et synchronisation multi-appareils activé.",
+        time: "Aujourd'hui",
+        icon: "fa-solid fa-crown",
+        iconBg: "rgba(245, 158, 11, 0.18)",
+        iconColor: "#f59e0b",
+        action: () => openPlanModal("pro")
+      });
+
+      // 4. Notification Moteur & Sécurité Meta API
+      notifs.push({
+        id: `security_meta_${userId}`,
+        title: "Moteur IA Certifié Meta Cloud",
+        body: "Vos échanges sont sécurisés de bout en bout avec protection anti-bannissement et latence < 1s.",
+        time: "Actif",
+        icon: "fa-solid fa-shield-halved",
+        iconBg: "rgba(6, 182, 212, 0.15)",
+        iconColor: "#06b6d4",
+        action: () => showView("settings", "Paramètres du Compte")
+      });
+
+      return notifs;
+    }
+
+    function renderNotifications() {
+      const notifs = buildUserNotificationsList();
+      const readIds = getReadNotifs();
+      
+      let unreadCount = 0;
+      notifs.forEach(n => {
+        if (!readIds.includes(n.id)) unreadCount++;
+      });
+
+      // Mise à jour de la cloche
+      if (notifBadge) {
+        if (unreadCount > 0) {
+          notifBadge.textContent = unreadCount;
+          notifBadge.style.display = "flex";
+        } else {
+          notifBadge.style.display = "none";
+        }
+      }
+
+      // Mise à jour de la pilule dans le header du dropdown
+      if (notifPill) {
+        if (unreadCount > 0) {
+          notifPill.textContent = `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}`;
+          notifPill.style.display = "inline-flex";
+        } else {
+          notifPill.style.display = "none";
+        }
+      }
+
+      // Rendu des items
+      if (!notifList) return;
+      
+      if (notifs.length === 0) {
+        notifList.innerHTML = `
+          <div class="notif-empty-box">
+            <div class="notif-empty-icon"><i class="fa-regular fa-bell-slash"></i></div>
+            <div class="notif-empty-title">Aucune notification</div>
+            <div class="notif-empty-desc">Vous êtes complètement à jour.</div>
+          </div>
+        `;
+        return;
+      }
+
+      notifList.innerHTML = notifs.map(n => {
+        const isUnread = !readIds.includes(n.id);
+        return `
+          <div class="notif-item ${isUnread ? 'unread' : ''}" data-notif-id="${escapeHtml(n.id)}">
+            <div class="notif-icon-circle" style="background: ${n.iconBg}; color: ${n.iconColor};">
+              <i class="${n.icon}"></i>
+            </div>
+            <div class="notif-content">
+              <div class="notif-title-row">
+                <span class="notif-title">${escapeHtml(n.title)}</span>
+                <span class="notif-time">${escapeHtml(n.time)}</span>
+              </div>
+              <p class="notif-body">${escapeHtml(n.body)}</p>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Clic sur un item
+      notifList.querySelectorAll(".notif-item").forEach(itemEl => {
+        itemEl.addEventListener("click", () => {
+          const notifId = itemEl.getAttribute("data-notif-id");
+          if (notifId) {
+            saveReadNotif(notifId);
+            renderNotifications();
+          }
+          const notifObj = notifs.find(n => n.id === notifId);
+          if (notifObj && typeof notifObj.action === "function") {
+            notifDropdown.style.display = "none";
+            notifObj.action();
+          }
+        });
+      });
+    }
+
+    // Toggle du dropdown au clic sur la cloche
+    notifBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isHidden = (notifDropdown.style.display === "none" || !notifDropdown.style.display);
+      if (isHidden) {
+        renderNotifications();
+        notifDropdown.style.display = "flex";
+      } else {
+        notifDropdown.style.display = "none";
+      }
     });
+
+    // Bouton "Tout marquer comme lu"
+    if (markAllBtn) {
+      markAllBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        markAllRead();
+      });
+    }
+
+    // Clic extérieur pour fermer le dropdown
+    document.addEventListener("click", (e) => {
+      if (notifContainer && !notifContainer.contains(e.target)) {
+        notifDropdown.style.display = "none";
+      }
+    });
+
+    // Rendu initial
+    renderNotifications();
+
+    // Exposer globalement pour mise à jour réactive
+    window.refreshUserNotifications = renderNotifications;
   }
+
+  // Initialisation du système de notifications
+  initUserNotifications();
 
   // Test webhook
   const testWebhookBtn = document.getElementById("btn-test-webhook");
@@ -4425,11 +4689,37 @@ function setupBillingAndAffiliate() {
     document.body.classList.remove("modal-open-lock");
   }
 
-  // 1. Tous les boutons de souscription ouvrent le modal de souscription (#plan-modal)
-  // Bouton 1: En-tête supérieur
+  // Bouton 1: En-tête supérieur (Mobile : Toggle déploiement couronne / Desktop : Ouvre modal)
   const headerUpgradeBtn = document.getElementById("btn-header-upgrade");
   if (headerUpgradeBtn) {
-    headerUpgradeBtn.onclick = (e) => { e.preventDefault(); openPlanModal("pro"); };
+    let collapseTimer = null;
+    headerUpgradeBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        if (!headerUpgradeBtn.classList.contains("expanded")) {
+          // Premier clic sur mobile : Déroule la pastille ("ça sort")
+          headerUpgradeBtn.classList.add("expanded");
+          clearTimeout(collapseTimer);
+          collapseTimer = setTimeout(() => {
+            headerUpgradeBtn.classList.remove("expanded");
+          }, 6000);
+          return;
+        }
+      }
+      // Deuxième clic sur mobile ou clic direct sur desktop : Ouvre la modale
+      headerUpgradeBtn.classList.remove("expanded");
+      openPlanModal("pro");
+    };
+
+    // Fermer le déploiement si clic n'importe où ailleurs
+    document.addEventListener("click", (evt) => {
+      if (!headerUpgradeBtn.contains(evt.target)) {
+        headerUpgradeBtn.classList.remove("expanded");
+      }
+    });
   }
 
   // Bouton 2: En-tête de la vue forfaits (Passer à la Formule Pro)
@@ -5186,6 +5476,11 @@ function setupBillingAndAffiliate() {
                     }
                 }
             };
+        }
+
+        // 6. Mise à jour automatique des notifications dynamiques
+        if (typeof window.refreshUserNotifications === 'function') {
+            try { window.refreshUserNotifications(); } catch(e) {}
         }
     };
 

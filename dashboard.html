@@ -19,9 +19,9 @@
   <link rel="apple-touch-icon" href="images/logo.png">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261015_v43">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v43">
-  <link rel="stylesheet" href="css/auth.css?v=20261015_v43">
+  <link rel="stylesheet" href="css/style.css?v=20261015_v47">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v47">
+  <link rel="stylesheet" href="css/auth.css?v=20261015_v47">
 
   <!-- Auth Guard synchrone : interdiction absolue d'accès sans compte enregistré -->
   <script>
@@ -369,8 +369,8 @@
           </div>
 
           <!-- Upgrade Plan Button (Desktop & Mobile) -->
-          <button class="header-plan-badge" id="btn-header-upgrade" type="button" title="Gérer mon abonnement" onclick="openPlanModal('pro')">
-            <i class="fa-solid fa-crown" style="color: #f59e0b;"></i>
+          <button class="header-plan-badge" id="btn-header-upgrade" type="button" title="Gérer mon abonnement" aria-label="Abonnement">
+            <span class="crown-icon-wrap"><i class="fa-solid fa-crown" style="color: #f59e0b;"></i></span>
             <span class="plan-badge-mini" id="header-trial-badge">Essai gratuit · 7j restants</span>
           </button>
 
@@ -380,11 +380,38 @@
             <button class="currency-btn active" data-currency="XOF">FCFA</button>
           </div>
 
-          <!-- Notification Bell (Mobile & Desktop) -->
-          <button class="header-icon-btn mobile-notification-btn" id="btn-notifications" aria-label="Notifications" title="Notifications">
-            <i class="fa-regular fa-bell"></i>
-            <span class="notification-badge-count">3</span>
-          </button>
+          <!-- Notification Bell (Mobile & Desktop) with Dynamic User Dropdown -->
+          <div class="notifications-dropdown-container" id="notif-dropdown-container">
+            <button class="header-icon-btn mobile-notification-btn" id="btn-notifications" aria-label="Notifications" title="Notifications" type="button">
+              <i class="fa-regular fa-bell"></i>
+              <span class="notification-badge-count" id="header-notif-count" style="display: none;">0</span>
+            </button>
+
+            <!-- Menu Dropdown des Notifications Utilisateur -->
+            <div class="notifications-dropdown-menu" id="notifications-dropdown" style="display: none;">
+              <div class="notif-dropdown-header">
+                <div class="notif-header-title">
+                  <i class="fa-solid fa-bell" style="color: #25d366;"></i>
+                  <span>Notifications</span>
+                  <span class="notif-badge-pill" id="notif-unread-pill" style="display: none;">0</span>
+                </div>
+                <button type="button" class="btn-mark-all-read" id="btn-mark-all-read" title="Tout marquer comme lu">
+                  <i class="fa-solid fa-check-double"></i>
+                  <span>Tout marquer comme lu</span>
+                </button>
+              </div>
+
+              <div class="notif-dropdown-body" id="notif-dropdown-list">
+                <!-- Chargé dynamiquement selon chaque utilisateur -->
+              </div>
+
+              <div class="notif-dropdown-footer">
+                <span class="notif-footer-text">
+                  <i class="fa-solid fa-shield-halved" style="color: #25d366;"></i> Alertes intelligentes VANDIAS AI
+                </span>
+              </div>
+            </div>
+          </div>
 
           <!-- Mobile Hamburger Menu Button (Right side on mobile) -->
           <button class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Ouvrir le menu" title="Menu">
@@ -3761,10 +3788,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261015_v46"></script>
+  <script src="js/i18n.js?v=20261015_v47"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261015_v46"></script>
-  <script src="js/dashboard.js?v=20261015_v46"></script>
+  <script src="js/auth.js?v=20261015_v47"></script>
+  <script src="js/dashboard.js?v=20261015_v47"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>

@@ -864,52 +864,81 @@
 /* ==========================================================================
    VIEW: OVERVIEW (#overview)
    ========================================================================== */
-/* Welcome Banner */
+/* Welcome Banner (Desktop - Agrandie, Impactante et Prestigieuse) */
 .overview-banner {
-  background: linear-gradient(135deg, rgba(16, 32, 28, 0.85) 0%, rgba(11, 20, 36, 0.85) 100%);
-  border: 1px solid rgba(37, 211, 102, 0.22);
-  border-radius: var(--radius-xl);
-  padding: 26px 28px;
+  background: radial-gradient(circle at 85% 35%, rgba(37, 211, 102, 0.22) 0%, rgba(13, 148, 136, 0.12) 40%, rgba(10, 18, 30, 0.95) 75%), #0c1524;
+  border: 1px solid rgba(37, 211, 102, 0.28);
+  border-radius: 24px;
+  padding: 34px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  min-height: 220px;
+  margin-bottom: 24px;
 }
 
 .overview-banner::after {
   content: '';
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 280px;
-  height: 100%;
-  background: radial-gradient(circle at top right, rgba(37, 211, 102, 0.15), transparent 70%);
+  top: -60px;
+  right: -60px;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(37, 211, 102, 0.22), transparent 70%);
   pointer-events: none;
-}
-
-.banner-left {
-  max-width: 680px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   z-index: 1;
 }
 
-.banner-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+.banner-left {
+  max-width: 720px;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 2;
+  position: relative;
+}
+
+.banner-tag-pill {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
+.banner-tag-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  color: #25d366;
+  text-shadow: 0 0 16px rgba(37, 211, 102, 0.5);
+}
+
+.banner-tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #25d366;
+  box-shadow: 0 0 10px #25d366;
+}
+
+.banner-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.28;
+  color: #ffffff;
+  margin: 0;
+}
+
 .banner-subtitle {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  font-size: 14.5px;
+  color: #94a3b8;
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0;
 }
 
 .banner-badges-row {
@@ -925,9 +954,9 @@
   gap: 7px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -939,8 +968,56 @@
 .banner-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  z-index: 1;
+  gap: 14px;
+  margin-top: 6px;
+  z-index: 2;
+}
+
+/* WhatsApp Glowing Orb (Desktop: Grand, lumineux et imposant) */
+.banner-whatsapp-orb {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 18px;
+  z-index: 2;
+}
+
+.whatsapp-orb-glow {
+  position: absolute;
+  inset: -28px;
+  background: radial-gradient(circle, rgba(37, 211, 102, 0.5) 0%, rgba(18, 140, 126, 0.22) 45%, transparent 70%);
+  border-radius: 50%;
+  animation: orbPulse 3s ease-in-out infinite alternate;
+  filter: blur(10px);
+}
+
+.whatsapp-orb-icon {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 60px;
+  box-shadow: 0 10px 38px rgba(37, 211, 102, 0.58), inset 0 3px 6px rgba(255, 255, 255, 0.45);
+  position: relative;
+  z-index: 2;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.whatsapp-orb-icon:hover {
+  transform: scale(1.08) rotate(4deg);
+}
+
+@keyframes orbPulse {
+  0% { transform: scale(0.92); opacity: 0.65; }
+  100% { transform: scale(1.12); opacity: 0.95; }
 }
 
 /* Primary Action Buttons */
@@ -2800,6 +2877,91 @@
     display: flex !important;
   }
 
+  /* Mobile Plan Badge : Compact Circular Crown by default */
+  .header-plan-badge {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(37, 211, 102, 0.15)) !important;
+    border: 1.5px solid rgba(245, 158, 11, 0.55) !important;
+    box-shadow: 0 2px 12px rgba(245, 158, 11, 0.25) !important;
+  }
+
+  .header-plan-badge .crown-icon-wrap {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .header-plan-badge .crown-icon-wrap i {
+    color: #f59e0b !important;
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7));
+  }
+
+  .header-plan-badge .plan-badge-mini {
+    max-width: 0 !important;
+    opacity: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    border: none !important;
+    white-space: nowrap !important;
+    transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.35s ease, margin 0.35s ease !important;
+  }
+
+  /* Au clic sur le bouton couronne sur mobile, le texte se déploie avec animation fluide ("ça sort") */
+  .header-plan-badge.expanded {
+    width: auto !important;
+    max-width: 280px !important;
+    border-radius: 20px !important;
+    padding: 0 12px 0 8px !important;
+    gap: 6px !important;
+    border-color: #f59e0b !important;
+    box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45) !important;
+    animation: badgeExpandPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .header-plan-badge.expanded .plan-badge-mini {
+    max-width: 220px !important;
+    opacity: 1 !important;
+    padding: 3px 8px !important;
+    margin-left: 2px !important;
+    pointer-events: auto !important;
+    border: 1px solid rgba(245, 158, 11, 0.4) !important;
+    background: rgba(245, 158, 11, 0.2) !important;
+    color: #f59e0b !important;
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+  }
+
+  @keyframes badgeExpandPop {
+    0% { transform: scale(0.92); }
+    60% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+
+  .notifications-dropdown-menu {
+    position: fixed !important;
+    top: 68px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
   .header-user-avatar-mobile {
     display: flex;
     align-items: center;
@@ -3748,9 +3910,10 @@
   white-space: nowrap;
   flex-shrink: 0;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  outline: none;
 }
 
 .header-plan-badge:hover {
@@ -3758,6 +3921,24 @@
   border-color: #f59e0b;
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+}
+
+.crown-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  transition: transform 0.25s ease;
+}
+
+.crown-icon-wrap i {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+.header-plan-badge:hover .crown-icon-wrap {
+  transform: rotate(-10deg) scale(1.15);
 }
 
 .plan-badge-mini {
@@ -3769,6 +3950,248 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.3px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =============================================================================
+   NOTIFICATIONS SYSTEM & DROPDOWN (VANDIAS AI)
+   ============================================================================= */
+.notifications-dropdown-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.notifications-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 360px;
+  max-width: 92vw;
+  background: rgba(13, 20, 36, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(37, 211, 102, 0.1);
+  z-index: 1050;
+  overflow: hidden;
+  animation: notifDropdownIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes notifDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.notif-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.notif-badge-pill {
+  background: rgba(37, 211, 102, 0.2);
+  color: #25d366;
+  border: 1px solid rgba(37, 211, 102, 0.4);
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.btn-mark-all-read {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-mark-all-read:hover {
+  color: #25d366;
+  background: rgba(37, 211, 102, 0.1);
+}
+
+.notif-dropdown-body {
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notif-dropdown-body::-webkit-scrollbar {
+  width: 5px;
+}
+.notif-dropdown-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notif-item.unread {
+  background: rgba(37, 211, 102, 0.06);
+}
+
+.notif-item.unread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: #25d366;
+  box-shadow: 0 0 8px #25d366;
+}
+
+.notif-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.notif-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-item.unread .notif-title {
+  color: #ffffff;
+}
+
+.notif-time {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.notif-body {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notif-dropdown-footer {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-footer-text {
+  font-size: 11px;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notif-empty-box {
+  padding: 32px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 18px;
+}
+
+.notif-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.notif-empty-desc {
+  font-size: 11.5px;
+  color: #64748b;
 }
 
 .btn-sidebar-upgrade {
@@ -4919,16 +5342,6 @@ body.modal-open-lock {
 }
 
 @media (max-width: 600px) {
-  .header-plan-badge {
-    padding: 4px 10px;
-    height: 32px;
-    font-size: 11px;
-    gap: 5px;
-  }
-  .header-plan-badge .plan-badge-mini {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
 
   .referral-link-input-row {
     flex-direction: column;
