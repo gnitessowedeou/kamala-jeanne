@@ -19,9 +19,9 @@
   <link rel="apple-touch-icon" href="images/logo.png">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261015_v40">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v40">
-  <link rel="stylesheet" href="css/auth.css?v=20261015_v40">
+  <link rel="stylesheet" href="css/style.css?v=20261015_v42">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v42">
+  <link rel="stylesheet" href="css/auth.css?v=20261015_v42">
 
   <!-- Auth Guard synchrone : interdiction absolue d'accès sans compte enregistré -->
   <script>
@@ -2863,59 +2863,73 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
               <label class="form-label" style="margin-bottom: 8px;">Sélectionnez votre formule :</label>
               <div class="plan-modal-grid">
                 
+                <!-- Plan 1: Basic -->
                 <label class="plan-select-card" for="modal-plan-basic">
                   <input type="radio" name="modal_plan_tier" id="modal-plan-basic" value="basic">
-                  <div class="plan-select-content">
-                    <div class="plan-select-top">
-                      <span class="plan-select-name">🦾 Basic</span>
+                  <div class="plan-select-top">
+                    <div class="plan-select-left">
+                      <span class="plan-radio-circle"></span>
+                      <span class="plan-select-name">🦾 Formule Basic</span>
                       <span class="badge badge-gray">Essentiel</span>
                     </div>
                     <div class="plan-select-price">
                       <strong class="plan-price-amount" data-plan="basic">7 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
                     </div>
-                    <ul class="plan-select-features">
-                      <li>1 Agent IA Commercial</li>
-                      <li>2 500 crédits IA/mois</li>
-                      <li>Paiements Wave &amp; MoMo</li>
-                    </ul>
                   </div>
+                  <ul class="plan-select-features">
+                    <li><span>1 Agent Commercial IA WhatsApp 24h/24</span></li>
+                    <li><span>2 500 Crédits IA conversationnels / mois</span></li>
+                    <li><span>Réponses instantanées (&lt; 1s) en continu</span></li>
+                    <li><span>Encaissements Wave, MoMo &amp; Cartes</span></li>
+                    <li><span>Relances automatiques paniers abandonnés</span></li>
+                    <li><span>Campagnes sécurisées SafeSend™</span></li>
+                  </ul>
                 </label>
 
+                <!-- Plan 2: Pro (Populaire) -->
                 <label class="plan-select-card selected" for="modal-plan-pro">
-                  <div class="plan-badge-popular">POPULAIRE</div>
                   <input type="radio" name="modal_plan_tier" id="modal-plan-pro" value="pro" checked>
-                  <div class="plan-select-content">
-                    <div class="plan-select-top">
-                      <span class="plan-select-name">🚀 Pro</span>
-                      <span class="badge badge-green">-50% à vie</span>
+                  <div class="plan-select-top">
+                    <div class="plan-select-left">
+                      <span class="plan-radio-circle"></span>
+                      <span class="plan-select-name">🚀 Formule Pro</span>
+                      <span class="badge badge-green">⭐ POPULAIRE (-50% À VIE)</span>
                     </div>
                     <div class="plan-select-price">
                       <strong class="plan-price-amount" data-plan="pro">14 900</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
                     </div>
-                    <ul class="plan-select-features">
-                      <li><strong>2 Agents IA (WhatsApp + Instagram)</strong></li>
-                      <li>6 000 crédits IA/mois</li>
-                      <li>Jusqu'à 10 collaborateurs</li>
-                    </ul>
                   </div>
+                  <ul class="plan-select-features">
+                    <li><span><strong>2 Agents IA (WhatsApp + Instagram)</strong></span></li>
+                    <li><span><strong>6 000 Crédits IA conversationnels / mois</strong></span></li>
+                    <li><span><strong>Jusqu'à 10 Collaborateurs &amp; Vendeurs</strong></span></li>
+                    <li><span><strong>Flow Builder &amp; Tunnels de vente illimités</strong></span></li>
+                    <li><span><strong>Routage commercial avancé vers humains</strong></span></li>
+                    <li><span><strong>Support VIP Dédié WhatsApp 24/7</strong></span></li>
+                  </ul>
                 </label>
 
+                <!-- Plan 3: Business -->
                 <label class="plan-select-card" for="modal-plan-business">
                   <input type="radio" name="modal_plan_tier" id="modal-plan-business" value="business">
-                  <div class="plan-select-content">
-                    <div class="plan-select-top">
-                      <span class="plan-select-name">💎 Business</span>
-                      <span class="badge badge-purple">15 000 crédits</span>
+                  <div class="plan-select-top">
+                    <div class="plan-select-left">
+                      <span class="plan-radio-circle"></span>
+                      <span class="plan-select-name">💎 Formule Business</span>
+                      <span class="badge badge-purple">👑 PERFORMANCE VIP</span>
                     </div>
                     <div class="plan-select-price">
-                      <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois <span style="opacity: 0.7; font-size: 11px;">(50$)</span></small>
+                      <strong class="plan-price-amount" data-plan="business">30 000</strong> <span class="plan-price-curr">FCFA</span><small>/mois</small>
                     </div>
-                    <ul class="plan-select-features">
-                      <li><strong>5 Agents IA Omnicanal illimités</strong></li>
-                      <li>15 000 crédits IA/mois</li>
-                      <li>Account Manager VIP dédié</li>
-                    </ul>
                   </div>
+                  <ul class="plan-select-features">
+                    <li><span><strong>5 Agents IA &amp; Numéros illimités</strong></span></li>
+                    <li><span><strong>15 000 Crédits IA conversationnels / mois</strong></span></li>
+                    <li><span><strong>Collaborateurs &amp; Équipe illimités</strong></span></li>
+                    <li><span><strong>Intégration sur mesure API &amp; Webhooks ERP/CRM</strong></span></li>
+                    <li><span><strong>Account Manager VIP Dédié &amp; SLA 99.9%</strong></span></li>
+                    <li><span><strong>Audit &amp; Optimisation Master Prompt mensuel</strong></span></li>
+                  </ul>
                 </label>
 
               </div>
@@ -3743,10 +3757,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261015_v41"></script>
+  <script src="js/i18n.js?v=20261015_v42"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261015_v41"></script>
-  <script src="js/dashboard.js?v=20261015_v41"></script>
+  <script src="js/auth.js?v=20261015_v42"></script>
+  <script src="js/dashboard.js?v=20261015_v42"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>

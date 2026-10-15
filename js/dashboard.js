@@ -4250,7 +4250,7 @@ function setupBillingAndAffiliate() {
     const titleEl = document.getElementById("modal-plan-title");
     const subEl = document.getElementById("modal-plan-subtitle");
     if (step1) {
-      step1.style.display = "block";
+      step1.style.display = "flex";
       step1.classList.remove("step-hidden");
     }
     if (step2) {
@@ -4512,7 +4512,7 @@ function setupBillingAndAffiliate() {
         step1.classList.add("step-hidden");
       }
       if (step2) {
-        step2.style.display = "block";
+        step2.style.display = "flex";
         step2.classList.remove("step-hidden");
       }
       if (titleEl) titleEl.textContent = "Finaliser votre Paiement";
@@ -4535,7 +4535,7 @@ function setupBillingAndAffiliate() {
       step2.classList.add("step-hidden");
     }
     if (step1) {
-      step1.style.display = "block";
+      step1.style.display = "flex";
       step1.classList.remove("step-hidden");
     }
     if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIA";
