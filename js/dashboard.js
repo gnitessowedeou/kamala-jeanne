@@ -4983,7 +4983,7 @@ function setupBillingAndAffiliate() {
         window.currentWhatsAppStatus = status || 'DISCONNECTED';
         if (phone) window.currentWhatsAppPhone = phone;
 
-        const isConnected = (status === 'CONNECTED');
+        const isConnected = (status === 'CONNECTED' || status === 'RECONNECTING');
         let user = {};
         try { user = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
 

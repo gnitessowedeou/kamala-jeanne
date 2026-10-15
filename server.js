@@ -292,6 +292,7 @@ const waSessionsQR = {}; // Stocke les QR codes generes
 const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing Code à 8 caractères)
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
+const waHeartbeats = {}; // Intervalles keep-alive Chromium / WebSocket WhatsApp
 
 function getClientPhone(client, userId) {
   if (waNumbers[userId] && String(waNumbers[userId]).replace(/\D/g, '').length >= 6) {
@@ -693,43 +694,177 @@ RÈGLES D'EXÉCUTION LORSQUE LE CLIENT VEUT PAYER OU COMMANDE :
 }
 
 
-app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
-  const { userId, restart, phoneNumber } = req.body;
-  if (!userId) return res.status(400).json({ error: "userId manquant" });
-  const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
+// =============================================================================
+// MOTEUR UNIVERSEL DE GESTION DES MESSAGES ENTRANTS (AGENT IA WHATSAPP)
+// =============================================================================
+async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const msgTime = msg.timestamp && msg.timestamp > 1e11 ? Math.floor(msg.timestamp / 1000) : (msg.timestamp || now);
 
-  if (waStatuses[userId] === 'CONNECTED' && !restart) {
-    return res.json({ status: 'CONNECTED', message: "Bot déjà actif", phone: waNumbers[userId] || null });
+    // Ne pas ignorer les messages récents (fenêtre large de 15 minutes)
+    if (msgTime && msgTime < now - 900) {
+      console.log(`[WA] Message ignoré car trop ancien (TS: ${msgTime}, Now: ${now})`);
+      return;
+    }
+
+    // Ignorer les statuts WhatsApp et les groupes de discussion
+    if (msg.isStatus || (msg.from && msg.from.includes('@g.us')) || (msg.to && msg.to.includes('@g.us'))) {
+      return;
+    }
+
+    // Vérifier que le message contient du texte
+    if (!msg.body || msg.body.trim() === '') return;
+
+    // Éviter les boucles infinies si l'IA s'écrit à elle-même
+    if (msg.body.startsWith('[IA')) return;
+
+    console.log(`[WA] Message reçu pour client ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
+
+    // Récupérer le profil Supabase
+    let profile = null;
+    if (supabase && userId) {
+      try {
+        const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
+        profile = data;
+      } catch (dbErr) {
+        console.warn('[WA] Notice Supabase profil:', dbErr.message);
+      }
+    }
+
+    // Crédits : Donner au moins 100 crédits de test si nouveau compte
+    const credits = (profile && typeof profile.credits === 'number') ? profile.credits : 100;
+    if (credits <= 0) {
+      console.log(`[WA] Client ${userId} sans crédits. Réponse suspendue.`);
+      return;
+    }
+
+    // Déterminer le destinataire exact et les identifiants client
+    const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
+    let targetChat = msg.from;
+    if (isSelfTest && client.info && client.info.wid) {
+      targetChat = client.info.wid._serialized;
+    }
+
+    let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
+    try {
+      const cInfo = await msg.getContact();
+      if (cInfo && (cInfo.pushname || cInfo.name)) {
+        cName = cInfo.pushname || cInfo.name;
+      }
+    } catch (e) {}
+
+    // Prompt de base du compte
+    const basePrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
+      ? profile.ai_prompt 
+      : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIYA IA. Réponds de manière concise, polie et engageante avec des emojis adaptés.";
+
+    // Récupérer ou restaurer la session et l'historique conversationnel (Supabase + cache, 24h timeout)
+    const session = await getCustomerSession(userId, rawSender, cName);
+
+    // Générer la réponse de l'agent commercial d'élite VANDIYA IA
+    let aiResponse = "";
+    try {
+      aiResponse = await generateSalesAgentResponse({
+        userId,
+        phone: rawSender,
+        contactName: session.contactName || cName,
+        userMessage: msg.body,
+        isNewSession: session.isNewSession,
+        history: session.history,
+        basePrompt
+      });
+    } catch (aiErr) {
+      console.error("[WA/IA] Erreur génération IA :", aiErr.message);
+      aiResponse = session.isNewSession
+        ? `Bonjour ${session.contactName || cName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui ?`
+        : `Je vous écoute, comment puis-je vous renseigner sur nos produits et commandes ?`;
+    }
+
+    // Sauvegarder durablement la session et l'historique dans Supabase et dans le cache
+    await saveCustomerSession(
+      userId,
+      rawSender,
+      session.contactName || cName,
+      msg.body,
+      aiResponse,
+      session.history,
+      session.sessionStart
+    );
+
+    console.log(`[WA] Envoi de la réponse IA à ${targetChat} : "${aiResponse}"`);
+    
+    // Envoi sécurisé : d'abord msg.reply(), puis client.sendMessage() en secours
+    try {
+      await msg.reply(aiResponse);
+      console.log(`[WA] Réponse envoyée avec succès via msg.reply à ${targetChat}`);
+    } catch (replyErr) {
+      console.warn(`[WA] msg.reply a échoué (${replyErr.message}), essai client.sendMessage...`);
+      await client.sendMessage(targetChat, aiResponse);
+      console.log(`[WA] Réponse envoyée avec succès via client.sendMessage à ${targetChat}`);
+    }
+
+    // Déduire 1 crédit
+    if (supabase && userId && profile && profile.credits > 0) {
+      try {
+        await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
+      } catch (crErr) {}
+    }
+  } catch (err) {
+    console.error("[WA/IA] Erreur traitement message :", err);
+  }
+}
+
+// =============================================================================
+// MOTEUR CENTRALISÉ WHATSAPP MULTI-DEVICE À TRÈS HAUTE DISPONIBILITÉ
+// (Reste actif même si le smartphone est éteint, sans batterie ou hors-ligne)
+// =============================================================================
+async function createOrGetWhatsAppClient(userId, options = {}) {
+  const { restart = false, phoneNumber = null, autoRestore = false } = options;
+  const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
+  const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+  const hasExistingSession = fs.existsSync(authDir);
+
+  // 1. Si déjà actif et connecté
+  if (waClients[userId] && !restart) {
+    if (waStatuses[userId] === 'CONNECTED') {
+      return waClients[userId];
+    }
+    if (waStatuses[userId] === 'STARTING' || waStatuses[userId] === 'RECONNECTING') {
+      return waClients[userId];
+    }
   }
 
-  // Nettoyage et réinitialisation si restart ou déconnecté
-  if (restart || waStatuses[userId] === 'DISCONNECTED' || waStatuses[userId] === 'ERROR' || !waClients[userId]) {
+  // 2. Nettoyage explicite UNIQUEMENT si redémarrage forcé par l'utilisateur
+  if (restart) {
     if (waClients[userId]) {
       try { await waClients[userId].destroy(); } catch (e) {}
       delete waClients[userId];
     }
+    if (waHeartbeats[userId]) {
+      clearInterval(waHeartbeats[userId]);
+      delete waHeartbeats[userId];
+    }
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
     delete waNumbers[userId];
-    const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
-    if (fs.existsSync(authDir)) {
+    if (hasExistingSession) {
       try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
     }
-  } else if (waClients[userId]) {
-    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
-      return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
-    }
-    return res.json({ status: waStatuses[userId] || 'STARTING' });
   }
 
-  waStatuses[userId] = 'STARTING';
-  
-  // Lancement du navigateur Chromium officiel
-  const chromiumPath = getChromiumExecutablePath();
-  console.log(`[WA] Chemin Chromium détecté: ${chromiumPath || 'Puppeteer standard'}`);
+  // 3. Statut initial (si session existante sur disque, maintien du statut connecté/reconnexion sans paniquer l'interface)
+  waStatuses[userId] = hasExistingSession ? 'RECONNECTING' : 'STARTING';
+  if (cleanPhone) waNumbers[userId] = cleanPhone;
 
+  const chromiumPath = getChromiumExecutablePath();
+  console.log(`[WA] Lancement client haute résilience pour ${userId} (sessionExistante=${hasExistingSession}, pairPhone=${cleanPhone || 'non'})...`);
+
+  // Flags Puppeteer ultra-optimisés : empêchent Chromium de suspendre les timers et WebSockets en arrière-plan
   const clientOptions = {
     authStrategy: new LocalAuth({ clientId: userId }),
+    takeoverOnConflict: true,
+    takeoverTimeoutMs: 0,
     puppeteer: {
       headless: true,
       args: [
@@ -738,14 +873,27 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
-        '--disable-gpu'
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-breakpad',
+        '--disable-component-update',
+        '--disable-default-apps',
+        '--disable-extensions',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService,NetworkServiceInProcess',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--mute-audio'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     },
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
   };
 
-  if (cleanPhone && cleanPhone.length >= 8) {
+  if (cleanPhone && cleanPhone.length >= 8 && !hasExistingSession) {
     clientOptions.pairWithPhoneNumber = {
       phoneNumber: cleanPhone,
       showNotification: true,
@@ -755,18 +903,31 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   }
 
   const client = new Client(clientOptions);
-
   waClients[userId] = client;
 
-  // Quand WhatsApp génère le QR Code
-  // Scan validé : Authentification réussie
+  // Gestion des événements QR Code & Code d'association
+  client.on('qr', async (qr) => {
+    try {
+      const qrImage = await qrcode.toDataURL(qr);
+      waSessionsQR[userId] = qrImage;
+      if (!waPairingCodes[userId]) waStatuses[userId] = 'QR_READY';
+      console.log(`📱 [WA] QR Code prêt pour client ${userId}`);
+    } catch (e) {}
+  });
+
+  client.on('code', (code) => {
+    console.log(`🔑 [WA] Client ${userId} PAIRING CODE REÇU : ${code}`);
+    waPairingCodes[userId] = code;
+    waStatuses[userId] = 'CODE_READY';
+  });
+
   client.on('authenticated', () => {
-    console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (scan validé) !`);
+    console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (Session validée) !`);
     waStatuses[userId] = 'AUTHENTICATED';
-    const detectedPhone = getClientPhone(client, userId);
-    if (detectedPhone) waNumbers[userId] = detectedPhone;
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
+    const detectedPhone = getClientPhone(client, userId) || cleanPhone;
+    if (detectedPhone) waNumbers[userId] = detectedPhone;
   });
 
   client.on('loading_screen', (percent, message) => {
@@ -776,52 +937,37 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     if (detectedPhone) waNumbers[userId] = detectedPhone;
   });
 
-  client.on('qr', async (qr) => {
-    const qrImage = await qrcode.toDataURL(qr); // Convertir en image affichable
-    waSessionsQR[userId] = qrImage;
-    if (!waPairingCodes[userId]) waStatuses[userId] = 'QR_READY';
-    console.log(`\n📱 [WA] SCANNEZ CE QR CODE AVEC VOTRE SMARTPHONE :`);
-    try { require('qrcode-terminal').generate(qr, { small: true }); } catch(e) {}
-  });
-
-  client.on('code', (code) => {
-    console.log(`🔑 [WA] Client ${userId} PAIRING CODE REÇU : ${code}`);
-    waPairingCodes[userId] = code;
-    waStatuses[userId] = 'CODE_READY';
-  });
-
-  // Quand le client a scanné et est connecté
-  // Gestion de la dconnexion et rinitialisation propre
-  client.on('auth_failure', (msg) => {
-    console.error(`[WA] Échec d'authentification pour ${userId} :`, msg);
-    waStatuses[userId] = 'DISCONNECTED';
-    delete waClients[userId];
-    delete waSessionsQR[userId];
-  });
-
-  client.on('disconnected', (reason) => {
-    console.log(`[WA] Client ${userId} déconnecté :`, reason);
-    waStatuses[userId] = 'DISCONNECTED';
-    delete waClients[userId];
-    delete waSessionsQR[userId];
-    delete waNumbers[userId];
-    try { client.destroy(); } catch (e) {}
-  });
-
   client.on('ready', async () => {
     waStatuses[userId] = 'CONNECTED';
     let detectedPhone = getClientPhone(client, userId);
     if (!detectedPhone) {
       detectedPhone = await getClientPhoneAsync(client, userId);
     }
+    if (!detectedPhone && cleanPhone) {
+      detectedPhone = cleanPhone;
+    }
     if (detectedPhone) {
       waNumbers[userId] = detectedPhone;
     }
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
-    console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId]}`);
+    console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId] || 'Actif'}`);
 
-    // Synchronisation automatique immédiate dans le profil Supabase
+    // Heartbeat Keep-Alive toutes les 40 secondes : empêche Chromium / WebSocket de se déconnecter
+    if (waHeartbeats[userId]) clearInterval(waHeartbeats[userId]);
+    waHeartbeats[userId] = setInterval(async () => {
+      try {
+        if (client && client.pupPage && !client.pupPage.isClosed()) {
+          await client.pupPage.evaluate(() => {
+            return (window.Store && window.Store.State) ? window.Store.State.default.state : 'HEARTBEAT_OK';
+          });
+        }
+      } catch (hbErr) {
+        console.warn(`[WA/HEARTBEAT] Signal pour ${userId}:`, hbErr.message);
+      }
+    }, 40000);
+
+    // Synchronisation automatique dans Supabase
     if (waNumbers[userId] && supabase) {
       try {
         const fullWaPhone = '+' + String(waNumbers[userId]).replace(/^\+/, '');
@@ -833,129 +979,54 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     }
   });
 
-  // Deduplication des messages (evite de traiter 2 fois si message ET message_create se declenchent)
-  const processedMessageIds = new Set();
+  client.on('auth_failure', (msg) => {
+    console.error(`[WA] Échec d'authentification pour ${userId} :`, msg);
+    waStatuses[userId] = 'DISCONNECTED';
+    delete waClients[userId];
+    delete waSessionsQR[userId];
+    delete waPairingCodes[userId];
+  });
 
-  // Fonction universelle de reponse IA WhatsApp
-  const handleIncomingMessage = async (msg, isSelfTest = false) => {
-    try {
-      const now = Math.floor(Date.now() / 1000);
-      const msgTime = msg.timestamp && msg.timestamp > 1e11 ? Math.floor(msg.timestamp / 1000) : (msg.timestamp || now);
-
-      // Ne pas ignorer les messages recents (fenetre large de 15 minutes)
-      if (msgTime && msgTime < now - 900) {
-        console.log(`[WA] Message ignore car trop ancien (TS: ${msgTime}, Now: ${now})`);
-        return;
-      }
-
-      // Ignorer les statuts WhatsApp et les groupes de discussion
-      if (msg.isStatus || (msg.from && msg.from.includes('@g.us')) || (msg.to && msg.to.includes('@g.us'))) {
-        return;
-      }
-
-      // Verifier que le message contient du texte
-      if (!msg.body || msg.body.trim() === '') return;
-
-      // Eviter les boucles infinies si l'IA s'ecrit
-      if (msg.body.startsWith('[IA')) return;
-
-      console.log(`[WA] Message recu pour client ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
-
-      // Recuperer le profil Supabase
-      let profile = null;
-      if (supabase && userId) {
-        try {
-          const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
-          profile = data;
-        } catch (dbErr) {
-          console.warn('[WA] Notice Supabase profil:', dbErr.message);
-        }
-      }
-
-      // Credits : Donner au moins 100 credits de test si nouveau compte
-      const credits = (profile && typeof profile.credits === 'number') ? profile.credits : 100;
-      if (credits <= 0) {
-        console.log(`[WA] Client ${userId} sans credits. Reponse suspendue.`);
-        return;
-      }
-
-      // Determiner le destinataire exact et les identifiants client
-      const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
-      let targetChat = msg.from;
-      if (isSelfTest && client.info && client.info.wid) {
-        targetChat = client.info.wid._serialized;
-      }
-
-      let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
-      try {
-        const cInfo = await msg.getContact();
-        if (cInfo && (cInfo.pushname || cInfo.name)) {
-          cName = cInfo.pushname || cInfo.name;
-        }
-      } catch (e) {}
-
-      // Prompt de base du compte
-      const basePrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
-        ? profile.ai_prompt 
-        : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIYA IA. Reponds de maniere concise, polie et engageante avec des emojis adaptes.";
-
-      // Recuperer ou restaurer la session et l'historique conversationnel (Supabase + cache, 24h timeout)
-      const session = await getCustomerSession(userId, rawSender, cName);
-
-      // Generer la reponse de l'agent commercial d'elite VANDIYA IA
-      let aiResponse = "";
-      try {
-        aiResponse = await generateSalesAgentResponse({
-          userId,
-          phone: rawSender,
-          contactName: session.contactName || cName,
-          userMessage: msg.body,
-          isNewSession: session.isNewSession,
-          history: session.history,
-          basePrompt
-        });
-      } catch (aiErr) {
-        console.error("[WA/IA] Erreur generation IA :", aiErr.message);
-        aiResponse = session.isNewSession
-          ? `Bonjour ${session.contactName || cName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui ?`
-          : `Je vous ecoute, comment puis-je vous renseigner sur nos produits et commandes ?`;
-      }
-
-      // Sauvegarder durablement la session et l'historique dans Supabase et dans le cache
-      await saveCustomerSession(
-        userId,
-        rawSender,
-        session.contactName || cName,
-        msg.body,
-        aiResponse,
-        session.history,
-        session.sessionStart
-      );
-
-      console.log(`[WA] Envoi de la reponse IA a ${targetChat} : "${aiResponse}"`);
-      
-      // Envoi securise : d'abord msg.reply(), puis client.sendMessage() en secours
-      try {
-        await msg.reply(aiResponse);
-        console.log(`[WA] Reponse envoyee avec succes via msg.reply a ${targetChat}`);
-      } catch (replyErr) {
-        console.warn(`[WA] msg.reply a echoue (${replyErr.message}), essai client.sendMessage...`);
-        await client.sendMessage(targetChat, aiResponse);
-        console.log(`[WA] Reponse envoyee avec succes via client.sendMessage a ${targetChat}`);
-      }
-
-      // Deduire 1 credit
-      if (supabase && userId && profile && profile.credits > 0) {
-        try {
-          await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
-        } catch (crErr) {}
-      }
-    } catch (err) {
-      console.error("[WA/IA] Erreur traitement message :", err);
+  // HAUTE DISPONIBILITÉ MULTI-DEVICE :
+  // Le smartphone peut être éteint ou déconnecté d'Internet sans perdre la liaison WhatsApp du bot !
+  // Seul un LOGOUT explicite supprime la session.
+  client.on('disconnected', async (reason) => {
+    console.log(`[WA] Client ${userId} déconnecté. Raison : ${reason}`);
+    if (waHeartbeats[userId]) {
+      clearInterval(waHeartbeats[userId]);
+      delete waHeartbeats[userId];
     }
-  };
 
-  // Routeur universel de messages : ecoute sur les 2 evenements pour une reception 100% garantie
+    if (reason === 'LOGOUT') {
+      console.log(`[WA] Déconnexion explicite (LOGOUT) depuis le smartphone pour ${userId}. Nettoyage.`);
+      waStatuses[userId] = 'DISCONNECTED';
+      delete waClients[userId];
+      delete waSessionsQR[userId];
+      delete waPairingCodes[userId];
+      delete waNumbers[userId];
+      const curAuthDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+      if (fs.existsSync(curAuthDir)) {
+        try { fs.rmSync(curAuthDir, { recursive: true, force: true }); } catch (e) {}
+      }
+      try { await client.destroy(); } catch (e) {}
+    } else {
+      // Déconnexion réseau temporaire, mise en veille ou smartphone temporairement éteint :
+      // On conserve impérativement la session sur disque et on relance la connexion en tâche de fond !
+      console.log(`[WA] Déconnexion réseau/mise en veille (${reason}) pour ${userId}. Maintien de la session et reconnexion automatique...`);
+      waStatuses[userId] = 'RECONNECTING';
+      delete waClients[userId];
+      try { await client.destroy(); } catch (e) {}
+
+      setTimeout(() => {
+        createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
+          console.warn(`[WA] Notice reconnexion automatique ${userId}:`, err.message);
+        });
+      }, 4000);
+    }
+  });
+
+  // Déduplication & écouteurs d'événements messages (Garantit 100% des réceptions)
+  const processedMessageIds = new Set();
   const handleAnyMessageEvent = async (msg) => {
     try {
       if (!msg) return;
@@ -972,7 +1043,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
       const myPhone = client.info && client.info.wid ? client.info.wid.user : null;
       const myWid = client.info && client.info.wid ? client.info.wid._serialized : null;
 
-      // Detection message auto-test (envoye a soi-meme)
+      // Détection message auto-test
       const isSelf = Boolean(
         msg.fromMe && (
           (msg.to && myWid && msg.to === myWid) ||
@@ -982,43 +1053,81 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
         )
       );
 
-      // Si le message a ete envoye par moi a quelqu'un d'autre (conversation ou l'humain parle), on n'intervient pas
+      // Si le message a été envoyé par moi à un client (l'humain parle), on n'intervient pas
       if (msg.fromMe && !isSelf) {
         return;
       }
 
-      await handleIncomingMessage(msg, isSelf);
+      await handleIncomingWhatsAppMessage(msg, isSelf, client, userId);
     } catch (e) {
       console.error("[WA] Erreur routeur message:", e);
     }
   };
 
-  // Double ecouteur : garantit qu'aucun message n'est manque sur WhatsApp Web multi-device
   client.on('message', handleAnyMessageEvent);
   client.on('message_create', handleAnyMessageEvent);
 
   client.initialize().catch(err => {
-      console.error("Erreur WA:", err);
-      waStatuses[userId] = 'ERROR';
-      delete waClients[userId];
+    console.error(`[WA] Erreur initialize client ${userId}:`, err.message);
+    waStatuses[userId] = 'ERROR';
+    delete waClients[userId];
   });
 
-  res.json({ status: 'STARTING', message: "Génération du QR Code..." });
+  return client;
+}
+
+app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
+  const { userId, restart, phoneNumber } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId manquant" });
+  const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
+
+  if (waStatuses[userId] === 'CONNECTED' && !restart && waClients[userId]) {
+    return res.json({ status: 'CONNECTED', message: "Bot déjà actif", phone: waNumbers[userId] || null });
+  }
+
+  try {
+    await createOrGetWhatsAppClient(userId, { restart: !!restart, phoneNumber: cleanPhone });
+
+    for (let i = 0; i < 6; i++) {
+      if (waStatuses[userId] === 'CONNECTED') {
+        return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null });
+      }
+      if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
+        return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
+      }
+      await new Promise(r => setTimeout(r, 400));
+    }
+
+    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
+      return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
+    }
+    return res.json({ status: waStatuses[userId] || 'STARTING' });
+  } catch (err) {
+    console.error("[WA] Erreur start:", err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
   if (waClients[userId]) {
-    try {
-      await waClients[userId].destroy();
-    } catch (e) {}
+    try { await waClients[userId].destroy(); } catch (e) {}
     delete waClients[userId];
+  }
+  if (waHeartbeats[userId]) {
+    clearInterval(waHeartbeats[userId]);
+    delete waHeartbeats[userId];
   }
   waStatuses[userId] = 'DISCONNECTED';
   delete waSessionsQR[userId];
+  delete waPairingCodes[userId];
   delete waNumbers[userId];
-  res.json({ success: true, message: "Session WhatsApp rinitialise avec succs" });
+  const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+  if (fs.existsSync(authDir)) {
+    try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+  }
+  res.json({ success: true, message: "Session WhatsApp déconnectée et réinitialisée avec succès." });
 });
 
 // Diagnostic en direct de l'état Puppeteer (Sécurisé par authMiddleware)
@@ -1073,122 +1182,23 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: "Numéro de téléphone invalide (incluez l'indicatif pays, ex: 2250701020304)." });
   }
 
-  // 1. Si un client existe déjà et supporte requestPairingCode
-  const existingClient = waClients[userId];
-  if (existingClient && typeof existingClient.requestPairingCode === 'function' && waStatuses[userId] !== 'CONNECTED') {
-    try {
-      console.log(`[WA] Demande de Pairing Code dynamique pour ${userId} sur +${cleanPhone}...`);
-      const code = await existingClient.requestPairingCode(cleanPhone);
-      waPairingCodes[userId] = code;
-      waNumbers[userId] = cleanPhone;
-      waStatuses[userId] = 'CODE_READY';
-      return res.json({ status: 'CODE_READY', code });
-    } catch (err) {
-      console.warn(`[WA] Échec requestPairingCode direct: ${err.message}. Redémarrage du client...`);
-    }
-  }
-
-  // 2. Démarrer avec pairWithPhoneNumber
   try {
-    if (existingClient) {
-      try { await existingClient.destroy(); } catch (e) {}
-      delete waClients[userId];
-    }
-    delete waSessionsQR[userId];
-    delete waPairingCodes[userId];
-    waNumbers[userId] = cleanPhone;
-
-    const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
-    if (fs.existsSync(authDir)) {
-      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
-    }
-
-    waStatuses[userId] = 'STARTING';
-    const chromiumPath = getChromiumExecutablePath();
-
-    const client = new Client({
-      authStrategy: new LocalAuth({ clientId: userId }),
-      pairWithPhoneNumber: {
-        phoneNumber: cleanPhone,
-        showNotification: true,
-        intervalMs: 180000
-      },
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--disable-gpu'
-        ],
-        ...(chromiumPath ? { executablePath: chromiumPath } : {})
-      },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
-    });
-
-    waClients[userId] = client;
-
-    client.on('code', (code) => {
-      console.log(`🔑 [WA] Pairing Code généré pour ${userId} : ${code}`);
-      waPairingCodes[userId] = code;
-      waStatuses[userId] = 'CODE_READY';
-    });
-
-    client.on('qr', async (qr) => {
-      const qrImage = await qrcode.toDataURL(qr);
-      waSessionsQR[userId] = qrImage;
-      if (!waPairingCodes[userId]) waStatuses[userId] = 'QR_READY';
-    });
-
-    client.on('authenticated', () => {
-      console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (Code validé) !`);
-      waStatuses[userId] = 'AUTHENTICATED';
-      waNumbers[userId] = cleanPhone;
-      delete waSessionsQR[userId];
-      delete waPairingCodes[userId];
-    });
-
-    client.on('ready', async () => {
-      waStatuses[userId] = 'CONNECTED';
-      const detectedPhone = getClientPhone(client, userId) || cleanPhone;
-      if (detectedPhone) waNumbers[userId] = detectedPhone;
-      delete waSessionsQR[userId];
-      delete waPairingCodes[userId];
-      console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp (Pairing) ! Numéro: ${waNumbers[userId]}`);
-
-      if (waNumbers[userId] && supabase) {
-        try {
-          const fullWaPhone = '+' + String(waNumbers[userId]).replace(/^\+/, '');
-          await supabase.from('profiles').update({ whatsapp_number: fullWaPhone }).eq('id', userId);
-          console.log(`💾 [WA] Profil Supabase synchronisé pour ${userId} : ${fullWaPhone}`);
-        } catch (err) {
-          console.warn(`[WA] Avertissement update Supabase:`, err.message);
-        }
+    const existingClient = waClients[userId];
+    if (existingClient && typeof existingClient.requestPairingCode === 'function' && waStatuses[userId] !== 'CONNECTED') {
+      try {
+        console.log(`[WA] Demande de Pairing Code dynamique pour ${userId} sur +${cleanPhone}...`);
+        const code = await existingClient.requestPairingCode(cleanPhone);
+        waPairingCodes[userId] = code;
+        waNumbers[userId] = cleanPhone;
+        waStatuses[userId] = 'CODE_READY';
+        return res.json({ status: 'CODE_READY', code });
+      } catch (err) {
+        console.warn(`[WA] Échec requestPairingCode direct: ${err.message}. Relance du client...`);
       }
-    });
+    }
 
-    client.on('auth_failure', (msg) => {
-      console.error(`[WA] Échec auth pour ${userId} :`, msg);
-      waStatuses[userId] = 'DISCONNECTED';
-      delete waClients[userId];
-      delete waPairingCodes[userId];
-    });
+    await createOrGetWhatsAppClient(userId, { restart: true, phoneNumber: cleanPhone });
 
-    client.on('disconnected', () => {
-      waStatuses[userId] = 'DISCONNECTED';
-      delete waClients[userId];
-      delete waPairingCodes[userId];
-      delete waSessionsQR[userId];
-    });
-
-    client.initialize().catch((err) => {
-      console.error(`[WA] Erreur initialize pour ${userId}:`, err.message);
-      waStatuses[userId] = 'ERROR';
-    });
-
-    // Attente du code jusqu'à 8 secondes
     for (let i = 0; i < 16; i++) {
       await new Promise(r => setTimeout(r, 500));
       if (waPairingCodes[userId]) {
@@ -1206,10 +1216,27 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
 app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const client = waClients[userId];
-  const st = waStatuses[userId] === 'AUTHENTICATED' ? 'CONNECTED' : (waStatuses[userId] || 'DISCONNECTED');
+  const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+  const hasExistingSession = fs.existsSync(authDir);
+
+  // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer silencieusement
+  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING') {
+    createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(() => {});
+    waStatuses[userId] = 'RECONNECTING';
+  }
+
+  let st = waStatuses[userId] || (hasExistingSession ? 'CONNECTED' : 'DISCONNECTED');
+  // Pendant la reconnexion automatique en tâche de fond, maintenir 'CONNECTED' pour ne pas paniquer le frontend
+  if (st === 'AUTHENTICATED' || st === 'RECONNECTING') {
+    st = 'CONNECTED';
+  }
+
   let detectedPhone = getClientPhone(client, userId);
   if (!detectedPhone && client && st === 'CONNECTED') {
     detectedPhone = await getClientPhoneAsync(client, userId);
+  }
+  if (!detectedPhone && waNumbers[userId]) {
+    detectedPhone = waNumbers[userId];
   }
   if (detectedPhone) waNumbers[userId] = detectedPhone;
 
@@ -2244,6 +2271,29 @@ app.use((req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[KAMALA JEANNE] Moteur Backend démarré sur http://localhost:${PORT}`);
+
+  // Restauration automatique de toutes les sessions WhatsApp sauvegardées sur le serveur
+  setTimeout(() => {
+    try {
+      const authBasePath = path.join(__dirname, '.wwebjs_auth');
+      if (fs.existsSync(authBasePath)) {
+        const entries = fs.readdirSync(authBasePath);
+        for (const entry of entries) {
+          if (entry.startsWith('session-')) {
+            const userId = entry.replace('session-', '');
+            if (userId && !waClients[userId]) {
+              console.log(`🚀 [WA/STARTUP] Rétablissement automatique de la session persistante pour ${userId}...`);
+              createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
+                console.warn(`[WA/STARTUP] Notice restauration pour ${userId}:`, err.message);
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[WA/STARTUP] Erreur détection sessions existantes:', err.message);
+    }
+  }, 3500);
 });
 
 // Fix pour forcer le maintien du processus Node.js en vie
