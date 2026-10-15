@@ -449,15 +449,15 @@ async function getClientPhoneAsync(client, userId) {
   return null;
 }
 
-// Memoire contextuelle persistante & fenetre de session de 24h
-const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;  // 4 heures d'inactivite (Conforme Master Prompt)
-const MAX_HISTORY_MESSAGES = 10;                // Maintient au minimum les 8 a 10 derniers echanges
+// Memoire contextuelle persistante & fenetre de session de 4h
+const SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;  // 4 heures d'inactivite
+const MAX_HISTORY_MESSAGES = 12;                // Maintient au minimum 8 a 12 echanges pour un contexte sans faille
 const waChatHistories = new Map();              // Cache memoire haute vitesse: ${userId}:${phone} -> { history, lastActivity, sessionStart, name }
 
 /**
  * Recupere la session et l'historique d'un client.
  * Recharge automatiquement depuis Supabase en cas de redemarrage serveur.
- * Verifie si la session active a expire (> 4h d'inactivite).
+ * Conserve impérativement l'historique des 8 à 12 derniers messages pour ne jamais perdre le fil commercial.
  */
 async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
   const historyKey = `${userId}:${phone}`;
@@ -468,11 +468,13 @@ async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
   // Si non present dans le cache memoire (ex: reboot Railway / redeploiement), recharger depuis Supabase
   if (!sessionData && supabase && userId) {
     try {
+      const cleanDigits = String(phone).replace(/\D/g, '');
       const { data } = await supabase
         .from('contacts')
         .select('*')
         .eq('user_id', userId)
-        .eq('phone_number', phone)
+        .or(`phone_number.eq.${phone},phone_number.eq.${cleanDigits},phone_number.eq.+${cleanDigits}`)
+        .limit(1)
         .maybeSingle();
 
       contactRow = data;
@@ -506,23 +508,25 @@ async function getCustomerSession(userId, phone, fallbackName = 'Cher client') {
     }
   }
 
-  // Verification de la fenetre des 4h
+  // Verification de la fenetre des 4h pour savoir s'il faut saluer
   const isFirstContact = !sessionData || !sessionData.lastActivity || sessionData.lastActivity === 0;
   const elapsed = sessionData && sessionData.lastActivity ? (now - sessionData.lastActivity) : 0;
   const isExpired = elapsed > SESSION_TIMEOUT_MS;
   const isNewSession = isFirstContact || isExpired;
 
-  let activeHistory = [];
+  // RÈGLE STRICTE : Toujours conserver les 8 à 12 derniers messages d'historique
+  const activeHistory = (sessionData && Array.isArray(sessionData.history) && sessionData.history.length > 0)
+    ? sessionData.history.slice(-MAX_HISTORY_MESSAGES)
+    : [];
+
   let sessionStart = sessionData ? sessionData.sessionStart : new Date(now).toISOString();
   let contactName = sessionData ? (sessionData.name || fallbackName) : fallbackName;
 
   if (isNewSession) {
-    activeHistory = [];
     sessionStart = new Date(now).toISOString();
-    console.log(`[WA/SESSION] NOUVELLE SESSION pour ${phone} (${isFirstContact ? 'Premier contact' : 'Inactivite > 4h (' + Math.round(elapsed / 3600000) + 'h)'}). Salutation activee.`);
+    console.log(`[WA/SESSION] REPRISE / NOUVELLE SESSION pour ${phone} (${isFirstContact ? 'Premier contact' : 'Inactivite > 4h'}). Historique conserve: ${activeHistory.length} msgs.`);
   } else {
-    activeHistory = (sessionData.history || []).slice(-MAX_HISTORY_MESSAGES);
-    console.log(`[WA/SESSION] SESSION ACTIVE pour ${phone} (Derniere activite il y a ${Math.round(elapsed / 60000)} min, ${activeHistory.length} msgs). Pas de salutation.`);
+    console.log(`[WA/SESSION] SESSION EN COURS pour ${phone} (Derniere activite il y a ${Math.round(elapsed / 60000)} min, ${activeHistory.length} msgs).`);
   }
 
   return {
@@ -583,7 +587,8 @@ async function saveCustomerSession(userId, phone, contactName, userText, assista
 }
 
 /**
- * Moteur de reponse commerciale d'elite VANDIYA IA
+ * Moteur de réponse commerciale IA pour VANDIA IA
+ * Utilise strictement la configuration, le catalogue, les prix, les instructions et l'historique du compte
  */
 async function generateSalesAgentResponse({
   userId,
@@ -594,141 +599,72 @@ async function generateSalesAgentResponse({
   history,
   basePrompt
 }) {
-  const commercialGuidelines = `
-## POSTURE COMMERCIALE D'ELITE (VANDIYA IA) :
-- Tu es l'agent commercial officiel de l'entreprise sur WhatsApp.
-- Tu incarnes un excellent commercial : poli, patient, naturel, attentif, digne de confiance et convaincant.
-- Reponds UNIQUEMENT des qu'un client t'ecrit. N'initie jamais de conversation et n'envoie aucun message spontanement.
-- Ecoute attentivement : pose au maximum une seule question pertinente et courte a la fois pour comprendre les besoins specifiques du client.
-- Presentation adaptee : presente les solutions selon ses besoins avec clarte, enthousiasme et transparence sur les tarifs, en utilisant exclusivement le catalogue et les prix fournis par l'entreprise.
-- Traitement des objections : reponds calmement, poliment et honnetement aux doutes, inquietudes ou remarques sur le prix ou la fiabilite.
-- Concretisation de commande : guide progressivement le client vers la validation de sa commande et le reglement, sans pression agressive ni fausses promesses.
-- Format WhatsApp : reponses concises (3 a 5 lignes courtes), aerees, vivantes et faciles a lire sur mobile avec des emojis bien doses. Pas de longs blocs de texte indigestes.`;
+  const strictBusinessDirectives = `
+## RÈGLES STRICTES DE POSTURE COMMERCIALE (VANDIA IA) :
+1. MISSION ET POSTURE :
+- Tu es l'agent commercial officiel et exclusif de l'entreprise sur WhatsApp.
+- Tu incarnes un excellent commercial : poli, courtois, chaleureux, bienveillant, digne de confiance et persuasif.
+- Réponds UNIQUEMENT lorsqu'un client ou prospect t'écrit. N'envoie jamais de message spontanément.
+- Pose au maximum UNE seule question courte et pertinente à la fois pour guider le client vers la conclusion de sa commande.
+
+2. CATALOGUE PRODUITS ET TARIFS (RÈGLE ABSOLUE ANTI-HALLUCINATION) :
+- Tu dois utiliser EXCLUSIVEMENT les produits, services, tarifs, remises et conditions figurant dans les INSTRUCTIONS OFFICIELLES de l'entreprise fournies ci-dessous.
+- INTERDICTION FORMELLE d'inventer des produits, des prix, des fonctionnalités ou des prestations qui ne figurent pas explicitement dans les instructions de l'entreprise.
+- Si le client demande un produit ou service qui n'est pas dans le catalogue, réponds poliment qu'il n'est pas disponible actuellement et oriente-le vers les offres officielles disponibles.
+
+3. COORDONNÉES DE PAIEMENT & SÉCURITÉ :
+- Utilise EXCLUSIVEMENT les moyens de paiement (Wave, Orange Money, MTN MoMo, Moov Money, Carte, etc.), numéros officiels et noms de bénéficiaires précisés dans les instructions de l'entreprise ci-dessous.
+- N'invente JAMAIS de numéro de paiement ni de nom de titulaire.
+- INTERDICTION ABSOLUE de valider ou confirmer un paiement à l'aveugle. Demande poliment la capture d'écran ou la référence du transfert au client et informe-le avec bienveillance que sa commande sera validée dès confirmation par le responsable.
+- Ne demande JAMAIS de code secret, code PIN, mot de passe bancaire ou identifiant confidentiel.
+
+4. FORMAT WHATSAPP :
+- Réponses courtes (3 à 5 lignes concises), aérées, élégantes et parfaitement lisibles sur smartphone, avec des puces et des émojis bien dosés (😊, ✨, 📦, 💳).
+- Interdiction de faire de longs blocs de texte indigestes.
+
+5. CONTINUITÉ ET FLUIDITÉ CONVERSATIONNELLE :
+- Consulte attentivement l'historique des derniers échanges ci-dessous. Maintiens une parfaite cohérence avec ce qui a déjà été dit.
+- Ne redis pas "Bonjour" si la conversation est déjà entamée. Réponds directement au client et avance vers l'objectif commercial.
+`;
+
+  const userInstructions = (basePrompt && basePrompt.trim().length > 10)
+    ? `\n## INSTRUCTIONS, CATALOGUE ET COORDONNÉES FOURNIS PAR L'ENTREPRISE :\n${basePrompt.trim()}`
+    : `\n## INSTRUCTIONS DE L'ENTREPRISE :\nTu es l'agent commercial de l'entreprise. Accueille le client chaleureusement, renseigne-le avec précision sur nos offres et guide-le vers la finalisation de sa commande.`;
 
   const sessionDirectives = isNewSession
-    ? `
-[REGLE DE SESSION - PREMIER CONTACT OU RETOUR APRES PLUS DE 4H D'INACTIVITE] :
-- Salue chaleureusement et poliment le client UNE SEULE FOIS (ex: "Bonjour ${contactName} ! Bienvenue chez nous 😊").
-- Si le client pose directement une question, salue-le tres brievement et reponds directement a sa question.
-- Ne repete JAMAIS cette formule d'accueil aux messages suivants.`
-    : `
-[REGLE DE FLUIDITE STRICTE - CONVERSATION EN COURS DANS LA SESSION ACTIVE (< 4H)] :
-- INTERDICTION FORMELLE ET ABSOLUE de redire "Bonjour", "Bonsoir", "Bienvenue chez nous" ou de te representer.
-- Reprends DIRECTEMENT et NATURELLEMENT le fil de la conversation.
-- Reponds precisement et directement au dernier message du client en tenant compte du contexte memorise ci-dessous.`;
+    ? `\n[CONSIGNE D'ACCUEIL] : Si c'est le tout premier message, salue chaleureusement le client (ex: "Bonjour ${contactName || ''} ! Bienvenue 😊"). Si la discussion est déjà engagée dans l'historique, poursuis naturellement.`
+    : `\n[CONSIGNE DE SUIVI] : La discussion est active, réponds directement à la demande du client sans formule d'accueil répétitive.`;
 
-  // Détection du pays du client par l'indicatif téléphonique
-  const cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
-  let detectedCountry = "Général / UEMOA";
-  let recommendedPaymentText = "";
+  const systemMessageContent = `${strictBusinessDirectives}\n${userInstructions}\n${sessionDirectives}`;
 
-  if (cleanPhone.startsWith('226')) {
-    detectedCountry = "Burkina Faso (Indicatif +226)";
-    recommendedPaymentText = "👉 Pour le Burkina Faso, propose prioritairement :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('229')) {
-    detectedCountry = "Bénin (Indicatif +229)";
-    recommendedPaymentText = "👉 Pour le Bénin, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('225')) {
-    detectedCountry = "Côte d'Ivoire (Indicatif +225)";
-    recommendedPaymentText = "👉 Pour la Côte d'Ivoire, propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MoMo au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('221')) {
-    detectedCountry = "Sénégal (Indicatif +221)";
-    recommendedPaymentText = "👉 Pour le Sénégal, propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('228')) {
-    detectedCountry = "Togo (Indicatif +228)";
-    recommendedPaymentText = "👉 Pour le Togo, propose prioritairement :\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('223')) {
-    detectedCountry = "Mali (Indicatif +223)";
-    recommendedPaymentText = "👉 Pour le Mali, propose prioritairement :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('227')) {
-    detectedCountry = "Niger (Indicatif +227)";
-    recommendedPaymentText = "👉 Pour le Niger, propose prioritairement :\n- MOOV MONEY / FLOOZ au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('224')) {
-    detectedCountry = "Guinée (Indicatif +224)";
-    recommendedPaymentText = "👉 Pour la Guinée, propose prioritairement :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('237')) {
-    detectedCountry = "Cameroun (Indicatif +237)";
-    recommendedPaymentText = "👉 Pour le Cameroun, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
-  } else if (cleanPhone.startsWith('242')) {
-    detectedCountry = "Congo-Brazzaville (Indicatif +242)";
-    recommendedPaymentText = "👉 Pour le Congo-Brazzaville, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
-  } else if (cleanPhone.startsWith('243')) {
-    detectedCountry = "RD Congo (Indicatif +243)";
-    recommendedPaymentText = "👉 Pour la RD Congo, propose prioritairement :\n- ORANGE MONEY / AIRTEL / M-PESA au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
-  } else if (cleanPhone.startsWith('241')) {
-    detectedCountry = "Gabon (Indicatif +241)";
-    recommendedPaymentText = "👉 Pour le Gabon, propose prioritairement :\n- MOOV MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
-  } else if (cleanPhone.startsWith('234')) {
-    detectedCountry = "Nigeria (Indicatif +234)";
-    recommendedPaymentText = "👉 Pour le Nigeria, propose prioritairement :\n- Paiement instantané sécurisé par Carte Bancaire (Visa/Mastercard) ou lien de paiement officiel VANDIAS";
-  } else if (cleanPhone.startsWith('233')) {
-    detectedCountry = "Ghana (Indicatif +233)";
-    recommendedPaymentText = "👉 Pour le Ghana, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte Bancaire (Visa/Mastercard)";
-  } else if (cleanPhone.startsWith('220')) {
-    detectedCountry = "Gambie (Indicatif +220)";
-    recommendedPaymentText = "👉 Pour la Gambie, propose prioritairement :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)";
-  } else if (cleanPhone.startsWith('231') || cleanPhone.startsWith('232') || cleanPhone.startsWith('245') || cleanPhone.startsWith('238') || cleanPhone.startsWith('222')) {
-    detectedCountry = "Zone Ouest-Africaine (Liberia, Sierra Leone, Guinée-Bissau, Cap-Vert, Mauritanie)";
-    recommendedPaymentText = "👉 Propose les options disponibles :\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard sécurisée";
-  } else {
-    detectedCountry = "International / Diaspora / Tous pays";
-    recommendedPaymentText = "👉 Propose les options disponibles :\n- WAVE au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- ORANGE MONEY au +226 05 15 84 94 (Nom : Gnitou Essowedeou)\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte Bancaire internationale (Visa / Mastercard)";
-  }
-
-  const hasCustomPayments = Boolean(basePrompt && (
-    basePrompt.includes("PAIEMENT") || 
-    basePrompt.includes("Wave") || 
-    basePrompt.includes("Orange Money") || 
-    basePrompt.includes("MTN") || 
-    basePrompt.includes("Moov") || 
-    basePrompt.includes("+")
-  ));
-
-  const paymentRoutingGuidelines = `
-## COORDONNÉES DE PAIEMENT OFFICIELLES & ROUTAGE PAR PAYS (OBLIGATOIRE & IMMÉDIAT) :
-Tu as un accès DIRECT, PERMANENT et COMPLET aux informations de paiement officielles.
-INTERDICTION FORMELLE ET ABSOLUE de dire que tu n'as pas accès aux numéros, que tu dois vérifier auprès du responsable ou de faire attendre le client !
-
-PAYS DÉTECTÉ DU CLIENT : ${detectedCountry} (Numéro client: ${phone})
-${hasCustomPayments ? "👉 PRIORITÉ : Utilise en priorité absolue les coordonnées et modalités de paiement définies par l'entreprise dans le prompt configuré ci-dessus." : recommendedPaymentText}
-
-${hasCustomPayments ? "TABLEAU DES MOYENS DE PAIEMENT DE SECOURS (Si non spécifié par l'entreprise) :" : "TABLEAU COMPLET DES MOYENS DE PAIEMENT OFFICIELS :"}
-- WAVE (CI, Sénégal, Burkina, Bénin, etc.) : +226 05 15 84 94 | Titulaire officiel : Gnitou Essowedeou
-- ORANGE MONEY (Burkina Faso, Mali, etc.) : +226 05 15 84 94 | Titulaire officiel : Gnitou Essowedeou
-- MTN MOBILE MONEY (Bénin, Togo, etc.) : +229 01 62 63 95 93 | Titulaire officiel : Gnitou Essowedeou
-- MOOV MONEY / FLOOZ : +229 01 62 63 95 93 | Titulaire officiel : Gnitou Essowedeou
-
-RÈGLES D'EXÉCUTION LORSQUE LE CLIENT VEUT PAYER OU COMMANDE :
-1. Dès que le client demande à payer, confirme sa commande ou demande le numéro, donne-lui IMMÉDIATEMENT le moyen et numéro adapté à son pays (priorité aux coordonnées de l'entreprise si configurées, sinon les coordonnées officielles ci-dessus).
-2. Si le client demande un moyen spécifique (ex: "Donne-moi Wave", "Je veux Orange Money", "As-tu MTN ?"), donne-lui IMMÉDIATEMENT les coordonnées correspondantes.
-3. Rappelle toujours le montant exact selon le produit ou service choisi dans le catalogue officiel de l'entreprise.
-4. Demande poliment la preuve ou capture de transfert Mobile Money, et informe avec transparence que la commande sera validée dès confirmation officielle du paiement.
-5. Ne demande JAMAIS de code secret, code PIN ou mot de passe bancaire/Mobile Money.`;
-
-  const systemMessageContent = `${basePrompt || "Tu es l'agent commercial officiel de l'entreprise sur WhatsApp."}\n\n${commercialGuidelines}\n\n${paymentRoutingGuidelines}\n\n${sessionDirectives}`;
+  // Conserver au minimum 8 à 12 messages d'historique
+  const recentHistory = Array.isArray(history) ? history.slice(-12) : [];
 
   const openAiMessages = [
     { role: 'system', content: systemMessageContent },
-    ...history,
+    ...recentHistory,
     { role: 'user', content: userMessage }
   ];
 
   if (!openai) {
+    console.warn("[WA/AI] Client OpenAI non initialisé. Vérifiez OPENAI_API_KEY.");
     return isNewSession
-      ? `Bonjour ${contactName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui avec nos outils et formations ?`
-      : `Je note votre demande. Souhaitez-vous des details complementaires pour finaliser votre commande ?`;
+      ? `Bonjour ${contactName || ''} ! Bienvenue chez nous 😊 Comment puis-je vous renseigner sur nos produits aujourd'hui ?`
+      : `Je note votre demande. Souhaitez-vous des détails complémentaires pour finaliser votre commande ?`;
   }
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: openAiMessages,
-    max_tokens: 350,
+    max_tokens: 450,
     temperature: 0.7
   });
 
-  return (completion.choices && completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content)
-    ? completion.choices[0].message.content
-    : "Je reste a votre entiere disposition pour vous accompagner dans votre commande !";
+  const replyText = (completion.choices && completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content)
+    ? completion.choices[0].message.content.trim()
+    : "Je reste à votre entière disposition pour vous accompagner dans votre commande !";
+
+  return replyText;
 }
 
 
@@ -740,9 +676,9 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     const now = Math.floor(Date.now() / 1000);
     const msgTime = msg.timestamp && msg.timestamp > 1e11 ? Math.floor(msg.timestamp / 1000) : (msg.timestamp || now);
 
-    // Ne pas ignorer les messages récents (fenêtre large de 15 minutes)
-    if (msgTime && msgTime < now - 900) {
-      console.log(`[WA] Message ignoré car trop ancien (TS: ${msgTime}, Now: ${now})`);
+    // Ignorer uniquement les messages réellement anciens (plus de 2 heures) reçus lors du rattrapage historique
+    if (msgTime && msgTime < now - 7200) {
+      console.log(`[WA] Message historique ignoré (TS: ${msgTime}, Now: ${now})`);
       return;
     }
 
@@ -754,16 +690,20 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     // Vérifier que le message contient du texte
     if (!msg.body || msg.body.trim() === '') return;
 
-    // Éviter les boucles infinies si l'IA s'écrit à elle-même
-    if (msg.body.startsWith('[IA')) return;
+    // Éviter les boucles infinies
+    if (msg.body.startsWith('[IA') || msg.body.startsWith('[BOT')) return;
 
-    console.log(`[WA] Message reçu pour client ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
+    console.log(`[WA/INCOMING] Message reçu pour utilisateur ${userId} de ${msg.from} (autoTest=${isSelfTest}): "${msg.body}"`);
 
-    // Récupérer le profil Supabase
+    // Récupérer le profil Supabase spécifique à cet utilisateur
     let profile = null;
     if (supabase && userId) {
       try {
-        const { data } = await supabase.from('profiles').select('credits, ai_prompt, created_at').eq('id', userId).single();
+        const { data } = await supabase
+          .from('profiles')
+          .select('credits, ai_prompt, created_at, full_name, whatsapp_number')
+          .eq('id', userId)
+          .single();
         profile = data;
       } catch (dbErr) {
         console.warn('[WA] Notice Supabase profil:', dbErr.message);
@@ -773,34 +713,43 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     // Crédits : Donner au moins 100 crédits de test si nouveau compte
     const credits = (profile && typeof profile.credits === 'number') ? profile.credits : 100;
     if (credits <= 0) {
-      console.log(`[WA] Client ${userId} sans crédits. Réponse suspendue.`);
+      console.log(`[WA] Utilisateur ${userId} sans crédits. Réponse suspendue.`);
       return;
     }
 
-    // Déterminer le destinataire exact et les identifiants client
-    const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (msg.from ? msg.from.split('@')[0] : 'Inconnu');
-    let targetChat = msg.from;
-    if (isSelfTest && client.info && client.info.wid) {
-      targetChat = client.info.wid._serialized;
-    }
-
+    // Résolution sécurisée du numéro de téléphone et du nom de contact
     let cName = isSelfTest ? 'Auto-Test (Moi)' : 'Client WhatsApp';
+    let cleanPhone = null;
+
     try {
-      const cInfo = await msg.getContact();
-      if (cInfo && (cInfo.pushname || cInfo.name)) {
-        cName = cInfo.pushname || cInfo.name;
+      const contact = await Promise.race([
+        msg.getContact(),
+        new Promise((_, r) => setTimeout(() => r(null), 2500))
+      ]);
+      if (contact) {
+        if (contact.number) cleanPhone = String(contact.number).replace(/\D/g, '');
+        if (contact.pushname || contact.name) cName = contact.pushname || contact.name;
       }
     } catch (e) {}
 
-    // Prompt de base du compte
+    if (!cleanPhone && msg.author) {
+      cleanPhone = String(msg.author).split('@')[0].replace(/\D/g, '');
+    }
+    if (!cleanPhone && msg.from) {
+      cleanPhone = String(msg.from).split('@')[0].replace(/\D/g, '');
+    }
+
+    const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (cleanPhone || 'Inconnu');
+
+    // Prompt configuré spécifiquement par cet utilisateur
     const basePrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
       ? profile.ai_prompt 
-      : "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIYA IA. Réponds de manière concise, polie et engageante avec des emojis adaptés.";
+      : null;
 
-    // Récupérer ou restaurer la session et l'historique conversationnel (Supabase + cache, 24h timeout)
+    // Récupérer ou restaurer la session et l'historique conversationnel (maintient au moins 8 à 12 messages)
     const session = await getCustomerSession(userId, rawSender, cName);
 
-    // Générer la réponse de l'agent commercial d'élite VANDIYA IA
+    // Générer la réponse de l'agent commercial VANDIA IA
     let aiResponse = "";
     try {
       aiResponse = await generateSalesAgentResponse({
@@ -815,7 +764,7 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     } catch (aiErr) {
       console.error("[WA/IA] Erreur génération IA :", aiErr.message);
       aiResponse = session.isNewSession
-        ? `Bonjour ${session.contactName || cName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui ?`
+        ? `Bonjour ${session.contactName || cName} ! Bienvenue 😊 Comment puis-je vous aider aujourd'hui ?`
         : `Je vous écoute, comment puis-je vous renseigner sur nos produits et commandes ?`;
     }
 
@@ -830,26 +779,79 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
       session.sessionStart
     );
 
-    console.log(`[WA] Envoi de la réponse IA à ${targetChat} : "${aiResponse}"`);
-    
-    // Envoi sécurisé : d'abord msg.reply(), puis client.sendMessage() en secours
+    console.log(`[WA/REPLY] Envoi de la réponse IA vers ${msg.from} : "${aiResponse.substring(0, 80)}..."`);
+
+    // DÉLIVRANCE MULTI-NIVEAUX GARANTIE À 100% (Gère nativement @c.us et @lid)
+    let delivered = false;
+
+    // Niveau 1 : Envoi via l'objet Chat (recommandé et officiel whatsapp-web.js)
     try {
-      await msg.reply(aiResponse);
-      console.log(`[WA] Réponse envoyée avec succès via msg.reply à ${targetChat}`);
-    } catch (replyErr) {
-      console.warn(`[WA] msg.reply a échoué (${replyErr.message}), essai client.sendMessage...`);
-      await client.sendMessage(targetChat, aiResponse);
-      console.log(`[WA] Réponse envoyée avec succès via client.sendMessage à ${targetChat}`);
+      const chat = await Promise.race([
+        msg.getChat(),
+        new Promise((_, r) => setTimeout(() => r(null), 3000))
+      ]);
+      if (chat && typeof chat.sendMessage === 'function') {
+        try { await chat.sendStateTyping(); } catch(e) {}
+        await new Promise(r => setTimeout(r, 600));
+        const sent = await chat.sendMessage(aiResponse);
+        if (sent) delivered = true;
+        console.log(`[WA/DELIVERED] Réponse IA délivrée avec succès via chat.sendMessage à ${chat.id ? chat.id._serialized : msg.from}`);
+      }
+    } catch (chatSendErr) {
+      console.warn(`[WA/DELIVERY] chat.sendMessage a échoué: ${chatSendErr.message}`);
     }
 
-    // Déduire 1 crédit
-    if (supabase && userId && profile && profile.credits > 0) {
+    // Niveau 2 : client.sendMessage avec cibles candidates (@c.us et @lid)
+    if (!delivered) {
+      const candidates = [];
+      if (isSelfTest && client.info && client.info.wid) {
+        candidates.push(client.info.wid._serialized);
+      } else {
+        if (msg.from) candidates.push(msg.from);
+        if (cleanPhone && cleanPhone.length >= 8) candidates.push(`${cleanPhone}@c.us`);
+      }
+
+      for (const target of candidates) {
+        if (delivered) break;
+        let formattedTarget = target;
+        if (formattedTarget.includes('@s.whatsapp.net')) {
+          formattedTarget = formattedTarget.replace('@s.whatsapp.net', '@c.us');
+        } else if (!formattedTarget.includes('@')) {
+          formattedTarget = `${formattedTarget.replace(/\D/g, '')}@c.us`;
+        }
+
+        try {
+          const sent = await client.sendMessage(formattedTarget, aiResponse);
+          if (sent) {
+            delivered = true;
+            console.log(`[WA/DELIVERED] Réponse IA délivrée via client.sendMessage à ${formattedTarget}`);
+            break;
+          }
+        } catch (directErr) {
+          console.warn(`[WA/DELIVERY] client.sendMessage direct vers ${formattedTarget} a échoué: ${directErr.message}`);
+        }
+      }
+    }
+
+    // Niveau 3 : msg.reply en ultime secours
+    if (!delivered) {
+      try {
+        const sent = await msg.reply(aiResponse);
+        if (sent) delivered = true;
+        console.log(`[WA/DELIVERED] Réponse IA délivrée via msg.reply en ultime secours`);
+      } catch (replyErr) {
+        console.error(`[WA/DELIVERY] Échec définitif délivrance réponse: ${replyErr.message}`);
+      }
+    }
+
+    // Déduire 1 crédit si le message a été délivré
+    if (delivered && supabase && userId && profile && profile.credits > 0) {
       try {
         await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
       } catch (crErr) {}
     }
   } catch (err) {
-    console.error("[WA/IA] Erreur traitement message :", err);
+    console.error("[WA/IA] Erreur globale traitement message :", err);
   }
 }
 
@@ -1088,7 +1090,10 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
   const handleAnyMessageEvent = async (msg) => {
     try {
       if (!msg) return;
-      const msgId = msg.id ? (msg.id._serialized || msg.id.id) : null;
+      const msgId = typeof msg.id === 'string'
+        ? msg.id
+        : (msg.id ? (msg.id._serialized || msg.id.id) : null) || `${msg.from || 'u'}_${msg.timestamp || 0}_${(msg.body || '').substring(0, 15)}`;
+
       if (msgId) {
         if (processedMessageIds.has(msgId)) return;
         processedMessageIds.add(msgId);
@@ -1111,8 +1116,20 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
         )
       );
 
-      // Si le message a été envoyé par moi à un client (l'humain parle), on n'intervient pas
+      // Si le message a été envoyé par moi à un client (l'humain parle), on n'intervient pas mais on note dans l'historique
       if (msg.fromMe && !isSelf) {
+        try {
+          if (msg.body && !msg.body.startsWith('[IA') && !msg.body.startsWith('[BOT')) {
+            const customerPhone = msg.to ? msg.to.split('@')[0].replace(/\D/g, '') : null;
+            if (customerPhone && customerPhone.length >= 8) {
+              const historyKey = `${userId}:${customerPhone}`;
+              const cached = waChatHistories.get(historyKey) || { history: [], lastActivity: Date.now() };
+              cached.history = [...(cached.history || []), { role: 'assistant', content: msg.body }].slice(-MAX_HISTORY_MESSAGES);
+              cached.lastActivity = Date.now();
+              waChatHistories.set(historyKey, cached);
+            }
+          }
+        } catch (hErr) {}
         return;
       }
 
@@ -1432,7 +1449,7 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
     if (!message || typeof message !== 'string') return res.status(400).json({ error: "Message requis" });
     if (message.length > 1000) return res.status(400).json({ error: "Message trop long (max 1000 caractères)" });
 
-    let systemPrompt = "Tu es l'agent commercial officiel de VANDIYA IA sur WhatsApp. Sois chaleureux, persuasif, très poli, attentif et guide le client avec bienveillance.";
+    let systemPrompt = "Tu es l'agent commercial officiel de VANDIA IA sur WhatsApp. Sois chaleureux, persuasif, très poli, attentif et guide le client avec bienveillance.";
     if (userId && supabase) {
       try {
         const { data: profile } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
@@ -1440,11 +1457,11 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
       } catch (pErr) {}
     }
 
-    // Gestion de session
+    // Gestion de session (Conserve le contexte d'au moins 8 à 12 messages)
     const session = await getCustomerSession(userId || 'test_user', phone, 'Client Test');
     if (simulateInactivityHours >= 4) {
       session.isNewSession = true;
-      session.history = [];
+      session.history = session.history.slice(-12);
     }
 
     const reply = await generateSalesAgentResponse({
