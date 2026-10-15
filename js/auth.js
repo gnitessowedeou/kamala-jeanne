@@ -800,47 +800,29 @@
      * ==============================================================================
      */
     async updateProfile(updates) {
-      let current = this.getCurrentUser();
-      if (!current) {
-        current = {
-          id: null,
-          firstName: "",
-          lastName: "",
-          email: "",
-          phoneCountry: "+228",
-          phoneNumber: "",
-          fullPhone: "",
-          company: "Mon Entreprise",
-          role: "Administrateur"
-        };
-      }
+      const current = this.getCurrentUser();
 
       if (updates.phoneNumber && !this.isValidPhone(updates.phoneNumber)) {
-        return { success: false, error: "Numéro WhatsApp invalide (minimum 6 chiffres)." };
+        return { success: false, error: "Numéro WhatsApp invalide." };
       }
 
-      const phoneCountry = updates.phoneCountry || current.phoneCountry || "+228";
-      const phoneNumber = updates.phoneNumber !== undefined ? updates.phoneNumber : (current.phoneNumber || "");
-      const fullPhone = phoneNumber ? this.formatPhone(phoneCountry, phoneNumber) : "";
+      const fullPhone = this.formatPhone(
+        updates.phoneCountry || current.phoneCountry,
+        updates.phoneNumber || current.phoneNumber
+      );
 
       const updated = {
         ...current,
         ...updates,
-        phoneCountry: phoneCountry,
-        phoneNumber: phoneNumber,
         fullPhone: fullPhone
       };
 
       // Synchronisation directe avec la table 'profiles' de Supabase
-      const userId = current.id || updated.id;
-      const userEmail = current.email || updated.email;
-
-      if (userId) {
+      if (current.id) {
         try {
-          await SupabaseRest.updateProfile(userId, {
+          await SupabaseRest.updateProfile(current.id, {
             first_name: updated.firstName || "",
             last_name: updated.lastName || "",
-            full_name: `${updated.firstName || ""} ${updated.lastName || ""}`.trim(),
             whatsapp_number: fullPhone,
             avatar_url: updated.avatarUrl || current.avatarUrl || "",
             updated_at: new Date().toISOString()
@@ -848,25 +830,9 @@
         } catch (err) {
           console.warn("Avertissement mise à jour table profiles:", err);
         }
-      } else if (userEmail) {
-        try {
-          await SupabaseRest.request(`/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}`, "PATCH", {
-            first_name: updated.firstName || "",
-            last_name: updated.lastName || "",
-            full_name: `${updated.firstName || ""} ${updated.lastName || ""}`.trim(),
-            whatsapp_number: fullPhone,
-            avatar_url: updated.avatarUrl || current.avatarUrl || "",
-            updated_at: new Date().toISOString()
-          });
-        } catch (err) {
-          console.warn("Avertissement mise à jour table profiles par email:", err);
-        }
       }
 
       this.saveCurrentUser(updated);
-      try {
-        if (fullPhone) localStorage.setItem('vendia_connected_phone', fullPhone);
-      } catch(e) {}
       this.syncProfileUI(updated);
       if (typeof window.applyWhatsAppState === 'function') {
         window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', updated.fullPhone || '');
@@ -919,7 +885,14 @@
 
         
       // 3. Statut WhatsApp connecté personnel
-      let userPhone = (user.fullPhone || user.whatsapp_number || user.phone || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
+      let userPhone = (
+        window.currentWhatsAppPhone || 
+        localStorage.getItem('vendia_connected_phone') || 
+        user.fullPhone || 
+        user.whatsapp_number || 
+        user.phone || 
+        ""
+      ).toString().trim();
       if (userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré' || userPhone === 'WhatsApp non configuré') {
         userPhone = "";
       }
@@ -931,10 +904,23 @@
         el.textContent = user.firstName || "Cher Partenaire";
       });
 
+      const isWaConnected = (window.currentWhatsAppStatus === 'CONNECTED');
       const headerNum = document.getElementById("header-connected-num");
       const sidebarNum = document.getElementById("sidebar-connected-num");
-      if (headerNum) headerNum.textContent = hasPhone ? formattedPhone : "WhatsApp non configuré";
-      if (sidebarNum) sidebarNum.textContent = hasPhone ? formattedPhone : "Non configuré";
+      if (headerNum) {
+        if (isWaConnected) {
+          headerNum.textContent = formattedPhone || "Ligne Connectée";
+        } else {
+          headerNum.textContent = hasPhone ? formattedPhone : "WhatsApp non configuré";
+        }
+      }
+      if (sidebarNum) {
+        if (isWaConnected) {
+          sidebarNum.textContent = formattedPhone || "IA Active";
+        } else {
+          sidebarNum.textContent = hasPhone ? formattedPhone : "Non configuré";
+        }
+      }
 
       if (typeof window.applyWhatsAppState === 'function') {
         window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', formattedPhone);

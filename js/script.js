@@ -361,7 +361,7 @@ function initAuthModal() {
       if (formSignup) formSignup.style.display = "block";
       if (formLogin) formLogin.style.display = "none";
       if (formForgot) formForgot.style.display = "none";
-      if (socialSection) socialSection.style.display = "block";
+      if (socialSection) socialSection.style.display = "none";
       if (footerPrompt) footerPrompt.style.display = "block";
       if (footerText) footerText.textContent = "Déjà un compte VANDIA ?";
       if (footerAction) footerAction.textContent = "Se connecter";
@@ -371,7 +371,7 @@ function initAuthModal() {
       if (formSignup) formSignup.style.display = "none";
       if (formLogin) formLogin.style.display = "block";
       if (formForgot) formForgot.style.display = "none";
-      if (socialSection) socialSection.style.display = "block";
+      if (socialSection) socialSection.style.display = "none";
       if (footerPrompt) footerPrompt.style.display = "block";
       if (footerText) footerText.textContent = "Pas encore de compte ?";
       if (footerAction) footerAction.textContent = "S'inscrire gratuitement";

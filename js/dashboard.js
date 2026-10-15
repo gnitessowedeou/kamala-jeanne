@@ -3932,13 +3932,8 @@ function setupActionButtons() {
 }
 
 function showToast(message, type = "info") {
-  let container = document.getElementById("toast-container");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "toast-container";
-    container.setAttribute("aria-live", "polite");
-    document.body.appendChild(container);
-  }
+  const container = document.getElementById("toast-container");
+  if (!container) return;
 
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
@@ -3946,30 +3941,26 @@ function showToast(message, type = "info") {
   const iconMap = {
     success: "fa-circle-check",
     error: "fa-triangle-exclamation",
-    warning: "fa-triangle-exclamation",
     info: "fa-circle-info"
   };
 
   const iconColor = {
     success: "var(--whatsapp-green)",
     error: "var(--rose)",
-    warning: "#f59e0b",
     info: "var(--cyan)"
   };
 
   toast.innerHTML = `
     <i class="fa-solid ${iconMap[type] || 'fa-circle-info'}" style="color: ${iconColor[type] || 'var(--cyan)'}; font-size: 16px;"></i>
     <span style="flex: 1;">${escapeHtml(message)}</span>
-    <button style="color: var(--text-muted); padding: 2px 6px; background: none; border: none; cursor: pointer;" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+    <button style="color: var(--text-muted); padding: 2px 6px;" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
   `;
 
   const closeBtn = toast.querySelector("button");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      toast.classList.add("toast-out");
-      setTimeout(() => toast.remove(), 250);
-    });
-  }
+  closeBtn.addEventListener("click", () => {
+    toast.classList.add("toast-out");
+    setTimeout(() => toast.remove(), 300);
+  });
 
   container.appendChild(toast);
 
@@ -3977,12 +3968,10 @@ function showToast(message, type = "info") {
   setTimeout(() => {
     if (toast.parentNode) {
       toast.classList.add("toast-out");
-      setTimeout(() => toast.remove(), 250);
+      setTimeout(() => toast.remove(), 300);
     }
   }, 3800);
 }
-window.showToast = showToast;
-if (window.AuthEngine) window.AuthEngine.showToast = showToast;
 
 // ==============================================================================
 // 13. REAL USER PROFILE MANAGEMENT & SYNCHRONIZATION
@@ -4044,51 +4033,33 @@ function setupProfileSystem() {
     tempAvatarBase64 = undefined;
 
     const inputFirst = document.getElementById("profile-firstname");
-    if (inputFirst) inputFirst.value = user?.firstName || "";
+    if (inputFirst) inputFirst.value = user.firstName || "";
 
     const inputLast = document.getElementById("profile-lastname");
-    if (inputLast) inputLast.value = user?.lastName || "";
+    if (inputLast) inputLast.value = user.lastName || "";
 
     const inputEmail = document.getElementById("profile-email");
-    if (inputEmail) inputEmail.value = user?.email || "";
+    if (inputEmail) inputEmail.value = user.email || "";
 
     const selectCountry = document.getElementById("profile-phone-country");
+    if (selectCountry && user.phoneCountry) selectCountry.value = user.phoneCountry;
+
     const inputPhone = document.getElementById("profile-phone-number");
-
-    // Smart phone & country detection
-    let country = user?.phoneCountry || "";
-    let rawP = (user?.phoneNumber || "").toString().trim();
-    const fullP = (user?.fullPhone || user?.whatsapp_number || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
-
-    if (!country && fullP && fullP.startsWith("+")) {
-      const match = fullP.match(/^(\+\d{1,4})\s*(.*)$/);
-      if (match) {
-        country = match[1];
-        if (!rawP) rawP = match[2];
-      }
-    }
-    if (!rawP && fullP) {
-      rawP = fullP.replace(/^\+\d{1,4}\s*/, "").trim();
-    }
-
-    if (selectCountry) {
-      if (country) selectCountry.value = country;
-      else if (!selectCountry.value) selectCountry.value = "+228"; // Togo par défaut
-    }
     if (inputPhone) {
+      const rawP = (user.phoneNumber || (user.fullPhone ? user.fullPhone.replace(/^\+\d+\s*/, '') : '')).toString().trim();
       inputPhone.value = rawP;
     }
 
     const inputCompany = document.getElementById("profile-company");
-    if (inputCompany) inputCompany.value = user?.company || "Mon Entreprise";
+    if (inputCompany) inputCompany.value = user.company || "";
 
     const inputRole = document.getElementById("profile-role");
-    if (inputRole) inputRole.value = user?.role || "Administrateur";
+    if (inputRole) inputRole.value = user.role || "";
 
     // Set Avatar Preview in Modal
-    const initials = ((user?.firstName?.[0] || "") + (user?.lastName?.[0] || "")).toUpperCase() || (user?.firstName?.[0] || "V").toUpperCase();
+    const initials = ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || "V";
     if (avatarPreview) {
-      const safeAvatar = sanitizeUrl(user?.avatarUrl);
+      const safeAvatar = sanitizeUrl(user.avatarUrl);
       if (safeAvatar) {
         avatarPreview.innerHTML = `<img src="${safeAvatar}" class="avatar-preview-img" alt="Photo de profil">`;
       } else {
@@ -4182,55 +4153,46 @@ function setupProfileSystem() {
       if (avatarInput) avatarInput.value = "";
       const first = document.getElementById("profile-firstname")?.value || "";
       const last = document.getElementById("profile-lastname")?.value || "";
-      const initials = ((first[0] || "") + (last[0] || "")).toUpperCase() || (first[0] || "V").toUpperCase();
+      const initials = ((first[0] || "") + (last[0] || "")).toUpperCase() || "V";
       if (avatarPreview) {
         avatarPreview.innerHTML = `<span class="avatar-preview-initials">${initials}</span>`;
       }
     });
   }
 
-  // Unified Profile Saver
-  let isSavingProfile = false;
-  const handleSaveProfile = async (e) => {
-    if (e) {
-      if (typeof e.preventDefault === "function") e.preventDefault();
-      if (typeof e.stopPropagation === "function") e.stopPropagation();
-    }
-    if (isSavingProfile) return;
+  // Form Submission: Save changes
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById("btn-profile-save");
+      const originalText = saveBtn ? saveBtn.innerHTML : "";
 
-    const saveBtn = document.getElementById("btn-profile-save");
-    const originalText = saveBtn ? saveBtn.innerHTML : "";
+      const firstName = document.getElementById("profile-firstname")?.value.trim() || "";
+      const lastName = document.getElementById("profile-lastname")?.value.trim() || "";
+      const email = document.getElementById("profile-email")?.value.trim() || "";
+      const phoneCountry = document.getElementById("profile-phone-country")?.value || "+225";
+      const phoneNumber = document.getElementById("profile-phone-number")?.value.trim() || "";
+      const company = document.getElementById("profile-company")?.value.trim() || "";
+      const role = document.getElementById("profile-role")?.value.trim() || "";
 
-    const firstName = document.getElementById("profile-firstname")?.value.trim() || "";
-    const lastName = document.getElementById("profile-lastname")?.value.trim() || "";
-    const email = document.getElementById("profile-email")?.value.trim() || "";
-    const phoneCountry = document.getElementById("profile-phone-country")?.value || "+228";
-    const phoneNumber = document.getElementById("profile-phone-number")?.value.trim() || "";
-    const company = document.getElementById("profile-company")?.value.trim() || "";
-    const role = document.getElementById("profile-role")?.value.trim() || "";
+      if (!firstName) {
+        showToast("Veuillez renseigner votre prénom.", "info");
+        return;
+      }
+      if (!lastName) {
+        showToast("Veuillez renseigner votre nom.", "info");
+        return;
+      }
+      if (window.AuthEngine && !window.AuthEngine.isValidPhone(phoneNumber)) {
+        showToast("Veuillez renseigner un numéro WhatsApp valide.", "info");
+        return;
+      }
 
-    if (!firstName) {
-      showToast("Veuillez renseigner votre prénom.", "info");
-      const fInput = document.getElementById("profile-firstname");
-      if (fInput) fInput.focus();
-      return;
-    }
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Enregistrement en cours...</span>';
+      }
 
-    // Le champ Nom de famille est optionnel (compatibilité profils Google et utilisateurs avec un seul prénom)
-    if (phoneNumber && window.AuthEngine && typeof window.AuthEngine.isValidPhone === "function" && !window.AuthEngine.isValidPhone(phoneNumber)) {
-      showToast("Veuillez renseigner un numéro WhatsApp valide (au moins 6 chiffres).", "info");
-      const pInput = document.getElementById("profile-phone-number");
-      if (pInput) pInput.focus();
-      return;
-    }
-
-    isSavingProfile = true;
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Enregistrement en cours...</span>';
-    }
-
-    try {
       const updates = {
         firstName,
         lastName,
@@ -4245,51 +4207,24 @@ function setupProfileSystem() {
         updates.avatarUrl = tempAvatarBase64;
       }
 
-      let res = null;
-      if (window.AuthEngine && typeof window.AuthEngine.updateProfile === "function") {
-        res = await window.AuthEngine.updateProfile(updates);
-      } else {
-        const cur = JSON.parse(localStorage.getItem("vendia_current_user") || "{}");
-        const fullPhone = phoneNumber ? `${phoneCountry} ${phoneNumber}`.trim() : (cur.fullPhone || "");
-        const updated = { ...cur, ...updates, fullPhone };
-        localStorage.setItem("vendia_current_user", JSON.stringify(updated));
-        localStorage.setItem("vendia_connected_phone", fullPhone);
-        res = { success: true, user: updated };
-      }
+      const res = await window.AuthEngine.updateProfile(updates);
 
-      if (res && res.success) {
-        closeProfileModal();
-        syncSettingsCard(res.user);
-        if (window.AuthEngine && typeof window.AuthEngine.syncProfileUI === "function") {
-          window.AuthEngine.syncProfileUI(res.user);
-        }
-        if (typeof window.applyWhatsAppState === "function") {
-          window.applyWhatsAppState(window.currentWhatsAppStatus || "DISCONNECTED", res.user?.fullPhone || "");
-        }
-        showToast("Profil et numéro WhatsApp enregistrés avec succès !", "success");
-      } else {
-        showToast(res?.error || "Une erreur est survenue lors de la mise à jour.", "info");
-      }
-    } catch (saveErr) {
-      console.error("[PROFILE] Erreur sauvegarde profil:", saveErr);
-      showToast("Erreur lors de l'enregistrement. Veuillez vérifier votre connexion.", "error");
-    } finally {
-      isSavingProfile = false;
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.innerHTML = originalText || '<i class="fa-solid fa-floppy-disk"></i> <span>Enregistrer les modifications</span>';
+        saveBtn.innerHTML = originalText;
       }
-    }
-  };
 
-  // Form Submission: Save changes
-  if (form) {
-    form.addEventListener("submit", handleSaveProfile);
-  }
-  const saveBtn = document.getElementById("btn-profile-save");
-  if (saveBtn) {
-    saveBtn.addEventListener("click", (e) => {
-      handleSaveProfile(e);
+      if (res.success) {
+        closeProfileModal();
+        syncSettingsCard(res.user);
+        window.AuthEngine.syncProfileUI(res.user);
+        if (typeof window.applyWhatsAppState === 'function') {
+          window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', res.user?.fullPhone || '');
+        }
+        window.AuthEngine.showToast("Profil mis à jour avec succès.", "success");
+      } else {
+        showToast(res.error || "Une erreur est survenue lors de la mise à jour.", "info");
+      }
     });
   }
 
@@ -4746,6 +4681,7 @@ function setupBillingAndAffiliate() {
             window.currentWhatsAppPhone = cleanIncomingPhone;
             if (user) {
                 user.fullPhone = cleanIncomingPhone;
+                user.whatsapp_number = cleanIncomingPhone;
                 user.phoneNumber = cleanIncomingPhone.replace(/^\+\d{1,4}/, '').trim();
                 try { localStorage.setItem('vendia_current_user', JSON.stringify(user)); } catch(e) {}
             }
@@ -4754,9 +4690,19 @@ function setupBillingAndAffiliate() {
 
         // Récupération du numéro personnel :
         // 1. Numéro en direct de la connexion active
-        // 2. Numéro mémorisé en session
-        // 3. Numéro du profil utilisateur (Supabase / local)
-        let userRawPhone = (phone || window.currentWhatsAppPhone || user?.fullPhone || user?.whatsapp_number || user?.phone || user?.phoneNumber || localStorage.getItem('vendia_connected_phone') || '').toString().trim();
+        // 2. Numéro mémorisé en session globale
+        // 3. Numéro stocké en cache local
+        // 4. Numéro du profil utilisateur (Supabase / local)
+        let userRawPhone = (
+            phone || 
+            window.currentWhatsAppPhone || 
+            localStorage.getItem('vendia_connected_phone') || 
+            user?.fullPhone || 
+            user?.whatsapp_number || 
+            user?.phone || 
+            user?.phoneNumber || 
+            ''
+        ).toString().trim();
         if (userRawPhone === 'Non lié' || userRawPhone === 'Inconnu' || userRawPhone === 'Non configuré' || userRawPhone === 'WhatsApp non configuré') {
             userRawPhone = '';
         }
@@ -4792,14 +4738,6 @@ function setupBillingAndAffiliate() {
                         if (typeof showSection === 'function') showSection('devices');
                         else window.location.hash = '#view-devices';
                     };
-                }
-            } else if (status === 'RECONNECTING') {
-                headerBadge.textContent = "Reconnexion 24/7...";
-                headerBadge.className = "status-badge-mini badge-amber";
-                if (headerPill) {
-                    headerPill.style.borderColor = "rgba(245, 158, 11, 0.4)";
-                    headerPill.style.background = "rgba(245, 158, 11, 0.12)";
-                    headerPill.title = "Reconnexion automatique 24/7 en cours...";
                 }
             } else if (hasPhone) {
                 headerBadge.textContent = "À Connecter";
@@ -4876,10 +4814,7 @@ function setupBillingAndAffiliate() {
                 cardBadge.textContent = "🟢 En Ligne & IA Active";
                 cardBadge.className = "badge badge-green";
             } else if (hasPhone) {
-                if (status === 'RECONNECTING') {
-                    cardBadge.textContent = "🟡 Reconnexion 24/7...";
-                    cardBadge.className = "badge badge-amber";
-                } else if (status === 'QR_READY') {
+                if (status === 'QR_READY') {
                     cardBadge.textContent = "🟡 En attente de scan QR";
                     cardBadge.className = "badge badge-amber";
                 } else {
@@ -4957,9 +4892,18 @@ function setupBillingAndAffiliate() {
 
             if (data.status === 'CONNECTED') {
                 if (data.phone) {
-                    try { localStorage.setItem('vendia_connected_phone', '+' + String(data.phone).replace(/^\+/, '')); } catch(e) {}
+                    const cleanPhone = '+' + String(data.phone).replace(/^\+/, '').trim();
+                    window.currentWhatsAppPhone = cleanPhone;
+                    try { localStorage.setItem('vendia_connected_phone', cleanPhone); } catch(e) {}
+                    try {
+                        let u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+                        u.fullPhone = cleanPhone;
+                        u.whatsapp_number = cleanPhone;
+                        localStorage.setItem('vendia_current_user', JSON.stringify(u));
+                    } catch(e) {}
+                    window.applyWhatsAppState('CONNECTED', cleanPhone);
                     if (window.SupabaseRest) {
-                        try { window.SupabaseRest.updateProfile(userId, { whatsapp_number: '+' + String(data.phone).replace(/^\+/, '') }); } catch(e) {}
+                        try { window.SupabaseRest.updateProfile(userId, { whatsapp_number: cleanPhone }); } catch(e) {}
                     }
                 } else {
                     setTimeout(() => syncWhatsAppStatus(), 1500);
@@ -4975,7 +4919,7 @@ function setupBillingAndAffiliate() {
                     if (statusInterval) clearInterval(statusInterval);
                     qrModal.classList.remove('active');
                     if (typeof showToast === 'function') {
-                        showToast("🎉 WhatsApp connecté avec succès ! Numéro : " + (data.phone ? '+' + data.phone : ''), "success");
+                        showToast("🎉 WhatsApp connecté avec succès ! Numéro : " + (data.phone ? '+' + String(data.phone).replace(/^\+/, '') : ''), "success");
                     }
                 }
             }
@@ -4996,9 +4940,18 @@ function setupBillingAndAffiliate() {
 
             if (data.status === 'CONNECTED') {
                 if (data.phone) {
-                    try { localStorage.setItem('vendia_connected_phone', '+' + String(data.phone).replace(/^\+/, '')); } catch(e) {}
+                    const cleanPhone = '+' + String(data.phone).replace(/^\+/, '').trim();
+                    window.currentWhatsAppPhone = cleanPhone;
+                    try { localStorage.setItem('vendia_connected_phone', cleanPhone); } catch(e) {}
+                    try {
+                        let u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+                        u.fullPhone = cleanPhone;
+                        u.whatsapp_number = cleanPhone;
+                        localStorage.setItem('vendia_current_user', JSON.stringify(u));
+                    } catch(e) {}
+                    window.applyWhatsAppState('CONNECTED', cleanPhone);
                     if (targetUserId && window.SupabaseRest) {
-                        try { window.SupabaseRest.updateProfile(targetUserId, { whatsapp_number: '+' + String(data.phone).replace(/^\+/, '') }); } catch(e) {}
+                        try { window.SupabaseRest.updateProfile(targetUserId, { whatsapp_number: cleanPhone }); } catch(e) {}
                     }
                 } else {
                     setTimeout(() => syncWhatsAppStatus(), 1500);
@@ -5068,7 +5021,8 @@ function setupBillingAndAffiliate() {
                     return;
                 } else if (quickData.status === 'CONNECTED') {
                     if (qrBox) qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
-                    window.applyWhatsAppState('CONNECTED', quickData.phone);
+                    const activeP = quickData.phone || window.currentWhatsAppPhone || localStorage.getItem('vendia_connected_phone');
+                    window.applyWhatsAppState('CONNECTED', activeP);
                     setTimeout(() => { if (qrModal) qrModal.classList.remove('active'); }, 1200);
                     return;
                 }
@@ -5090,7 +5044,8 @@ function setupBillingAndAffiliate() {
                 return;
             } else if (data.status === 'CONNECTED') {
                 if (qrBox) qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
-                window.applyWhatsAppState('CONNECTED', data.phone);
+                const activeP = data.phone || window.currentWhatsAppPhone || localStorage.getItem('vendia_connected_phone');
+                window.applyWhatsAppState('CONNECTED', activeP);
                 setTimeout(() => { if (qrModal) qrModal.classList.remove('active'); }, 1200);
                 return;
             }
@@ -5134,6 +5089,13 @@ function setupBillingAndAffiliate() {
         document.body.addEventListener('click', (e) => {
             if (e.target.closest('.btn-open-qr') || e.target.closest('#btn-add-whatsapp-num')) {
                 if (qrModal) qrModal.classList.add('active');
+                const pInput = document.getElementById('wa-pairing-phone-input');
+                if (pInput && !pInput.value) {
+                    let u = {};
+                    try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
+                    const curP = window.currentWhatsAppPhone || localStorage.getItem('vendia_connected_phone') || u?.fullPhone || u?.whatsapp_number || '';
+                    if (curP) pInput.value = curP;
+                }
                 startWhatsApp();
             }
             if (e.target.closest('[data-close-modal="qr-modal"]')) {
@@ -6081,6 +6043,16 @@ window.submitWhatsAppPairingCode = async function() {
         if (typeof showToast === "function") showToast("Numéro trop court. Veuillez inclure l'indicatif pays (ex: 2250701020304).", "error");
         return;
     }
+
+    var formattedWithPlus = '+' + cleanDigits;
+    window.currentWhatsAppPhone = formattedWithPlus;
+    try { localStorage.setItem('vendia_connected_phone', formattedWithPlus); } catch(e) {}
+    try {
+        var u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+        u.fullPhone = formattedWithPlus;
+        u.whatsapp_number = formattedWithPlus;
+        localStorage.setItem('vendia_current_user', JSON.stringify(u));
+    } catch(e) {}
 
     if (btn) btn.disabled = true;
     if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Génération...';
