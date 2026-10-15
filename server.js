@@ -30,6 +30,39 @@ const { OpenAI } = require('openai');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Dossier de stockage persistant (Support natif des volumes Railway / Docker)
+const AUTH_BASE_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || 
+                      process.env.DATA_PATH || 
+                      path.join(__dirname, '.wwebjs_auth');
+
+try {
+  if (!fs.existsSync(AUTH_BASE_DIR)) {
+    fs.mkdirSync(AUTH_BASE_DIR, { recursive: true });
+    console.log(`[STORAGE] Dossier d'authentification initialisé : ${AUTH_BASE_DIR}`);
+  }
+} catch (e) {
+  console.warn('[STORAGE] Notice création AUTH_BASE_DIR :', e.message);
+}
+
+function getSessionDir(userId) {
+  return path.join(AUTH_BASE_DIR, `session-${userId}`);
+}
+
+// Nettoyage préventif des verrous résiduels Chromium après redémarrage ou crash
+function cleanupChromiumLocks(sessionPath) {
+  if (!fs.existsSync(sessionPath)) return;
+  const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+  for (const lockFile of lockFiles) {
+    const lockPath = path.join(sessionPath, lockFile);
+    try {
+      if (fs.existsSync(lockPath)) {
+        fs.unlinkSync(lockPath);
+        console.log(`[STORAGE] Verrou résiduel Chromium purgé : ${lockFile}`);
+      }
+    } catch (e) {}
+  }
+}
+
 // === S�CURIT� : D�SACTIVER X-POWERED-BY & RESTRICTION CORS ===
 app.disable('x-powered-by');
 
@@ -193,6 +226,11 @@ app.get('/api/diag', (req, res, next) => {
       has_SUPABASE_SERVICE_KEY: !!process.env.SUPABASE_SERVICE_KEY,
       has_SUPABASE_URL: !!process.env.SUPABASE_URL,
       saspayPrefix: (process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || '') ? (process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY).substring(0, 7) + '...' : 'none'
+    },
+    storage: {
+      authBaseDir: AUTH_BASE_DIR,
+      exists: fs.existsSync(AUTH_BASE_DIR),
+      sessions: fs.existsSync(AUTH_BASE_DIR) ? fs.readdirSync(AUTH_BASE_DIR).filter(e => e.startsWith('session-')) : []
     }
   });
 });
@@ -819,10 +857,11 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
 // MOTEUR CENTRALISÉ WHATSAPP MULTI-DEVICE À TRÈS HAUTE DISPONIBILITÉ
 // (Reste actif même si le smartphone est éteint, sans batterie ou hors-ligne)
 // =============================================================================
+
 async function createOrGetWhatsAppClient(userId, options = {}) {
   const { restart = false, phoneNumber = null, autoRestore = false } = options;
   const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
-  const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+  const authDir = getSessionDir(userId);
   const hasExistingSession = fs.existsSync(authDir);
 
   // 1. Si déjà actif et connecté
@@ -853,18 +892,37 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     }
   }
 
+  // Nettoyage des verrous Chromium si session existante pour assurer un démarrage sans heurt
+  if (hasExistingSession) {
+    cleanupChromiumLocks(authDir);
+  }
+
   // 3. Statut initial (si session existante sur disque, maintien du statut connecté/reconnexion sans paniquer l'interface)
   waStatuses[userId] = hasExistingSession ? 'RECONNECTING' : 'STARTING';
   if (cleanPhone) waNumbers[userId] = cleanPhone;
 
   const chromiumPath = getChromiumExecutablePath();
-  console.log(`[WA] Lancement client haute résilience pour ${userId} (sessionExistante=${hasExistingSession}, pairPhone=${cleanPhone || 'non'})...`);
+  console.log(`[WA] Lancement client haute résilience pour ${userId} (sessionExistante=${hasExistingSession}, pairPhone=${cleanPhone || 'non'}, storage=${AUTH_BASE_DIR})...`);
+
+  // Stratégie d'authentification robuste avec dataPath pointant sur le volume persistant
+  const authStrategy = new LocalAuth({ 
+    clientId: userId,
+    dataPath: AUTH_BASE_DIR 
+  });
+
+  // PROTECTION CRITIQUE MULTI-DEVICE :
+  // whatsapp-web.js déclenche authStrategy.logout() dès qu'un événement transitoire
+  // comme 'logout_from_bridge' survient (lorsque le téléphone principal s'éteint ou est hors-ligne).
+  // On surcharge logout() pour interdire formellement toute suppression physique sur le disque !
+  authStrategy.logout = async function() {
+    console.warn(`[WA/GUARD] Appel authStrategy.logout() intercepté pour ${userId}. Les fichiers de session restent protégés et conservés sur disque.`);
+  };
 
   // Flags Puppeteer ultra-optimisés : empêchent Chromium de suspendre les timers et WebSockets en arrière-plan
   const clientOptions = {
-    authStrategy: new LocalAuth({ clientId: userId }),
+    authStrategy,
     takeoverOnConflict: true,
-    takeoverTimeoutMs: 0,
+    takeoverTimeoutMs: 5000,
     puppeteer: {
       headless: true,
       args: [
@@ -988,41 +1046,41 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
   });
 
   // HAUTE DISPONIBILITÉ MULTI-DEVICE :
-  // Le smartphone peut être éteint ou déconnecté d'Internet sans perdre la liaison WhatsApp du bot !
-  // Seul un LOGOUT explicite supprime la session.
+  // Le smartphone principal peut être éteint, sans batterie ou hors-ligne sans perdre la liaison WhatsApp du bot !
+  // Les clés Multi-Device de l'appareil compagnon restent 100% valides sur les serveurs de Meta jusqu'à 14 jours.
+  // INTERDICTION STRICTE DE SUPPRIMER LES FICHIERS DE SESSION SUR DISQUE ICI.
+  client.on('change_state', (state) => {
+    console.log(`[WA/STATE] État de connexion changé pour ${userId} : ${state}`);
+    if (state === 'CONNECTED') {
+      waStatuses[userId] = 'CONNECTED';
+    } else if (state === 'OPENING' || state === 'PAIRING') {
+      waStatuses[userId] = 'RECONNECTING';
+    }
+  });
+
   client.on('disconnected', async (reason) => {
-    console.log(`[WA] Client ${userId} déconnecté. Raison : ${reason}`);
+    console.warn(`[WA] Client ${userId} déconnecté. Raison : ${reason}`);
     if (waHeartbeats[userId]) {
       clearInterval(waHeartbeats[userId]);
       delete waHeartbeats[userId];
     }
 
-    if (reason === 'LOGOUT') {
-      console.log(`[WA] Déconnexion explicite (LOGOUT) depuis le smartphone pour ${userId}. Nettoyage.`);
-      waStatuses[userId] = 'DISCONNECTED';
-      delete waClients[userId];
-      delete waSessionsQR[userId];
-      delete waPairingCodes[userId];
-      delete waNumbers[userId];
-      const curAuthDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
-      if (fs.existsSync(curAuthDir)) {
-        try { fs.rmSync(curAuthDir, { recursive: true, force: true }); } catch (e) {}
-      }
-      try { await client.destroy(); } catch (e) {}
-    } else {
-      // Déconnexion réseau temporaire, mise en veille ou smartphone temporairement éteint :
-      // On conserve impérativement la session sur disque et on relance la connexion en tâche de fond !
-      console.log(`[WA] Déconnexion réseau/mise en veille (${reason}) pour ${userId}. Maintien de la session et reconnexion automatique...`);
-      waStatuses[userId] = 'RECONNECTING';
-      delete waClients[userId];
-      try { await client.destroy(); } catch (e) {}
+    // Quelle que soit la raison ('LOGOUT' provoqué par logout_from_bridge lors de la coupure du smartphone,
+    // TIMEOUT, CONFLICT, NAVIGATION, etc.), la session sur disque est PRÉSERVÉE ET PROTÉGÉE.
+    // Seul un appel explicite à POST /api/whatsapp/disconnect a le droit de purger la session.
+    waStatuses[userId] = 'RECONNECTING';
+    delete waClients[userId];
+    delete waSessionsQR[userId];
+    delete waPairingCodes[userId];
 
-      setTimeout(() => {
-        createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
-          console.warn(`[WA] Notice reconnexion automatique ${userId}:`, err.message);
-        });
-      }, 4000);
-    }
+    try { await client.destroy(); } catch (e) {}
+
+    console.log(`[WA/RECONNECT] Session préservée pour ${userId}. Reconnexion automatique en tâche de fond dans 4 secondes...`);
+    setTimeout(() => {
+      createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
+        console.warn(`[WA/RECONNECT] Notice tentative reconnexion ${userId} :`, err.message);
+      });
+    }, 4000);
   });
 
   // Déduplication & écouteurs d'événements messages (Garantit 100% des réceptions)
@@ -1123,7 +1181,7 @@ app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
   delete waSessionsQR[userId];
   delete waPairingCodes[userId];
   delete waNumbers[userId];
-  const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+  const authDir = getSessionDir(userId);
   if (fs.existsSync(authDir)) {
     try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
   }
@@ -1216,7 +1274,7 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
 app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   const client = waClients[userId];
-  const authDir = path.join(__dirname, '.wwebjs_auth', `session-${userId}`);
+  const authDir = getSessionDir(userId);
   const hasExistingSession = fs.existsSync(authDir);
 
   // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer silencieusement
@@ -2275,7 +2333,7 @@ app.listen(PORT, '0.0.0.0', () => {
   // Restauration automatique de toutes les sessions WhatsApp sauvegardées sur le serveur
   setTimeout(() => {
     try {
-      const authBasePath = path.join(__dirname, '.wwebjs_auth');
+      const authBasePath = AUTH_BASE_DIR;
       if (fs.existsSync(authBasePath)) {
         const entries = fs.readdirSync(authBasePath);
         for (const entry of entries) {
