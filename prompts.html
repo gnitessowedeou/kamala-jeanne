@@ -19,8 +19,8 @@
   <link rel="apple-touch-icon" href="images/logo.png">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/auth.css?v=20261012_v16">
+  <link rel="stylesheet" href="css/style.css?v=20261015_v37">
+  <link rel="stylesheet" href="css/auth.css?v=20261015_v37">
 </head>
 <body>
 
@@ -122,11 +122,63 @@
 
       <!-- Actions Right -->
       <div class="nav-actions">
-        <button class="lang-selector-btn" aria-label="Langue sélectionnée : Français">
-          <span class="lang-flag-box">FR</span>
-          <span>FR</span>
-          <i class="fa-solid fa-chevron-down" style="font-size: 8px; opacity: 0.8;"></i>
-        </button>
+        <!-- Multi-Language Selector Dropdown -->
+        <div class="lang-selector-dropdown-wrap" id="lang-selector-wrap">
+          <button class="lang-selector-btn" id="lang-selector-btn" aria-haspopup="true" aria-expanded="false" aria-label="Changer de langue">
+            <img src="https://flagcdn.com/w40/fr.png" alt="Français" class="lang-flag-img">
+            <span class="lang-current-code">FR</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          
+          <div class="lang-dropdown-menu" id="lang-dropdown-menu">
+            <div class="lang-dropdown-header">Choisir la langue</div>
+            <button class="lang-option-item active" data-lang="fr" type="button">
+              <img src="https://flagcdn.com/w40/fr.png" alt="Français" class="lang-option-flag">
+              <div class="lang-option-info">
+                <span class="lang-option-name">Français</span>
+                <span class="lang-option-desc">Afrique & France</span>
+              </div>
+              <span class="lang-option-code">FR</span>
+              <i class="fa-solid fa-check lang-check-icon"></i>
+            </button>
+            <button class="lang-option-item" data-lang="en" type="button">
+              <img src="https://flagcdn.com/w40/gb.png" alt="English" class="lang-option-flag">
+              <div class="lang-option-info">
+                <span class="lang-option-name">English</span>
+                <span class="lang-option-desc">Global / Anglophone</span>
+              </div>
+              <span class="lang-option-code">EN</span>
+              <i class="fa-solid fa-check lang-check-icon"></i>
+            </button>
+            <button class="lang-option-item" data-lang="es" type="button">
+              <img src="https://flagcdn.com/w40/es.png" alt="Español" class="lang-option-flag">
+              <div class="lang-option-info">
+                <span class="lang-option-name">Español</span>
+                <span class="lang-option-desc">América Latina & España</span>
+              </div>
+              <span class="lang-option-code">ES</span>
+              <i class="fa-solid fa-check lang-check-icon"></i>
+            </button>
+            <button class="lang-option-item" data-lang="pt" type="button">
+              <img src="https://flagcdn.com/w40/br.png" alt="Português" class="lang-option-flag">
+              <div class="lang-option-info">
+                <span class="lang-option-name">Português</span>
+                <span class="lang-option-desc">Brasil & Lusofonia</span>
+              </div>
+              <span class="lang-option-code">PT</span>
+              <i class="fa-solid fa-check lang-check-icon"></i>
+            </button>
+            <button class="lang-option-item" data-lang="ar" type="button">
+              <img src="https://flagcdn.com/w40/ae.png" alt="العربية" class="lang-option-flag">
+              <div class="lang-option-info">
+                <span class="lang-option-name">العربية</span>
+                <span class="lang-option-desc">الشرق الأوسط & شمال أفريقيا</span>
+              </div>
+              <span class="lang-option-code">AR</span>
+              <i class="fa-solid fa-check lang-check-icon"></i>
+            </button>
+          </div>
+        </div>
 
         <a href="dashboard.html" class="btn-nav-login">Connexion</a>
         
@@ -458,6 +510,7 @@
       });
     })();
   </script>
-  <script src="js/script.js"></script>
+  <div id="google_translate_element" style="display: none;"></div>
+  <script src="js/script.js?v=20261015_v37"></script>
 </body>
 </html>

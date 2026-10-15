@@ -1085,21 +1085,46 @@
     }
   };
 
-  // Gestionnaire de sélecteur de pays compact (Indicateur seul affiché, pays complets déroulés au clic)
+  const COUNTRY_ISO_BY_VAL = {
+    '+225': 'ci', '+229': 'bj', '+226': 'bf', '+221': 'sn', '+228': 'tg',
+    '+223': 'ml', '+227': 'ne', '+224': 'gn', '+245': 'gw', '+234': 'ng',
+    '+233': 'gh', '+220': 'gm', '+231': 'lr', '+232': 'sl', '+238': 'cv',
+    '+222': 'mr', '+237': 'cm', '+242': 'cg', '+243': 'cd', '+241': 'ga',
+    '+33': 'fr',  '+32': 'be',  '+41': 'ch',  '+1': 'us',   '+44': 'gb',
+    '+34': 'es',  '+55': 'br',  '+212': 'ma', '+216': 'tn', '+213': 'dz'
+  };
+
+  // Gestionnaire de sélecteur de pays compact (Drapeau HD garanti PC & Mobile, indicateur seul affiché)
   function initCompactCountrySelectors() {
     const selects = document.querySelectorAll('.country-code-select');
     selects.forEach(sel => {
+      // Insertion ou récupération du drapeau réel haute définition garanti visible sur PC Windows
+      let flagImg = null;
+      if (sel.parentElement && (sel.parentElement.classList.contains('phone-input-group') || sel.parentElement.classList.contains('auth-input-wrapper'))) {
+        flagImg = sel.parentElement.querySelector('.country-flag-preview');
+        if (!flagImg) {
+          flagImg = document.createElement('img');
+          flagImg.className = 'country-flag-preview';
+          flagImg.alt = 'Drapeau';
+          sel.parentElement.insertBefore(flagImg, sel);
+        }
+      }
+
       Array.from(sel.options).forEach(opt => {
         if (!opt.dataset.full) {
           opt.dataset.full = opt.text;
-          const parts = opt.text.split('·');
-          opt.dataset.short = parts[0].trim();
+          const match = opt.text.match(/\+\d+/);
+          opt.dataset.short = match ? match[0] : opt.text.split('·')[0].trim();
         }
       });
 
       const updateDisplay = () => {
         const opt = sel.options[sel.selectedIndex];
         if (opt && opt.dataset.short) opt.text = opt.dataset.short;
+        const iso = COUNTRY_ISO_BY_VAL[sel.value] || 'ci';
+        if (flagImg) {
+          flagImg.src = `https://flagcdn.com/w40/${iso}.png`;
+        }
       };
 
       const restoreFull = () => {

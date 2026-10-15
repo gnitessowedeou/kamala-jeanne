@@ -6136,19 +6136,29 @@ body.modal-open-lock {
   align-items: center !important;
 }
 
-.country-code-select {
-  width: 110px !important;
-  min-width: 95px !important;
-  max-width: 40% !important;
+.country-flag-preview {
+  width: 22px !important;
+  height: 15px !important;
+  border-radius: 3px !important;
+  object-fit: cover !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
   flex-shrink: 0 !important;
-  padding: 10px 6px 10px 10px !important;
+  display: inline-block !important;
+}
+
+.country-code-select {
+  width: 86px !important;
+  min-width: 78px !important;
+  max-width: 35% !important;
+  flex-shrink: 0 !important;
+  padding: 10px 6px 10px 8px !important;
   background: rgba(16, 24, 40, 0.85) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
   font-family: inherit !important;
   font-size: 13.5px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   cursor: pointer !important;
   outline: none !important;
 }

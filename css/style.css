@@ -1,8 +1,12 @@
 /* ==========================================================================
-   VENDIA AI — LANDING PAGE OFFICIAL DESIGN SYSTEM & STYLES
-   Theme: Premium SaaS | Dark Mode | High-Tech Glassmorphism | WhatsApp Green
-   Typography: Outfit (Headings) & Inter (Body)
+   TWEMOJI COUNTRY FLAGS POLYFILL (Affichage garanti des drapeaux sur PC Windows & tous OS)
    ========================================================================== */
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+  src: url('https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1/dist/TwemojiCountryFlags.woff2') format('woff2');
+  font-display: swap;
+}
 
 :root {
   /* Brand Colors */
@@ -315,19 +319,26 @@ img {
   flex-shrink: 0;
 }
 
+/* Language Dropdown Container */
+.lang-selector-dropdown-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .lang-selector-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   padding: 6px 14px;
   background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-full);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #f1f5f9;
   cursor: pointer;
   transition: all var(--transition-fast);
+  backdrop-filter: blur(8px);
 }
 
 .lang-selector-btn:hover {
@@ -336,16 +347,142 @@ img {
   background: rgba(37, 211, 102, 0.08);
 }
 
-.lang-flag-box {
-  display: inline-flex;
+.lang-flag-img {
+  width: 20px;
+  height: 14px;
+  border-radius: 3px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.lang-chevron {
+  font-size: 9px;
+  opacity: 0.75;
+  transition: transform 0.2s ease;
+}
+
+.lang-selector-dropdown-wrap.open .lang-chevron {
+  transform: rotate(180deg);
+}
+
+.lang-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 250px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1000;
+  backdrop-filter: blur(16px);
+  animation: langFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lang-selector-dropdown-wrap.open .lang-dropdown-menu {
+  display: flex;
+}
+
+@keyframes langFadeIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.lang-dropdown-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+.lang-option-item {
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: #e2e8f0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.lang-option-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.lang-option-item.active {
+  background: rgba(37, 211, 102, 0.12);
+  color: var(--whatsapp-green);
+  border: 1px solid rgba(37, 211, 102, 0.25);
+}
+
+.lang-option-flag {
+  width: 22px;
+  height: 15px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.lang-option-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.lang-option-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lang-option-desc {
   font-size: 10.5px;
-  font-weight: 800;
-  padding: 1px 4px;
-  background: rgba(255, 255, 255, 0.12);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lang-option-code {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.6;
+  margin-left: auto;
+  padding: 2px 5px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  letter-spacing: 0.02em;
+}
+
+.lang-check-icon {
+  font-size: 12px;
+  color: var(--whatsapp-green);
+  display: none;
+  margin-left: 6px;
+}
+
+.lang-option-item.active .lang-check-icon {
+  display: inline-block;
 }
 
 .btn-nav-login {
@@ -4183,4 +4320,50 @@ img {
     justify-content: center !important;
   }
 }
+
+/* ==========================================================================
+   GOOGLE TRANSLATE SEAMLESS OVERRIDES & HIDDEN BANNERS
+   ========================================================================== */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+body {
+  top: 0px !important;
+  position: static !important;
+}
+
+#google_translate_element {
+  display: none !important;
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+}
+
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Phone input group real flag preview image */
+.country-flag-preview {
+  width: 22px;
+  height: 15px;
+  border-radius: 3px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 

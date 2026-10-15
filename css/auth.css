@@ -3,6 +3,13 @@
    Used by both index.html (Landing Page) & dashboard.html (Dashboard)
    ============================================================================== */
 
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+  src: url('https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1/dist/TwemojiCountryFlags.woff2') format('woff2');
+  font-display: swap;
+}
+
 /* Modal Backdrop */
 .auth-modal-backdrop,
 .profile-modal-backdrop {
@@ -212,22 +219,33 @@
 /* WhatsApp Phone Input Group */
 .phone-input-group {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.country-code-select {
-  width: 110px;
-  min-width: 95px;
-  max-width: 40%;
+.country-flag-preview {
+  width: 22px;
+  height: 15px;
+  border-radius: 3px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
-  padding: 12px 6px 12px 10px;
+  display: inline-block;
+}
+
+.country-code-select {
+  width: 86px;
+  min-width: 78px;
+  max-width: 35%;
+  flex-shrink: 0;
+  padding: 12px 6px 12px 8px;
   background: rgba(16, 24, 40, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   color: #ffffff;
   font-family: inherit;
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   outline: none;
 }

@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   initSmoothScroll();
   initAuthModal();
+  initLanguageSelector();
 });
 
 // ==============================================================================
@@ -657,4 +658,156 @@ function initAuthModal() {
     }
   } catch(e) {}
 }
+
+// ==============================================================================
+// 9. MULTI-LANGUAGE SELECTOR & TRANSLATION ENGINE (FR, EN, ES, PT, AR)
+// ==============================================================================
+const VENDIA_LANGUAGES = {
+  fr: { code: 'FR', name: 'Français', flag: 'https://flagcdn.com/w40/fr.png' },
+  en: { code: 'EN', name: 'English', flag: 'https://flagcdn.com/w40/gb.png' },
+  es: { code: 'ES', name: 'Español', flag: 'https://flagcdn.com/w40/es.png' },
+  pt: { code: 'PT', name: 'Português', flag: 'https://flagcdn.com/w40/br.png' },
+  ar: { code: 'AR', name: 'العربية', flag: 'https://flagcdn.com/w40/ae.png' }
+};
+
+function initLanguageSelector() {
+  const wraps = document.querySelectorAll('.lang-selector-dropdown-wrap');
+  if (!wraps.length) return;
+
+  const savedLang = localStorage.getItem('vendia_lang') || 'fr';
+
+  // Met à jour l'affichage de tous les sélecteurs de langue (desktop et mobile)
+  const updateSelectorsUI = (langCode) => {
+    const lang = VENDIA_LANGUAGES[langCode] || VENDIA_LANGUAGES.fr;
+    wraps.forEach(wrap => {
+      const btn = wrap.querySelector('.lang-selector-btn');
+      if (btn) {
+        const flagImg = btn.querySelector('.lang-flag-img');
+        const codeSpan = btn.querySelector('.lang-current-code');
+        if (flagImg) flagImg.src = lang.flag;
+        if (codeSpan) codeSpan.textContent = lang.code;
+      }
+
+      // Mise à jour de la classe active dans la liste
+      const items = wrap.querySelectorAll('.lang-option-item');
+      items.forEach(item => {
+        if (item.dataset.lang === langCode) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    });
+  };
+
+  // Gestion des clics sur les boutons et les options
+  wraps.forEach(wrap => {
+    const btn = wrap.querySelector('.lang-selector-btn');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = wrap.classList.contains('open');
+        // Ferme les autres dropdowns
+        wraps.forEach(w => w.classList.remove('open'));
+        if (!isOpen) {
+          wrap.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        } else {
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    const items = wrap.querySelectorAll('.lang-option-item');
+    items.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const selectedLang = item.dataset.lang;
+        if (!selectedLang || !VENDIA_LANGUAGES[selectedLang]) return;
+
+        localStorage.setItem('vendia_lang', selectedLang);
+        updateSelectorsUI(selectedLang);
+        wraps.forEach(w => w.classList.remove('open'));
+
+        // Déclenche la traduction automatique de la page
+        applyPageTranslation(selectedLang);
+      });
+    });
+  });
+
+  // Fermeture au clic en dehors
+  document.addEventListener('click', () => {
+    wraps.forEach(w => {
+      w.classList.remove('open');
+      const b = w.querySelector('.lang-selector-btn');
+      if (b) b.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // Applique la langue sauvegardée au démarrage
+  updateSelectorsUI(savedLang);
+  if (savedLang !== 'fr') {
+    applyPageTranslation(savedLang);
+  }
+}
+
+// Moteur de traduction dynamique automatique (Google Translate transparent)
+function applyPageTranslation(targetLang) {
+  if (targetLang === 'fr') {
+    // Réinitialise la langue d'origine (Français)
+    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
+    const combo = document.querySelector('.goog-te-combo');
+    if (combo && combo.value !== 'fr') {
+      combo.value = 'fr';
+      combo.dispatchEvent(new Event('change'));
+    } else {
+      window.location.reload();
+    }
+    return;
+  }
+
+  // Positionne le cookie Google Translate vers la langue cible
+  document.cookie = "googtrans=/fr/" + targetLang + "; path=/;";
+  document.cookie = "googtrans=/fr/" + targetLang + "; path=/; domain=" + window.location.hostname;
+
+  const combo = document.querySelector('.goog-te-combo');
+  if (combo) {
+    combo.value = targetLang;
+    combo.dispatchEvent(new Event('change'));
+  } else {
+    ensureGoogleTranslateApi(() => {
+      setTimeout(() => {
+        const c = document.querySelector('.goog-te-combo');
+        if (c) {
+          c.value = targetLang;
+          c.dispatchEvent(new Event('change'));
+        }
+      }, 350);
+    });
+  }
+}
+
+function ensureGoogleTranslateApi(cb) {
+  if (window.google && window.google.translate) {
+    if (cb) cb();
+    return;
+  }
+  if (!document.getElementById('google-translate-script')) {
+    window.googleTranslateElementInit = function() {
+      new window.google.translate.TranslateElement({
+        pageLanguage: 'fr',
+        includedLanguages: 'fr,en,es,pt,ar',
+        autoDisplay: false
+      }, 'google_translate_element');
+      if (cb) setTimeout(cb, 250);
+    };
+    const s = document.createElement('script');
+    s.id = 'google-translate-script';
+    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    s.async = true;
+    document.head.appendChild(s);
+  }
+}
+
 
