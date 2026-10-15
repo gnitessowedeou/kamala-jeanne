@@ -331,6 +331,7 @@ const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing C
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
 const waHeartbeats = {}; // Intervalles keep-alive Chromium / WebSocket WhatsApp
+const waErrors = {};     // Stocke les erreurs d'initialisation exactes
 
 function getClientPhone(client, userId) {
   if (waNumbers[userId] && String(waNumbers[userId]).replace(/\D/g, '').length >= 6) {
@@ -920,7 +921,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     console.warn(`[WA/GUARD] Appel authStrategy.logout() intercepté pour ${userId}. Les fichiers de session restent protégés et conservés sur disque.`);
   };
 
-  // Flags Puppeteer ultra-optimisés : empêchent Chromium de suspendre les timers et WebSockets en arrière-plan
+  // Flags Puppeteer stables et éprouvés pour conteneur Docker / Linux
   const clientOptions = {
     authStrategy,
     takeoverOnConflict: true,
@@ -933,34 +934,14 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
-        '--no-zygote',
         '--disable-gpu',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-breakpad',
-        '--disable-component-update',
-        '--disable-default-apps',
-        '--disable-extensions',
-        '--disable-ipc-flooding-protection',
-        '--enable-features=NetworkService,NetworkServiceInProcess',
-        '--force-color-profile=srgb',
-        '--metrics-recording-only',
-        '--mute-audio'
+        '--disable-renderer-backgrounding'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
-    },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+    }
   };
-
-  if (cleanPhone && cleanPhone.length >= 8 && !hasExistingSession) {
-    clientOptions.pairWithPhoneNumber = {
-      phoneNumber: cleanPhone,
-      showNotification: true,
-      intervalMs: 180000
-    };
-    console.log(`[WA] Client ${userId} configuré pour code d'association (+${cleanPhone})`);
-  }
 
   const client = new Client(clientOptions);
   waClients[userId] = client;
@@ -1143,8 +1124,9 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
   client.on('message_create', handleAnyMessageEvent);
 
   client.initialize().catch(err => {
-    console.error(`[WA] Erreur initialize client ${userId}:`, err.message);
+    console.error(`[WA] Erreur initialize client ${userId}:`, err);
     waStatuses[userId] = 'ERROR';
+    waErrors[userId] = err.message || String(err);
     delete waClients[userId];
   });
 
@@ -1226,7 +1208,8 @@ app.get('/api/whatsapp/debug/:userId', authMiddleware, async (req, res) => {
     phone: waNumbers[userId] || null,
     clientInfo: client && client.info ? client.info : null,
     pageUrl,
-    pageTitle
+    pageTitle,
+    lastError: waErrors[userId] || null
   });
 });
 
@@ -1294,16 +1277,16 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const authDir = getSessionDir(userId);
   const hasExistingSession = fs.existsSync(authDir);
 
-  // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer silencieusement
-  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING') {
+  // Si pas de client actif en mémoire mais session existante sur disque et pas d'erreur persistante
+  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING' && waStatuses[userId] !== 'ERROR') {
     createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(() => {});
-    waStatuses[userId] = 'RECONNECTING';
   }
 
-  let st = waStatuses[userId] || (hasExistingSession ? 'CONNECTED' : 'DISCONNECTED');
-  // Pendant la reconnexion automatique en tâche de fond, maintenir 'CONNECTED' pour ne pas paniquer le frontend
-  if (st === 'AUTHENTICATED' || st === 'RECONNECTING') {
-    st = 'CONNECTED';
+  // Statut réel fidèle à l'état réel de Chromium
+  let st = waStatuses[userId] || (hasExistingSession ? 'STARTING' : 'DISCONNECTED');
+  if (st !== 'CONNECTED') {
+    if (waPairingCodes[userId]) st = 'CODE_READY';
+    else if (waSessionsQR[userId]) st = 'QR_READY';
   }
 
   let detectedPhone = getClientPhone(client, userId);
@@ -1328,7 +1311,7 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
     qr: waSessionsQR[userId] || null,
     pairingCode: waPairingCodes[userId] || null,
     phone: waNumbers[userId] ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
-    error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null
+    error: waStatuses[userId] === 'ERROR' ? (waErrors[userId] || 'Erreur d\'initialisation WhatsApp') : null
   });
 });
 
