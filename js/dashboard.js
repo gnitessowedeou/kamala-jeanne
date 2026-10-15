@@ -23,6 +23,53 @@ function getAuthHeaders(extraHeaders = {}) {
 // D�tection dynamique et r�siliente de l'URL API Backend
 let API_URL = 'https://kamala-jeanne-production.up.railway.app';
 
+// Analyseur universel de téléphone pour le Dashboard
+function parseAppPhone(rawPhone, fallbackCountry = '+225') {
+  if (typeof window !== 'undefined' && window.AuthEngine && typeof window.AuthEngine.splitPhone === 'function') {
+    return window.AuthEngine.splitPhone(rawPhone, fallbackCountry);
+  }
+  const KNOWN = [
+    '+225', '+229', '+226', '+221', '+228', '+223', '+227', '+224', '+245',
+    '+234', '+233', '+220', '+231', '+232', '+238', '+222', '+237', '+242',
+    '+243', '+241', '+212', '+216', '+213', '+33',  '+32',  '+41',  '+1',
+    '+44',  '+34',  '+55'
+  ].sort((a, b) => b.length - a.length);
+
+  const fallback = (fallbackCountry || '+225').trim();
+  const safeFallback = fallback.startsWith('+') ? fallback : '+' + fallback;
+
+  if (!rawPhone) return { country: safeFallback, number: '', rawNumber: '', full: '', cleanFull: '' };
+  let s = String(rawPhone).trim().replace(/[\s\-\.]/g, '');
+  if (!s || s === 'Non lié' || s === 'Inconnu' || s === 'Non configuré' || s === 'WhatsApp non configuré') {
+    return { country: safeFallback, number: '', rawNumber: '', full: '', cleanFull: '' };
+  }
+  if (!s.startsWith('+')) {
+    const matchNoPlus = KNOWN.find(c => s.startsWith(c.slice(1)));
+    if (matchNoPlus) s = '+' + s;
+    else s = safeFallback + s;
+  }
+  const match = KNOWN.find(c => s.startsWith(c));
+  let country = safeFallback;
+  let national = s;
+  if (match) {
+    country = match;
+    national = s.slice(match.length);
+  } else {
+    const m = s.match(/^\+(\d{1,3})(.*)$/);
+    if (m) { country = '+' + m[1]; national = m[2]; }
+  }
+  const cleanDigits = national.replace(/\D/g, '');
+  const chunked = (cleanDigits.match(/.{1,2}/g) || []).join(' ');
+  return {
+    country: country,
+    number: chunked || cleanDigits,
+    rawNumber: cleanDigits,
+    full: cleanDigits.length >= 6 ? (country + ' ' + (chunked || cleanDigits)).trim() : '',
+    cleanFull: cleanDigits.length >= 6 ? (country + cleanDigits).trim() : ''
+  };
+}
+window.parseAppPhone = parseAppPhone;
+
 // Identifiant utilisateur infaillible (Global)
 function getAppUserId() {
   try {
@@ -30,10 +77,18 @@ function getAppUserId() {
     if (u && u.id && u.id.length > 5 && !u.id.startsWith('usr_')) return u.id;
   } catch(e) {}
   try {
-    const su = JSON.parse(localStorage.getItem('sb-bbubzckxoxkscuzvhhiv-auth-token') || '{}');
-    if (su && su.user && su.user.id) return su.user.id;
+    const su1 = JSON.parse(localStorage.getItem('sb-rcnaebfqtkwwmqdbgkpq-auth-token') || '{}');
+    if (su1 && su1.user && su1.user.id) return su1.user.id;
   } catch(e) {}
-  return '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+  try {
+    const su2 = JSON.parse(localStorage.getItem('sb-bbubzckxoxkscuzvhhiv-auth-token') || '{}');
+    if (su2 && su2.user && su2.user.id) return su2.user.id;
+  } catch(e) {}
+  try {
+    const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+    if (u && u.id) return u.id;
+  } catch(e) {}
+  return '360ca892-6818-46e4-bb2a-451036e58d11';
 }
 window.getAppUserId = getAppUserId;
 
@@ -806,17 +861,26 @@ async function syncSubscriptionStatusFromServer() {
         updateTrialAndSubscriptionUI();
 
         // Synchronisation directe du numéro WhatsApp personnel depuis Supabase
-        const dbPhone = (profile.whatsapp_number || profile.phone || "").toString().trim();
+        const rawDbPhone = (profile.whatsapp_number || profile.phone || "").toString().trim();
         try {
           const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-          u.fullPhone = dbPhone;
-          u.phoneNumber = dbPhone.replace(/^\+\d+\s*/, '');
+          const candidatePhone = rawDbPhone || u.fullPhone || u.whatsapp_number || localStorage.getItem('vendia_connected_phone') || "";
+          const split = parseAppPhone(candidatePhone, u.phoneCountry || '+225');
+          if (split.full) {
+            u.fullPhone = split.full;
+            u.phoneNumber = split.number;
+            u.phoneCountry = split.country;
+            u.whatsapp_number = split.full;
+            try { localStorage.setItem('vendia_connected_phone', split.full); } catch(e) {}
+            window.currentWhatsAppPhone = split.full;
+          }
           if (profile.first_name) u.firstName = profile.first_name;
           if (profile.last_name) u.lastName = profile.last_name;
           localStorage.setItem('vendia_current_user', JSON.stringify(u));
+          if (typeof syncSettingsCard === 'function') syncSettingsCard(u);
         } catch(e) {}
         if (typeof window.applyWhatsAppState === 'function') {
-          window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', dbPhone);
+          window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', rawDbPhone);
         }
       }
     } catch (pErr) {
@@ -872,10 +936,18 @@ async function syncSubscriptionStatusFromServer() {
           if (data.whatsappNumber !== undefined) {
             let apiPhone = (data.whatsappNumber || '').toString().trim();
             if (apiPhone === '+229 62639593' || apiPhone === '22962639593') apiPhone = '';
-            u.fullPhone = apiPhone;
-            u.phoneNumber = apiPhone.replace(/^\+\d+\s*/, '');
+            const phoneToUse = apiPhone || u.fullPhone || u.whatsapp_number || localStorage.getItem('vendia_connected_phone') || '';
+            const split = parseAppPhone(phoneToUse, u.phoneCountry || '+225');
+            if (split.full) {
+              u.fullPhone = split.full;
+              u.phoneNumber = split.number;
+              u.phoneCountry = split.country;
+              u.whatsapp_number = split.full;
+              try { localStorage.setItem('vendia_connected_phone', split.full); } catch(e) {}
+              window.currentWhatsAppPhone = split.full;
+            }
             if (typeof window.applyWhatsAppState === 'function') {
-              window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', apiPhone);
+              window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', u.fullPhone || apiPhone);
             }
           }
 
@@ -4004,9 +4076,18 @@ function setupProfileSystem() {
     if (emailEl) emailEl.textContent = user.email || "";
 
     const phoneEl = document.getElementById("settings-display-phone");
-    const cleanSettingsPhone = (user.fullPhone || user.phoneNumber || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
-    const hasValidSettingsPhone = cleanSettingsPhone && cleanSettingsPhone !== 'Non lié' && cleanSettingsPhone !== 'Non configuré' && cleanSettingsPhone.replace(/\D/g, '').length >= 6;
-    if (phoneEl) phoneEl.textContent = hasValidSettingsPhone ? cleanSettingsPhone : "Non configuré";
+    const rawSettingsPhone = (
+      user.fullPhone || 
+      user.whatsapp_number || 
+      user.phone || 
+      user.phoneNumber || 
+      localStorage.getItem('vendia_connected_phone') || 
+      window.currentWhatsAppPhone || 
+      ""
+    ).toString().trim();
+    const split = parseAppPhone(rawSettingsPhone, user.phoneCountry || '+225');
+    const hasValidSettingsPhone = split.full && split.full !== 'Non lié' && split.full !== 'Non configuré' && split.cleanFull.replace(/\D/g, '').length >= 6;
+    if (phoneEl) phoneEl.textContent = hasValidSettingsPhone ? split.full : "Non configuré";
 
     const roleEl = document.getElementById("settings-display-role");
     if (roleEl) roleEl.textContent = user.role || "Propriétaire";
@@ -4029,7 +4110,7 @@ function setupProfileSystem() {
   // Populate and open Profile Modal
   const openProfileModal = () => {
     if (!profileModal) return;
-    const user = window.AuthEngine ? window.AuthEngine.getCurrentUser() : MOCK_DATA.currentUser;
+    const user = (window.AuthEngine ? window.AuthEngine.getCurrentUser() : null) || MOCK_DATA.currentUser || {};
     tempAvatarBase64 = undefined;
 
     const inputFirst = document.getElementById("profile-firstname");
@@ -4041,13 +4122,31 @@ function setupProfileSystem() {
     const inputEmail = document.getElementById("profile-email");
     if (inputEmail) inputEmail.value = user.email || "";
 
+    const rawP = (
+      user.fullPhone || 
+      user.whatsapp_number || 
+      user.phone || 
+      user.phoneNumber || 
+      localStorage.getItem('vendia_connected_phone') || 
+      window.currentWhatsAppPhone || 
+      ""
+    ).toString().trim();
+
+    const split = parseAppPhone(rawP, user.phoneCountry || '+225');
+
     const selectCountry = document.getElementById("profile-phone-country");
-    if (selectCountry && user.phoneCountry) selectCountry.value = user.phoneCountry;
+    if (selectCountry && split.country) {
+      selectCountry.value = split.country;
+      try { selectCountry.dispatchEvent(new Event('change')); } catch(e) {}
+    }
 
     const inputPhone = document.getElementById("profile-phone-number");
     if (inputPhone) {
-      const rawP = (user.phoneNumber || (user.fullPhone ? user.fullPhone.replace(/^\+\d+\s*/, '') : '')).toString().trim();
-      inputPhone.value = rawP;
+      inputPhone.value = split.number || split.rawNumber || "";
+    }
+
+    if (typeof window.initCompactCountrySelectors === 'function') {
+      setTimeout(window.initCompactCountrySelectors, 40);
     }
 
     const inputCompany = document.getElementById("profile-company");
@@ -4898,15 +4997,17 @@ function setupBillingAndAffiliate() {
 
         // Si un numéro est retourné par la connexion active, le mémoriser et l'adopter immédiatement
         if (phone && String(phone).replace(/\D/g, '').length >= 6) {
-            const cleanIncomingPhone = '+' + String(phone).replace(/^\+/, '').trim();
-            window.currentWhatsAppPhone = cleanIncomingPhone;
+            const splitIn = parseAppPhone(phone, user?.phoneCountry || '+225');
+            const cleanIncomingPhone = splitIn.cleanFull;
+            window.currentWhatsAppPhone = splitIn.full;
             if (user) {
-                user.fullPhone = cleanIncomingPhone;
-                user.whatsapp_number = cleanIncomingPhone;
-                user.phoneNumber = cleanIncomingPhone.replace(/^\+\d{1,4}/, '').trim();
+                user.fullPhone = splitIn.full;
+                user.whatsapp_number = splitIn.full;
+                user.phoneNumber = splitIn.number;
+                user.phoneCountry = splitIn.country;
                 try { localStorage.setItem('vendia_current_user', JSON.stringify(user)); } catch(e) {}
             }
-            try { localStorage.setItem('vendia_connected_phone', cleanIncomingPhone); } catch(e) {}
+            try { localStorage.setItem('vendia_connected_phone', splitIn.full); } catch(e) {}
         }
 
         // Récupération du numéro personnel :
@@ -4928,9 +5029,9 @@ function setupBillingAndAffiliate() {
             userRawPhone = '';
         }
 
-        const digitsOnly = userRawPhone.replace(/\D/g, '');
-        const hasPhone = digitsOnly.length >= 6;
-        const activePhone = hasPhone ? (userRawPhone.startsWith('+') ? userRawPhone : '+' + userRawPhone) : '';
+        const split = parseAppPhone(userRawPhone, user?.phoneCountry || '+225');
+        const hasPhone = !!split.full && split.cleanFull.replace(/\D/g, '').length >= 6;
+        const activePhone = hasPhone ? split.full : '';
 
         // 2. Header (En-tête supérieur)
         const headerNum = document.getElementById("header-connected-num");
@@ -5039,7 +5140,7 @@ function setupBillingAndAffiliate() {
                     cardBadge.textContent = "🟡 En attente de scan QR";
                     cardBadge.className = "badge badge-amber";
                 } else {
-                    cardBadge.textContent = "🟡 En attente de connexion";
+                    cardBadge.textContent = "🟡 Prêt à connecter";
                     cardBadge.className = "badge badge-amber";
                 }
             } else {
@@ -5051,10 +5152,15 @@ function setupBillingAndAffiliate() {
             if (isConnected) {
                 cardLabel.textContent = "Ligne Principale Vente (IA Active)";
             } else if (hasPhone) {
-                cardLabel.textContent = "Ligne à synchroniser via QR Code";
+                cardLabel.textContent = "Ligne enregistrée — Prête pour synchronisation QR Code";
             } else {
                 cardLabel.innerHTML = 'Ajoutez votre numéro dans les <a href="#settings" onclick="if(typeof showSection===\'function\'){showSection(\'settings\');}" style="color: var(--whatsapp-green); text-decoration: underline; font-weight: 600;">Paramètres</a>';
             }
+        }
+
+        // Pré-remplissage immédiat de la modale QR/Pairing si présente
+        if (typeof prefillWaPairingInput === 'function') {
+            prefillWaPairingInput();
         }
 
         // 5. Contrôle strict du bouton "Connecter un Numéro" (#btn-add-whatsapp-num)
@@ -5310,12 +5416,8 @@ function setupBillingAndAffiliate() {
         document.body.addEventListener('click', (e) => {
             if (e.target.closest('.btn-open-qr') || e.target.closest('#btn-add-whatsapp-num')) {
                 if (qrModal) qrModal.classList.add('active');
-                const pInput = document.getElementById('wa-pairing-phone-input');
-                if (pInput && !pInput.value) {
-                    let u = {};
-                    try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
-                    const curP = window.currentWhatsAppPhone || localStorage.getItem('vendia_connected_phone') || u?.fullPhone || u?.whatsapp_number || '';
-                    if (curP) pInput.value = curP;
+                if (typeof window.prefillWaPairingInput === 'function') {
+                    window.prefillWaPairingInput();
                 }
                 startWhatsApp();
             }
@@ -6190,7 +6292,58 @@ if (document.readyState === "loading") {
 // =============================================================================
 window.currentWaPairingCode = "";
 
+window.prefillWaPairingInput = function() {
+    var u = {};
+    try {
+        if (window.AuthEngine && typeof window.AuthEngine.getCurrentUser === 'function') {
+            u = window.AuthEngine.getCurrentUser() || {};
+        }
+    } catch(e) {}
+    if (!u || !u.id) {
+        try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
+    }
+
+    var rawPhone = (
+        window.currentWhatsAppPhone ||
+        localStorage.getItem('vendia_connected_phone') ||
+        u.fullPhone ||
+        u.whatsapp_number ||
+        u.phone ||
+        u.phoneNumber ||
+        ''
+    ).toString().trim();
+
+    if (rawPhone === 'Non lié' || rawPhone === 'Inconnu' || rawPhone === 'Non configuré' || rawPhone === 'WhatsApp non configuré') {
+        rawPhone = '';
+    }
+
+    var sp = parseAppPhone(rawPhone, u.phoneCountry || '+225');
+    var targetPhone = sp.full || rawPhone;
+
+    // 1. Pré-remplir l'input du mode pairing code
+    var phoneInput = document.getElementById("wa-pairing-phone-input");
+    if (phoneInput && targetPhone) {
+        var currentVal = (phoneInput.value || '').trim();
+        if (!currentVal || currentVal.includes('01 02 03 04') || currentVal.includes('07 89 45 12 30')) {
+            phoneInput.value = targetPhone;
+        }
+    }
+
+    // 2. Mettre à jour le badge d'affichage du numéro sur le QR code
+    var qrTarget = document.getElementById("qr-modal-target-phone");
+    if (qrTarget) {
+        if (targetPhone) {
+            qrTarget.textContent = targetPhone;
+        } else {
+            qrTarget.textContent = "Numéro de votre compte";
+        }
+    }
+};
+
 window.switchWaConnectMode = function(mode) {
+    if (typeof window.prefillWaPairingInput === 'function') {
+        window.prefillWaPairingInput();
+    }
     var tabQr = document.getElementById("tab-btn-qr");
     var tabPairing = document.getElementById("tab-btn-pairing");
     var paneQr = document.getElementById("pane-conn-qr");

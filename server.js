@@ -1545,6 +1545,21 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
     const remainingCredits = typeof profile.credits === 'number' ? profile.credits : 100;
     const userCreatedAt = user.created_at || profile.created_at || new Date().toISOString();
 
+    const KNOWN_COUNTRY_CODES = ['+225', '+229', '+226', '+221', '+228', '+223', '+227', '+224', '+245', '+234', '+233', '+220', '+231', '+232', '+238', '+222', '+237', '+242', '+243', '+241', '+33', '+1'];
+    let parsedPhoneCountry = "+225";
+    let parsedPhoneNumber = "";
+    const rawWaNumber = (profile.whatsapp_number || "").toString().trim();
+    if (rawWaNumber) {
+      const normalizedWa = rawWaNumber.startsWith('+') ? rawWaNumber : '+' + rawWaNumber;
+      const matchedPrefix = KNOWN_COUNTRY_CODES.find(code => normalizedWa.startsWith(code));
+      if (matchedPrefix) {
+        parsedPhoneCountry = matchedPrefix;
+        parsedPhoneNumber = normalizedWa.slice(matchedPrefix.length).replace(/\D/g, '');
+      } else {
+        parsedPhoneNumber = normalizedWa.replace(/^\+\d{1,4}/, '').replace(/\D/g, '');
+      }
+    }
+
     return res.status(200).json({
       success: true,
       profile,
@@ -1553,9 +1568,10 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
         firstName: profile.first_name || firstName,
         lastName: profile.last_name || lastName,
         email: profile.email || cleanEmail,
-        phoneCountry: "+225",
-        phoneNumber: (profile.whatsapp_number || "").replace(/^\+\d+\s*/, ""),
-        fullPhone: profile.whatsapp_number || "",
+        phoneCountry: parsedPhoneCountry,
+        phoneNumber: parsedPhoneNumber,
+        fullPhone: rawWaNumber,
+        whatsapp_number: rawWaNumber,
         company: "Mon Entreprise",
         role: "Administrateur",
         avatarUrl: profile.avatar_url || avatarUrl,

@@ -239,10 +239,69 @@
       return [DEFAULT_USER];
     },
 
+    splitPhone(rawPhone, fallbackCountry = '+225') {
+      const KNOWN = [
+        '+225', '+229', '+226', '+221', '+228', '+223', '+227', '+224', '+245',
+        '+234', '+233', '+220', '+231', '+232', '+238', '+222', '+237', '+242',
+        '+243', '+241', '+212', '+216', '+213', '+33',  '+32',  '+41',  '+1',
+        '+44',  '+34',  '+55'
+      ].sort((a, b) => b.length - a.length);
+
+      const fallback = (fallbackCountry || '+225').trim();
+      const safeFallback = fallback.startsWith('+') ? fallback : '+' + fallback;
+
+      if (!rawPhone) {
+        return { country: safeFallback, number: '', rawNumber: '', full: '', cleanFull: '' };
+      }
+
+      let s = String(rawPhone).trim().replace(/[\s\-\.]/g, '');
+      if (!s || s === 'Non lié' || s === 'Inconnu' || s === 'Non configuré' || s === 'WhatsApp non configuré') {
+        return { country: safeFallback, number: '', rawNumber: '', full: '', cleanFull: '' };
+      }
+
+      if (!s.startsWith('+')) {
+        const matchNoPlus = KNOWN.find(c => s.startsWith(c.slice(1)));
+        if (matchNoPlus) {
+          s = '+' + s;
+        } else {
+          s = safeFallback + s;
+        }
+      }
+
+      const match = KNOWN.find(c => s.startsWith(c));
+      let country = safeFallback;
+      let national = s;
+
+      if (match) {
+        country = match;
+        national = s.slice(match.length);
+      } else {
+        const m = s.match(/^\+(\d{1,3})(.*)$/);
+        if (m) {
+          country = '+' + m[1];
+          national = m[2];
+        }
+      }
+
+      const cleanDigits = national.replace(/\D/g, '');
+      const chunked = (cleanDigits.match(/.{1,2}/g) || []).join(' ');
+
+      return {
+        country: country,
+        number: chunked || cleanDigits,
+        rawNumber: cleanDigits,
+        full: cleanDigits.length >= 6 ? (country + ' ' + (chunked || cleanDigits)).trim() : '',
+        cleanFull: cleanDigits.length >= 6 ? (country + cleanDigits).trim() : ''
+      };
+    },
+
     formatPhone(country, number) {
-      const cleanNum = (number || "").trim().replace(/[^\d\s-]/g, "");
+      const cleanNum = (number || "").trim();
       const cleanCountry = (country || "+225").trim();
-      return `${cleanCountry} ${cleanNum}`.trim();
+      if (!cleanNum) return "";
+      const combined = cleanNum.startsWith('+') ? cleanNum : `${cleanCountry} ${cleanNum}`;
+      const parsed = this.splitPhone(combined, cleanCountry);
+      return parsed.full || `${cleanCountry} ${cleanNum}`.trim();
     },
 
     isValidEmail(email) {
@@ -287,7 +346,8 @@
         return { success: false, error: "Les mots de passe ne correspondent pas." };
       }
 
-      const fullPhone = this.formatPhone(phoneCountry, phoneNumber);
+      const parsedPhone = this.splitPhone(`${phoneCountry || '+225'} ${phoneNumber}`, phoneCountry || '+225');
+      const fullPhone = parsedPhone.full;
       const cleanEmail = email.trim().toLowerCase();
 
       try {
@@ -329,9 +389,10 @@
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: cleanEmail,
-          phoneCountry: phoneCountry || "+225",
-          phoneNumber: phoneNumber.trim(),
+          phoneCountry: parsedPhone.country,
+          phoneNumber: parsedPhone.number,
           fullPhone: fullPhone,
+          whatsapp_number: fullPhone,
           company: "Mon Entreprise",
           role: "Administrateur",
           avatarUrl: "",
@@ -347,6 +408,10 @@
         };
 
         this.saveCurrentUser(newUser);
+        try {
+          localStorage.setItem('vendia_connected_phone', fullPhone);
+          window.currentWhatsAppPhone = fullPhone;
+        } catch(e) {}
         return { success: true, user: newUser };
       } catch (err) {
         console.error("Erreur inscription Supabase:", err);
@@ -390,8 +455,9 @@
         const appMeta = userObj?.app_metadata || {};
         const userFirst = profile?.first_name || meta.first_name || cleanEmail.split("@")[0].charAt(0).toUpperCase() + cleanEmail.split("@")[0].slice(1);
         const userLast = profile?.last_name || meta.last_name || "";
-        let userPhone = (profile?.whatsapp_number || meta.whatsapp_number || "").toString().trim();
+        let userPhone = (profile?.whatsapp_number || profile?.phone || meta.whatsapp_number || meta.phone || "").toString().trim();
         if (userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré' || userPhone === 'WhatsApp non configuré') userPhone = "";
+        const parsedPhone = this.splitPhone(userPhone);
 
         const userCreatedAt = userObj?.created_at || profile?.created_at || new Date().toISOString();
         const activePlan = appMeta.plan || profile?.plan || 'trial';
@@ -409,9 +475,10 @@
           firstName: userFirst,
           lastName: userLast,
           email: profile?.email || userObj?.email || cleanEmail,
-          phoneCountry: "+225",
-          phoneNumber: userPhone ? userPhone.replace(/^\+\d+\s*/, "") : "",
-          fullPhone: userPhone,
+          phoneCountry: parsedPhone.country,
+          phoneNumber: parsedPhone.number,
+          fullPhone: parsedPhone.full,
+          whatsapp_number: parsedPhone.full,
           company: "Mon Entreprise",
           role: "Administrateur",
           avatarUrl: profile?.avatar_url || meta.avatar_url || "",
@@ -431,6 +498,12 @@
         };
 
         this.saveCurrentUser(loggedInUser);
+        if (parsedPhone.full) {
+          try {
+            localStorage.setItem('vendia_connected_phone', parsedPhone.full);
+            window.currentWhatsAppPhone = parsedPhone.full;
+          } catch(e) {}
+        }
         try {
           localStorage.setItem('vendia_user_registered_' + userId, userCreatedAt);
         } catch(e) {}
@@ -748,20 +821,24 @@
 
         let oauthPhone = (profile?.whatsapp_number || (serverUser ? serverUser.fullPhone : "")).toString().trim();
         if (oauthPhone === 'Non lié' || oauthPhone === 'Inconnu' || oauthPhone === 'Non configuré' || oauthPhone === 'WhatsApp non configuré') oauthPhone = "";
+        const parsedOAuthPhone = this.splitPhone(oauthPhone);
 
         const loggedInUser = serverUser ? {
           ...serverUser,
-          fullPhone: oauthPhone,
-          phoneNumber: oauthPhone ? oauthPhone.replace(/^\+\d+\s*/, "") : "",
+          fullPhone: parsedOAuthPhone.full,
+          whatsapp_number: parsedOAuthPhone.full,
+          phoneCountry: parsedOAuthPhone.country,
+          phoneNumber: parsedOAuthPhone.number,
           provider: "google"
         } : {
           id: userObj.id,
           firstName: profile?.first_name || userFirst,
           lastName: profile?.last_name || userLast,
           email: profile?.email || cleanEmail,
-          phoneCountry: "+225",
-          phoneNumber: oauthPhone ? oauthPhone.replace(/^\+\d+\s*/, "") : "",
-          fullPhone: oauthPhone,
+          phoneCountry: parsedOAuthPhone.country,
+          phoneNumber: parsedOAuthPhone.number,
+          fullPhone: parsedOAuthPhone.full,
+          whatsapp_number: parsedOAuthPhone.full,
           company: "Mon Entreprise",
           role: "Administrateur",
           avatarUrl: profile?.avatar_url || userAvatar,
@@ -781,6 +858,12 @@
         };
 
         this.saveCurrentUser(loggedInUser);
+        if (parsedOAuthPhone.full) {
+          try {
+            localStorage.setItem('vendia_connected_phone', parsedOAuthPhone.full);
+            window.currentWhatsAppPhone = parsedOAuthPhone.full;
+          } catch(e) {}
+        }
         try {
           localStorage.setItem('vendia_user_registered_' + (loggedInUser.id || userObj.id), userCreatedAt);
         } catch(e) {}
@@ -806,15 +889,16 @@
         return { success: false, error: "Numéro WhatsApp invalide." };
       }
 
-      const fullPhone = this.formatPhone(
-        updates.phoneCountry || current.phoneCountry,
-        updates.phoneNumber || current.phoneNumber
-      );
+      const rawCombined = `${updates.phoneCountry || current.phoneCountry || '+225'} ${updates.phoneNumber || current.phoneNumber || ''}`;
+      const parsedPhone = this.splitPhone(rawCombined, updates.phoneCountry || current.phoneCountry || '+225');
 
       const updated = {
         ...current,
         ...updates,
-        fullPhone: fullPhone
+        phoneCountry: parsedPhone.country,
+        phoneNumber: parsedPhone.number,
+        fullPhone: parsedPhone.full,
+        whatsapp_number: parsedPhone.full
       };
 
       // Synchronisation directe avec la table 'profiles' de Supabase
@@ -823,13 +907,20 @@
           await SupabaseRest.updateProfile(current.id, {
             first_name: updated.firstName || "",
             last_name: updated.lastName || "",
-            whatsapp_number: fullPhone,
+            whatsapp_number: parsedPhone.full,
             avatar_url: updated.avatarUrl || current.avatarUrl || "",
             updated_at: new Date().toISOString()
           });
         } catch (err) {
           console.warn("Avertissement mise à jour table profiles:", err);
         }
+      }
+
+      if (parsedPhone.full) {
+        try {
+          localStorage.setItem('vendia_connected_phone', parsedPhone.full);
+          window.currentWhatsAppPhone = parsedPhone.full;
+        } catch(e) {}
       }
 
       this.saveCurrentUser(updated);
@@ -891,13 +982,15 @@
         user.fullPhone || 
         user.whatsapp_number || 
         user.phone || 
+        user.phoneNumber || 
         ""
       ).toString().trim();
       if (userPhone === 'Non lié' || userPhone === 'Inconnu' || userPhone === 'Non configuré' || userPhone === 'WhatsApp non configuré') {
         userPhone = "";
       }
-      const hasPhone = !!userPhone && userPhone.replace(/\D/g, '').length >= 6;
-      const formattedPhone = hasPhone ? (userPhone.startsWith('+') ? userPhone : '+' + userPhone) : '';
+      const parsedPhone = this.splitPhone(userPhone, user.phoneCountry || '+225');
+      const hasPhone = !!parsedPhone.full && parsedPhone.rawNumber.length >= 6;
+      const formattedPhone = hasPhone ? parsedPhone.full : '';
 
       const welcomeNames = document.querySelectorAll(".welcome-name");
       welcomeNames.forEach(el => {
@@ -947,9 +1040,12 @@
       const inputEmail = document.getElementById("profile-email");
       if (inputEmail) inputEmail.value = user.email || "";
       const selectCountry = document.getElementById("profile-phone-country");
-      if (selectCountry && user.phoneCountry) selectCountry.value = user.phoneCountry;
+      if (selectCountry && parsedPhone.country) {
+        selectCountry.value = parsedPhone.country;
+        try { selectCountry.dispatchEvent(new Event('change')); } catch(e) {}
+      }
       const inputPhone = document.getElementById("profile-phone-number");
-      if (inputPhone) inputPhone.value = user.phoneNumber || "";
+      if (inputPhone) inputPhone.value = parsedPhone.number || parsedPhone.rawNumber || "";
       const inputCompany = document.getElementById("profile-company");
       if (inputCompany) inputCompany.value = user.company || "";
       const inputRole = document.getElementById("profile-role");
@@ -1014,18 +1110,21 @@
           const persistentCreatedAt = user.createdAt || profile.created_at || localStorage.getItem('vendia_user_registered_' + user.id);
 
           // Récupération stricte du numéro personnel depuis Supabase
-          let profilePhone = (profile.whatsapp_number || profile.phone || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
+          let profilePhone = (profile.whatsapp_number || profile.phone || user.fullPhone || user.whatsapp_number || localStorage.getItem('vendia_connected_phone') || "").toString().trim();
           if (profilePhone === 'Non lié' || profilePhone === 'Inconnu' || profilePhone === 'Non configuré' || profilePhone === 'WhatsApp non configuré') {
             profilePhone = "";
           }
+          const parsedPhone = this.splitPhone(profilePhone, user.phoneCountry || '+225');
 
           const syncedUser = {
             ...user,
             createdAt: persistentCreatedAt || user.createdAt,
             firstName: profile.first_name || user.firstName,
             lastName: profile.last_name || user.lastName,
-            fullPhone: profilePhone,
-            phoneNumber: profilePhone ? profilePhone.replace(/^\+\d{1,4}/, '').trim() : "",
+            fullPhone: parsedPhone.full,
+            whatsapp_number: parsedPhone.full,
+            phoneCountry: parsedPhone.country,
+            phoneNumber: parsedPhone.number,
             avatarUrl: profile.avatar_url || user.avatarUrl,
             affiliateCode: profile.affiliate_code || user.affiliateCode,
             plan: {

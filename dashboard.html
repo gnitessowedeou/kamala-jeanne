@@ -2600,9 +2600,13 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
         <!-- Pane A: QR Code Mode -->
         <div id="pane-conn-qr" class="conn-pane active">
-          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
             Scannez ce QR Code avec votre téléphone dans <strong>WhatsApp &gt; Appareils Connectés</strong> pour synchroniser vos discussions en coexistence avec l'Agent IA.
           </p>
+
+          <div class="qr-target-badge" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px auto; padding: 7px 16px; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.25); border-radius: 20px; font-size: 13px; color: var(--whatsapp-green); max-width: 360px;">
+            <i class="fa-brands fa-whatsapp"></i> <span>Ligne WhatsApp : <strong id="qr-modal-target-phone">Prête à synchroniser</strong></span>
+          </div>
 
           <div class="qr-code-box" id="qr-canvas-box" style="display: flex; align-items: center; justify-content: center; min-height: 260px; background: rgba(0,0,0,0.25); border-radius: 12px; margin: 15px auto;">
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center;">
@@ -2634,7 +2638,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             <div class="pairing-form-row">
               <div class="pairing-input-wrap">
                 <i class="fa-brands fa-whatsapp"></i>
-                <input type="tel" id="wa-pairing-phone-input" placeholder="Ex: +225 07 01 02 03 04 ou 229..." autocomplete="tel">
+                <input type="tel" id="wa-pairing-phone-input" placeholder="Votre numéro WhatsApp (ex: +229 99 04 47 29)" autocomplete="tel">
               </div>
               <button type="button" class="btn-primary-glow" id="btn-submit-pairing" onclick="submitWhatsAppPairingCode()">
                 <i class="fa-solid fa-key"></i>
@@ -2802,7 +2806,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
                 <option value="+243">🇨🇩 +243 · RD Congo</option>
                 <option value="+241">🇬🇦 +241 · Gabon</option>
               </select>
-              <input type="tel" class="profile-input" id="profile-phone-number" placeholder="07 89 45 12 30" required style="flex: 1;">
+              <input type="tel" class="profile-input" id="profile-phone-number" placeholder="Ex: 99 04 47 29" required style="flex: 1;">
             </div>
           </div>
 
@@ -2991,7 +2995,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
                       <option value="+33">🇫🇷 +33</option>
                       <option value="+1">🇺🇸 +1</option>
                     </select>
-                    <input type="tel" class="form-control" id="modal-customer-phone" placeholder="07 89 45 12 30" required style="flex: 1;">
+                    <input type="tel" class="form-control" id="modal-customer-phone" placeholder="Ex: 99 04 47 29" required style="flex: 1;">
                   </div>
                 </div>
               </div>
@@ -3155,7 +3159,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
                   <option value="+243">🇨🇩 +243 · RD Congo</option>
                   <option value="+241">🇬🇦 +241 · Gabon</option>
                 </select>
-                <input type="tel" class="form-control" id="modal-pay-phone" placeholder="07 89 45 12 30" required style="flex: 1;">
+                <input type="tel" class="form-control" id="modal-pay-phone" placeholder="Numéro Mobile Money (ex: 99 04 47 29)" required style="flex: 1;">
               </div>
               <small style="color: #64748b; font-size: 11.5px; margin-top: 5px; display: block;">
                 Une notification de validation de paiement instantané s'affichera directement sur votre téléphone.
@@ -3253,7 +3257,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="payout-beneficiary">Numéro ou Coordonnées de réception <span class="required">*</span></label>
-            <input type="text" class="form-control" id="payout-beneficiary" placeholder="Ex: +225 07 89 45 12 30" required>
+            <input type="text" class="form-control" id="payout-beneficiary" placeholder="Ex: Votre numéro Mobile Money ou IBAN" required>
           </div>
 
           <div class="form-group">
@@ -3720,7 +3724,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
                 <option value="+243">🇨🇩 +243 · RD Congo</option>
                 <option value="+241">🇬🇦 +241 · Gabon</option>
               </select>
-              <input type="tel" class="form-control" id="invite-member-phone" placeholder="07 89 45 12 30" style="flex: 1;">
+              <input type="tel" class="form-control" id="invite-member-phone" placeholder="Ex: 99 04 47 29" style="flex: 1;">
             </div>
           </div>
 
@@ -3757,10 +3761,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261015_v43"></script>
+  <script src="js/i18n.js?v=20261015_v45"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261015_v43"></script>
-  <script src="js/dashboard.js?v=20261015_v43"></script>
+  <script src="js/auth.js?v=20261015_v45"></script>
+  <script src="js/dashboard.js?v=20261015_v45"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -3966,6 +3970,9 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       if (qm) {
         const obs = new MutationObserver(function() {
           if (qm.classList.contains('active')) {
+            if (typeof window.prefillWaPairingInput === 'function') {
+              window.prefillWaPairingInput();
+            }
             if (typeof window.startWhatsApp === 'function') {
               window.startWhatsApp();
             }
