@@ -35,6 +35,8 @@ app.disable('x-powered-by');
 
 const allowedOrigins = [
   'https://kamala-jeanne.vercel.app',
+  'https://vandias.com',
+  'https://www.vandias.com',
   'https://vandia.ai',
   'https://www.vandia.ai',
   'http://localhost:8080',
@@ -619,7 +621,7 @@ async function generateSalesAgentResponse({
     recommendedPaymentText = "👉 Pour le Gabon, propose prioritairement :\n- MOOV MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte VISA / Mastercard disponible";
   } else if (cleanPhone.startsWith('234')) {
     detectedCountry = "Nigeria (Indicatif +234)";
-    recommendedPaymentText = "👉 Pour le Nigeria, propose prioritairement :\n- Paiement instantané sécurisé par Carte Bancaire (Visa/Mastercard) ou lien de paiement officiel VANDIA";
+    recommendedPaymentText = "👉 Pour le Nigeria, propose prioritairement :\n- Paiement instantané sécurisé par Carte Bancaire (Visa/Mastercard) ou lien de paiement officiel VANDIAS";
   } else if (cleanPhone.startsWith('233')) {
     detectedCountry = "Ghana (Indicatif +233)";
     recommendedPaymentText = "👉 Pour le Ghana, propose prioritairement :\n- MTN MOBILE MONEY au +229 01 62 63 95 93 (Nom : Gnitou Essowedeou)\n- Carte Bancaire (Visa/Mastercard)";
@@ -1491,7 +1493,7 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
       return res.status(403).json({
         success: false,
         code: "NO_ACCOUNT",
-        error: `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`,
+        error: `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIAS. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`,
         user: {
           firstName,
           lastName,
@@ -1870,7 +1872,7 @@ app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
         const { userId, planTier, amount, cycle, email, customer_name } = req.body;
         
         let customerEmail = email || "client@kamalajeanne.com";
-        let customerName = customer_name || "Client VANDIA";
+        let customerName = customer_name || "Client VANDIAS";
 
         if (userId && supabase) {
             try {

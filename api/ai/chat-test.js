@@ -3,8 +3,10 @@ const { OpenAI } = require('openai');
 
 const allowedOrigins = [
   'https://kamala-jeanne.vercel.app',
-  'https://vandia.ai',
-  'https://www.vandia.ai',
+  'https://vandias.com',
+  'https://www.vandias.com',
+  'https://vandias.com',
+  'https://www.vandias.com',
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000'
@@ -52,7 +54,7 @@ module.exports = async (req, res) => {
     if (!message || typeof message !== 'string') return res.status(400).json({ error: "Message requis" });
     if (message.length > 1000) return res.status(400).json({ error: "Message trop long (max 1000 caractères)" });
 
-    let systemPrompt = "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIA AI.";
+    let systemPrompt = "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIAS AI.";
     if (userId && supabaseUrl && supabaseKey) {
       try {
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -64,7 +66,7 @@ module.exports = async (req, res) => {
     if (!openAiKey) {
       return res.status(200).json({ 
         success: true, 
-        reply: "Bonjour ! Je suis l'assistant IA VANDIA. Mon moteur est prêt à vous assister." 
+        reply: "Bonjour ! Je suis l'assistant IA VANDIAS. Mon moteur est prêt à vous assister." 
       });
     }
 

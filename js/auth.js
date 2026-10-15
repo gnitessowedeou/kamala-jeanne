@@ -10,7 +10,7 @@
 
 ﻿/**
  * ==============================================================================
- * VENDIA AI — CORE AUTHENTICATION & SUPABASE REST PROFILE ENGINE
+ * VANDIAS AI — CORE AUTHENTICATION & SUPABASE REST PROFILE ENGINE
  * Handles: Inscription, Connexion, Synchronisation Profil Réel (table 'profiles'),
  * Réinitialisation Mot de Passe, Formatage WhatsApp, Avatar & Persistance.
  * 100% Natif via Fetch API (Zéro dépendance CDN externe — Fiabilité 100%)
@@ -24,7 +24,7 @@
   const STORAGE_KEY_USERS = "vendia_users_db";
   const STORAGE_KEY_TOKEN = "vendia_supabase_token";
 
-  // Configuration Supabase Officielle VANDIA AI
+  // Configuration Supabase Officielle VANDIAS AI
   const SUPABASE_URL = "https://rcnaebfqtkwwmqdbgkpq.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_76HCqO2mjcqMQIOo0Yx9Bg_dUJmCixv";
 
@@ -614,7 +614,7 @@
               localStorage.removeItem(STORAGE_KEY_TOKEN);
             } catch(e) {}
 
-            const errorMsg = resData?.error || `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
+            const errorMsg = resData?.error || `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIAS. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
             const prefill = resData?.user || { firstName: userFirst, lastName: userLast, email: cleanEmail };
 
             try {
@@ -683,7 +683,7 @@
               localStorage.removeItem(STORAGE_KEY_TOKEN);
             } catch(e) {}
 
-            const errorMsg = `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIA. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
+            const errorMsg = `Cette adresse e-mail (${cleanEmail}) n'a pas encore de compte sur la plateforme VANDIAS. Veuillez créer votre compte ci-dessous pour démarrer vos 7 jours d'essai gratuit.`;
 
             try {
               sessionStorage.setItem("vendia_oauth_error", errorMsg);
@@ -849,7 +849,7 @@
       if (!user) user = this.getCurrentUser();
       if (!user) return;
 
-      const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Utilisateur VANDIA";
+      const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Utilisateur VANDIAS";
       const initials = ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || "V";
 
       // 1. Profil Sidebar
@@ -937,7 +937,7 @@
       const teamLeadName = document.getElementById("team-lead-name");
       if (teamLeadName) teamLeadName.textContent = fullName;
       const teamLeadEmail = document.getElementById("team-lead-email");
-      if (teamLeadEmail) teamLeadEmail.textContent = user.email || "admin@vandia.ai";
+      if (teamLeadEmail) teamLeadEmail.textContent = user.email || "admin@vandias.com";
 
       // 5. Champs d'édition du formulaire modal
       const inputFirst = document.getElementById("profile-firstname");

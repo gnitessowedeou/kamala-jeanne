@@ -47,7 +47,7 @@ try {
 } catch (e) {}
 ﻿/**
  * ==============================================================================
- * VANDIA AI — DASHBOARD JAVASCRIPT ENGINE
+ * VANDIAS AI — DASHBOARD JAVASCRIPT ENGINE
  * Full SPA Frontend Navigation, Chart.js, WhatsApp Live Chat, Modals & MOCK Data
  * Prepared for Supabase / Backend API integration
  * ==============================================================================
@@ -243,7 +243,7 @@ const MOCK_DATA = {
       contacts: 312,
       conversion: "38.5%",
       icon: "fa-hand-sparkles",
-      step1: "Bonjour et bienvenue chez nous ! 😊 Je suis votre conseiller commercial VANDIA. Comment puis-je vous aider aujourd'hui ? 1️⃣ Canva Pro, 2️⃣ CapCut Pro, 3️⃣ Formations",
+      step1: "Bonjour et bienvenue chez nous ! 😊 Je suis votre conseiller commercial VANDIAS. Comment puis-je vous aider aujourd'hui ? 1️⃣ Canva Pro, 2️⃣ CapCut Pro, 3️⃣ Formations",
       delay: "1h",
       step2: "Bonjour ! N'hésitez pas à me dire quel outil vous intéresse afin que je vous guide vers la meilleure offre."
     },
@@ -331,7 +331,7 @@ const MOCK_DATA = {
       badgeClass: "badge-blue",
       desc: "Paiements sécurisés par Carte VISA, Mastercard et liens de paiement pour les clients internationaux.",
       phone: "Lien de paiement sécurisé",
-      beneficiary: "VANDIA SAS",
+      beneficiary: "VANDIAS SAS",
       color: "#10b981",
       icon: "fa-credit-card",
       active: true
@@ -379,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ==============================================================================
-// MOTEUR UNIFIÉ DU SYSTÈME D'ESSAI GRATUIT (7 JOURS) & ABONNEMENTS VANDIA IA
+// MOTEUR UNIFIÉ DU SYSTÈME D'ESSAI GRATUIT (7 JOURS) & ABONNEMENTS VANDIAS IA
 // ==============================================================================
 let trialCountdownTimer = null;
 let currentSubscriptionState = {
@@ -1141,7 +1141,7 @@ function setupNavigation() {
   if (brandLogo) {
     brandLogo.addEventListener("click", (e) => {
       e.preventDefault();
-      showView("overview", "Tableau de Bord VANDIA IA");
+      showView("overview", "Tableau de Bord VANDIAS IA");
     });
   }
 
@@ -1188,7 +1188,7 @@ function showView(viewId, customTitle = null) {
   });
 
   // 3. Update Header Title & Icon
-  updateHeaderTitle(customTitle || "Tableau de Bord VANDIA IA", viewId);
+  updateHeaderTitle(customTitle || "Tableau de Bord VANDIAS IA", viewId);
 
   // 4. Update window hash cleanly without jump
   if (history.pushState) {
@@ -1735,7 +1735,7 @@ function renderActivityFeed() {
 
   const user = (window.AuthEngine ? window.AuthEngine.getCurrentUser() : null) || MOCK_DATA.currentUser || {};
   const userName = user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user.full_name || user.email?.split('@')[0] || "Administrateur");
-  const planName = user.plan?.name || "VANDIA Pro (Essai 7j)";
+  const planName = user.plan?.name || "VANDIAS Pro (Essai 7j)";
   const tokensMax = user.plan?.tokensMax || 100;
   const tokensUsed = user.plan?.tokensUsed || 0;
   const tokensLeft = Math.max(0, tokensMax - tokensUsed);
@@ -2764,7 +2764,7 @@ const DEFAULT_META_TEMPLATES = [
     footer: "Service client disponible 7j/7",
     cta: "Suivre mon colis",
     btnType: "url",
-    btnUrl: "https://vandia.ai/suivi",
+    btnUrl: "https://vandias.com/suivi",
     status: "Approuvé Meta",
     statusType: "green"
   },
@@ -2775,10 +2775,10 @@ const DEFAULT_META_TEMPLATES = [
     lang: "fr",
     header: "🛒 VOTRE PANIER VOUS ATTEND",
     content: "Bonjour {{1}}, vous n'avez pas finalisé votre panier. Bonne nouvelle : vos articles sont réservés pour les prochaines 2 heures avec livraison offerte !",
-    footer: "VANDIA Commerce Sécurisé",
+    footer: "VANDIAS Commerce Sécurisé",
     cta: "Finaliser ma commande",
     btnType: "url",
-    btnUrl: "https://vandia.ai/panier",
+    btnUrl: "https://vandias.com/panier",
     status: "Approuvé Meta",
     statusType: "green"
   }
@@ -3705,7 +3705,7 @@ async function saveAgentConfig() {
     return;
   }
 
-  const agentName = nameInput ? nameInput.value.trim() : "Sarah - Conseillère Commerciale VANDIA";
+  const agentName = nameInput ? nameInput.value.trim() : "Sarah - Conseillère Commerciale VANDIAS";
   const agentTone = activeToneBtn ? activeToneBtn.textContent.trim() : "Chaleureux & Persuasif";
   const isActive = switchInput ? switchInput.checked : true;
   const delay = delaySelect ? delaySelect.value : "30";
@@ -3920,7 +3920,7 @@ function setupActionButtons() {
   const logoutBtn = document.getElementById("btn-logout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      if (confirm("Voulez-vous vraiment vous déconnecter de votre espace VANDIA AI ?")) {
+      if (confirm("Voulez-vous vraiment vous déconnecter de votre espace VANDIAS AI ?")) {
         if (window.AuthEngine) {
           window.AuthEngine.logout();
         } else {
@@ -3994,7 +3994,7 @@ function setupProfileSystem() {
     if (!user && window.AuthEngine) user = window.AuthEngine.getCurrentUser();
     if (!user) return;
 
-    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Utilisateur VANDIA";
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Utilisateur VANDIAS";
     const initials = ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || "V";
 
     const nameEl = document.getElementById("settings-display-fullname");
@@ -4257,7 +4257,7 @@ function setupBillingAndAffiliate() {
       step2.style.display = "none";
       step2.classList.add("step-hidden");
     }
-    if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIA";
+    if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIAS";
     if (subEl) subEl.textContent = "Étape 1/2 : Choisissez votre formule et vos coordonnées";
 
     // Pre-fill user details from localStorage if available
@@ -4538,7 +4538,7 @@ function setupBillingAndAffiliate() {
       step1.style.display = "flex";
       step1.classList.remove("step-hidden");
     }
-    if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIA";
+    if (titleEl) titleEl.textContent = "Choisir / Activer un Forfait VANDIAS";
     if (subEl) subEl.textContent = "Étape 1/2 : Choisissez votre formule et vos coordonnées";
   }
 
@@ -4719,8 +4719,8 @@ function setupBillingAndAffiliate() {
 
         const fname = fnameInput ? fnameInput.value.trim() : "";
         const lname = lnameInput ? lnameInput.value.trim() : "";
-        const customerName = (fname + ' ' + lname).trim() || "Client VANDIA";
-        const email = (emailInput ? emailInput.value.trim() : "") || "client@vendia.ai";
+        const customerName = (fname + ' ' + lname).trim() || "Client VANDIAS";
+        const email = (emailInput ? emailInput.value.trim() : "") || "client@vandias.com";
 
         let monthlyAmount = selectedTier === 'basic' ? 7900 : selectedTier === 'pro' ? 14900 : 30000;
         let totalAmount = isAnnual ? Math.round((monthlyAmount * 0.8) * 12) : monthlyAmount;
@@ -5608,7 +5608,7 @@ async function syncAffiliateModule() {
   if (affInput) affInput.value = dynamicAffLink;
   if (affWaShare) {
     affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
-      "Bonjour ! Je te recommande VANDIA AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7 : " + dynamicAffLink
+      "Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7 : " + dynamicAffLink
     );
   }
 
@@ -5673,7 +5673,7 @@ window.simulateAffiliateTest = function() {
 };
 
 // ==============================================================================
-// GESTION DES MEMBRES DE L'ÉQUIPE & INVITATIONS VANDIA AI
+// GESTION DES MEMBRES DE L'ÉQUIPE & INVITATIONS VANDIAS AI
 // ==============================================================================
 function getSavedTeamMembers() {
   try {
@@ -5700,7 +5700,7 @@ function renderTeamMembers() {
   } catch(e) {}
   
   const leadName = currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Administrateur' : 'Administrateur';
-  const leadEmail = currentUser?.email || 'admin@vandia.ai';
+  const leadEmail = currentUser?.email || 'admin@vandias.com';
   const leadInitial = ((currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || '')).toUpperCase() || (leadName.charAt(0) || 'A').toUpperCase();
 
   const invited = getSavedTeamMembers();
@@ -5885,14 +5885,14 @@ window.removeTeamMember = function(memberId) {
 
 
 // ==============================================================================
-// VANDIA ACADEMY — FORMATIONS & DÉMONSTRATIONS VIDÉO CONTROLLER
+// VANDIAS ACADEMY — FORMATIONS & DÉMONSTRATIONS VIDÉO CONTROLLER
 // ==============================================================================
 const ACADEMY_VIDEOS = {
   "video-1": {
     title: "Module 01 : Lier son Numéro WhatsApp Officiel en 60s via QR Code",
     badge: "Démarrage Rapide • 3:45",
     category: "quickstart",
-    desc: "Démonstration complète de la synchronisation de votre numéro WhatsApp avec VANDIA IA via le scan du QR Code.",
+    desc: "Démonstration complète de la synchronisation de votre numéro WhatsApp avec VANDIAS IA via le scan du QR Code.",
     points: [
       "Rendez-vous dans la section 'Vue d'ensemble' ou 'Numéros & Coexistence'.",
       "Cliquez sur 'Lier un numéro' et ouvrez WhatsApp sur votre téléphone > Appareils connectés.",
@@ -5931,7 +5931,7 @@ const ACADEMY_VIDEOS = {
     title: "Module 04 : Diffusions de Masse WhatsApp sans Risque de Ban Meta",
     badge: "Diffusions • 7:15",
     category: "broadcast",
-    desc: "Découvrez la méthode anti-ban de VANDIA pour envoyer vos offres à des milliers de prospects en toute sécurité.",
+    desc: "Découvrez la méthode anti-ban de VANDIAS pour envoyer vos offres à des milliers de prospects en toute sécurité.",
     points: [
       "Importez votre fichier de contacts via CSV ou utilisez les contacts CRM.",
       "Utilisez des messages personnalisés avec des variables de politesse.",
@@ -6079,7 +6079,7 @@ if (document.readyState === "loading") {
 
 
 // ==============================================================================
-// VANDIA MASTER PROMPTS — BIBLIOTHÈQUE & DÉMONSTRATIONS CONTROLLER
+// VANDIAS MASTER PROMPTS — BIBLIOTHÈQUE & DÉMONSTRATIONS CONTROLLER
 // ==============================================================================
 function copyMasterPrompt(elemId) {
   const elem = document.getElementById(elemId);

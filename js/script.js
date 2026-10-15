@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * VENDIA AI — LANDING PAGE INTERACTIVE ENGINE
+ * VANDIAS AI — LANDING PAGE INTERACTIVE ENGINE
  * Mobile Navigation, Phone Simulator, Pricing Toggle, FAQ Accordion & Modals
  * Pure Vanilla JavaScript
  * ==============================================================================
@@ -364,7 +364,7 @@ function initAuthModal() {
       if (formForgot) formForgot.style.display = "none";
       if (socialSection) socialSection.style.display = "none";
       if (footerPrompt) footerPrompt.style.display = "block";
-      if (footerText) footerText.textContent = "Déjà un compte VANDIA ?";
+      if (footerText) footerText.textContent = "Déjà un compte VANDIAS ?";
       if (footerAction) footerAction.textContent = "Se connecter";
     } else if (mode === "login") {
       if (tabSignup) tabSignup.classList.remove("active");
@@ -662,7 +662,7 @@ function initAuthModal() {
 // ==============================================================================
 // 9. MULTI-LANGUAGE SELECTOR & TRANSLATION ENGINE (FR, EN, ES, PT, AR)
 // ==============================================================================
-const VENDIA_LANGUAGES = {
+const VANDIAS_LANGUAGES = {
   fr: { code: 'FR', name: 'Français', flag: 'https://flagcdn.com/w40/fr.png' },
   en: { code: 'EN', name: 'English', flag: 'https://flagcdn.com/w40/gb.png' },
   es: { code: 'ES', name: 'Español', flag: 'https://flagcdn.com/w40/es.png' },
@@ -678,7 +678,7 @@ function initLanguageSelector() {
 
   // Met à jour l'affichage de tous les sélecteurs de langue (desktop et mobile)
   const updateSelectorsUI = (langCode) => {
-    const lang = VENDIA_LANGUAGES[langCode] || VENDIA_LANGUAGES.fr;
+    const lang = VANDIAS_LANGUAGES[langCode] || VANDIAS_LANGUAGES.fr;
     wraps.forEach(wrap => {
       const btn = wrap.querySelector('.lang-selector-btn');
       if (btn) {
@@ -723,7 +723,7 @@ function initLanguageSelector() {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const selectedLang = item.dataset.lang;
-        if (!selectedLang || !VENDIA_LANGUAGES[selectedLang]) return;
+        if (!selectedLang || !VANDIAS_LANGUAGES[selectedLang]) return;
 
         localStorage.setItem('vendia_lang', selectedLang);
         updateSelectorsUI(selectedLang);

@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * VENDIA AI — NATIVE MULTI-LANGUAGE ENGINE (i18n)
+ * VANDIAS AI — NATIVE MULTI-LANGUAGE ENGINE (i18n)
  * Ultra-fast, zero-dependency, instantaneous translation for:
  * - Français (FR)
  * - English (EN)
@@ -13,7 +13,7 @@
 (function(window) {
   'use strict';
 
-  const VENDIA_LANGUAGES = {
+  const VANDIAS_LANGUAGES = {
     fr: { code: 'FR', name: 'Français', flag: 'https://flagcdn.com/w40/fr.png', dir: 'ltr' },
     en: { code: 'EN', name: 'English', flag: 'https://flagcdn.com/w40/gb.png', dir: 'ltr' },
     es: { code: 'ES', name: 'Español', flag: 'https://flagcdn.com/w40/es.png', dir: 'ltr' },
@@ -251,10 +251,10 @@
       pt: "RECURSOS PRINCIPAIS",
       ar: "الميزات الرئيسية"
     },
-    "Pourquoi les Meilleurs Vendeurs Choisissent VANDIA": {
-      en: "Why Top Sellers Choose VANDIA",
-      es: "Por Qué los Mejores Vendedores Eligen VANDIA",
-      pt: "Por Que os Melhores Vendedores Escolhem a VANDIA",
+    "Pourquoi les Meilleurs Vendeurs Choisissent VANDIAS": {
+      en: "Why Top Sellers Choose VANDIAS",
+      es: "Por Qué los Mejores Vendedores Eligen VANDIAS",
+      pt: "Por Que os Melhores Vendedores Escolhem a VANDIAS",
       ar: "لماذا يختار أفضل البائعين فانديا"
     },
     "Gérer manuellement des dizaines de discussions quotidiennes est le premier frein à la croissance de votre business.": {
@@ -461,22 +461,22 @@
       pt: "Repetir palavra-passe",
       ar: "تكرار كلمة المرور"
     },
-    "Créer mon compte VANDIA (-50% à Vie)": {
-      en: "Create my VANDIA account (-50% Lifetime)",
-      es: "Crear mi cuenta VANDIA (-50% de por vida)",
-      pt: "Criar minha conta VANDIA (-50% Vitalício)",
+    "Créer mon compte VANDIAS (-50% à Vie)": {
+      en: "Create my VANDIAS account (-50% Lifetime)",
+      es: "Crear mi cuenta VANDIAS (-50% de por vida)",
+      pt: "Criar minha conta VANDIAS (-50% Vitalício)",
       ar: "إنشاء حسابي في فانديا (-50% مدى الحياة)"
     },
-    "Se connecter à VANDIA AI": {
-      en: "Sign in to VANDIA AI",
-      es: "Iniciar sesión en VANDIA AI",
-      pt: "Entrar no VANDIA AI",
+    "Se connecter à VANDIAS AI": {
+      en: "Sign in to VANDIAS AI",
+      es: "Iniciar sesión en VANDIAS AI",
+      pt: "Entrar no VANDIAS AI",
       ar: "تسجيل الدخول إلى فانديا"
     },
-    "Déjà un compte VANDIA ?": {
-      en: "Already have a VANDIA account?",
-      es: "¿Ya tienes cuenta en VANDIA?",
-      pt: "Já tem uma conta VANDIA?",
+    "Déjà un compte VANDIAS ?": {
+      en: "Already have a VANDIAS account?",
+      es: "¿Ya tienes cuenta en VANDIAS?",
+      pt: "Já tem uma conta VANDIAS?",
       ar: "هل لديك حساب بالفعل في فانديا؟"
     },
     "Pas encore de compte ?": {
@@ -537,12 +537,12 @@
     }
 
     setLanguage(langCode, save = true) {
-      if (!VENDIA_LANGUAGES[langCode]) langCode = 'fr';
+      if (!VANDIAS_LANGUAGES[langCode]) langCode = 'fr';
       this.currentLang = langCode;
       if (save) localStorage.setItem('vendia_lang', langCode);
 
       // Update HTML lang and direction
-      const langMeta = VENDIA_LANGUAGES[langCode];
+      const langMeta = VANDIAS_LANGUAGES[langCode];
       document.documentElement.lang = langCode;
       document.documentElement.dir = langMeta.dir || 'ltr';
 
@@ -557,7 +557,7 @@
     }
 
     updateUI(langCode) {
-      const lang = VENDIA_LANGUAGES[langCode] || VENDIA_LANGUAGES.fr;
+      const lang = VANDIAS_LANGUAGES[langCode] || VANDIAS_LANGUAGES.fr;
       const wraps = document.querySelectorAll('.lang-selector-dropdown-wrap');
       wraps.forEach(wrap => {
         const flagImg = wrap.querySelector('.lang-flag-img');
