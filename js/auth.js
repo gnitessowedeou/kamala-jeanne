@@ -370,6 +370,7 @@ window.getStoredReferralCode = getStoredReferralCode;
       const parsedPhone = this.splitPhone(`${phoneCountry || '+225'} ${phoneNumber}`, phoneCountry || '+225');
       const fullPhone = parsedPhone.full;
       const cleanEmail = email.trim().toLowerCase();
+      const cleanRefCode = (typeof referralCode === 'string' && referralCode.trim()) ? referralCode.trim().toUpperCase() : null;
       const effectiveRefCode = cleanRefCode || (typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : null);
 
       try {
