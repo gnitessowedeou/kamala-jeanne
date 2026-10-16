@@ -3,10 +3,42 @@
 function getAuthHeaders(extraHeaders = {}) {
   let token = null;
   try {
-    token = localStorage.getItem('vendia_supabase_token');
+    // 1. Clés directes de jeton
+    token = localStorage.getItem('vendia_supabase_token') ||
+            localStorage.getItem('vandia_access_token') ||
+            localStorage.getItem('supabase_token');
+
+    // 2. Jeton officiel Supabase JS SDK (clé sb-*-auth-token)
+    if (!token) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(k) || '{}');
+            if (parsed && parsed.access_token) {
+              token = parsed.access_token;
+              try { localStorage.setItem('vendia_supabase_token', token); } catch(e) {}
+              break;
+            }
+          } catch(e) {}
+        }
+      }
+    }
+
+    // 3. Cache utilisateur local
     if (!token) {
       const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-      if (u && u.token) token = u.token;
+      if (u && (u.token || u.access_token)) token = u.token || u.access_token;
+    }
+
+    // 4. Moteur SupabaseRest en mémoire
+    if (!token && typeof window !== 'undefined' && window.SupabaseRest && typeof window.SupabaseRest.getToken === 'function') {
+      token = window.SupabaseRest.getToken();
+    }
+
+    // 5. SessionStorage de secours
+    if (!token) {
+      token = sessionStorage.getItem('vendia_supabase_token') || sessionStorage.getItem('vandia_access_token');
     }
   } catch(e) {}
 
@@ -6482,22 +6514,157 @@ async function syncAffiliateModule() {
     console.warn("[AFFILIATE] Notice sync dashboard API:", err.message);
   }
 
-  // Secours direct via SupabaseRest si l'API rencontre un délai
-  if (window.SupabaseRest && userId) {
+  // Secours direct via Supabase si l'API rencontre un délai ou un problème de réseau
+  if (userId) {
     try {
-      const prof = await window.SupabaseRest.getProfile(userId);
-      if (prof && prof.affiliate_code) {
-        if (affCodeInput) affCodeInput.value = prof.affiliate_code;
-        if (affLinkInput) affLinkInput.value = `${window.location.origin}/?ref=${prof.affiliate_code}`;
+      let prof = null;
+      if (window.SupabaseRest && typeof window.SupabaseRest.getProfile === 'function') {
+        prof = await window.SupabaseRest.getProfile(userId);
+      } else if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.from === 'function') {
+        const { data } = await window.supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        prof = data;
+      }
+
+      const activeCode = prof?.affiliate_code || cachedCode;
+      if (activeCode) {
+        if (affCodeInput) affCodeInput.value = activeCode;
+        const generatedLink = `${window.location.origin}/?ref=${activeCode}`;
+        if (affLinkInput) affLinkInput.value = generatedLink;
+        if (affWaShare) {
+          affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
+            `Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7. Inscris-toi avec mon lien officiel : ${generatedLink} ou mon code parrainage ${activeCode}`
+          );
+        }
         if (cachedUser) {
-          cachedUser.affiliateCode = prof.affiliate_code;
+          cachedUser.affiliateCode = activeCode;
           try { localStorage.setItem('vendia_current_user', JSON.stringify(cachedUser)); } catch(e) {}
         }
       }
+
       if (prof && typeof prof.affiliate_balance === 'number' && statBalance) {
         statBalance.textContent = Number(prof.affiliate_balance).toLocaleString('fr-FR') + " FCFA";
       }
-    } catch (e) {}
+
+      // Synchronisation directe des filleuls réels depuis Supabase
+      if (activeCode) {
+        let refs = [];
+        if (window.SupabaseRest && typeof window.SupabaseRest.request === 'function') {
+          refs = await window.SupabaseRest.request(`/rest/v1/profiles?referred_by=eq.${encodeURIComponent(activeCode)}&select=id,first_name,last_name,email,created_at,plan,plan_status`);
+        } else if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.from === 'function') {
+          const { data } = await window.supabase.from('profiles').select('id,first_name,last_name,email,created_at,plan,plan_status').eq('referred_by', activeCode);
+          refs = data || [];
+        }
+
+        if (Array.isArray(refs)) {
+          if (statSignups) statSignups.textContent = refs.length;
+
+          const formatted = refs.map(r => {
+            const fName = r.first_name || '';
+            const lInitial = r.last_name ? r.last_name.charAt(0) + '.' : '';
+            const dispName = `${fName} ${lInitial}`.trim() || (r.email ? r.email.split('@')[0] : 'Nouveau Filleul');
+            return {
+              id: r.id,
+              date: r.created_at ? new Date(r.created_at).toLocaleDateString('fr-FR') : 'Récemment',
+              name: dispName,
+              plan: 'Essai Gratuit 7j',
+              paymentAmount: '0 FCFA',
+              commissionAmount: '0 FCFA',
+              status: 'Inscrit (Essai)',
+              isPaid: false
+            };
+          });
+
+          if (referralsTbody) {
+            if (formatted.length > 0) {
+              referralsTbody.innerHTML = formatted.map(r => `
+                <tr>
+                  <td style="color: var(--text-secondary); font-size: 13px;">${escapeHtml(r.date)}</td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <div class="conv-avatar" style="width: 30px; height: 30px; font-size: 12px; background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(37, 211, 102, 0.25);">
+                        ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'F')}
+                      </div>
+                      <span style="font-weight: 600; color: #ffffff;">${escapeHtml(r.name)}</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-amber">${escapeHtml(r.plan)}</span></td>
+                  <td style="color: var(--text-muted); font-size: 13px;"><span>0 FCFA <small style="opacity: 0.65; font-size: 11px;">(Essai)</small></span></td>
+                  <td>
+                    <div style="display: flex; flex-direction: column;"><span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">0 FCFA</span><span style="font-size: 10.5px; color: #94a3b8; font-style: italic;">Attente abonnement</span></div>
+                  </td>
+                  <td>
+                    <span class="badge badge-amber">
+                      <i class="fa-solid fa-hourglass-half" style="margin-right: 4px;"></i>${escapeHtml(r.status)}
+                    </span>
+                  </td>
+                </tr>
+              `).join("");
+            } else {
+              referralsTbody.innerHTML = `
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
+                    Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(activeCode || 'unique')}</strong> pour toucher 20% sur chaque abonnement !
+                  </td>
+                </tr>
+              `;
+            }
+          }
+
+          if (referralsCardsMobile) {
+            if (formatted.length > 0) {
+              referralsCardsMobile.innerHTML = formatted.map(r => `
+                <div class="aff-referral-card aff-card-trial">
+                  <div class="aff-card-top">
+                    <div class="aff-user-info">
+                      <div class="aff-avatar">
+                        ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'F')}
+                      </div>
+                      <div style="min-width: 0;">
+                        <div class="aff-user-name">${escapeHtml(r.name)}</div>
+                        <div class="aff-user-date"><i class="fa-regular fa-calendar-days"></i> ${escapeHtml(r.date)}</div>
+                      </div>
+                    </div>
+                    <span class="badge badge-amber">
+                      <i class="fa-solid fa-hourglass-half"></i> ${escapeHtml(r.status)}
+                    </span>
+                  </div>
+                  <div class="aff-card-details">
+                    <div class="aff-detail-row">
+                      <span class="aff-detail-label">Formule choisie :</span>
+                      <span class="badge badge-amber">${escapeHtml(r.plan)}</span>
+                    </div>
+                    <div class="aff-detail-grid">
+                      <div class="aff-grid-col">
+                        <span class="aff-mini-label">Paiement Réel Client</span>
+                        <span class="aff-pay-amount">0 FCFA (Essai)</span>
+                      </div>
+                      <div class="aff-grid-col aff-comm-col">
+                        <span class="aff-mini-label">Votre Commission (20%)</span>
+                        <span class="aff-comm-amount aff-comm-zero">0 FCFA</span>
+                      </div>
+                    </div>
+                    <div class="aff-trial-notice">
+                      <i class="fa-solid fa-circle-info"></i> Commission débloquée dès son 1er abonnement payant
+                    </div>
+                  </div>
+                </div>
+              `).join("");
+            } else {
+              referralsCardsMobile.innerHTML = `
+                <div class="aff-empty-state-mobile">
+                  <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
+                  <p style="font-weight: 600; color: #ffffff; margin-bottom: 4px; font-size: 13.5px;">Aucun filleul enregistré pour le moment</p>
+                  <p style="font-size: 12px; color: var(--text-muted); line-height: 1.45; margin: 0;">Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(activeCode || 'unique')}</strong> pour toucher 20% sur chaque abonnement !</p>
+                </div>
+              `;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[AFFILIATE] Notice sync direct fallback:", e.message);
+    }
   }
 }
 
