@@ -5650,7 +5650,9 @@ function setupBillingAndAffiliate() {
     function renderQrImage(qrData) {
         const qrBox = document.getElementById('qr-canvas-box') || document.querySelector('#qr-modal .qr-code-box') || document.querySelector('.qr-code-box');
         if (!qrBox) return;
-        qrBox.innerHTML = '<img src="' + qrData + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
+        if (typeof qrData === 'string' && qrData.startsWith('data:image/')) {
+            qrBox.innerHTML = '<img src="' + qrData + '" alt="QR Code Officiel WhatsApp" style="width: 250px; height: 250px; border-radius: 12px; display: block; margin: 0 auto; background: #ffffff; padding: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">';
+        }
     }
 
     let statusInterval = null;
@@ -5671,7 +5673,10 @@ function setupBillingAndAffiliate() {
                 if (data.phone) {
                     const cleanPhone = '+' + String(data.phone).replace(/^\+/, '').trim();
                     window.currentWhatsAppPhone = cleanPhone;
-                    try { localStorage.setItem('vendia_connected_phone', cleanPhone); } catch(e) {}
+                    try { 
+                        localStorage.setItem('vendia_connected_phone', cleanPhone);
+                        localStorage.setItem('vendia_connected_phone_' + userId, cleanPhone);
+                    } catch(e) {}
                     try {
                         let u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
                         u.fullPhone = cleanPhone;
@@ -5719,7 +5724,10 @@ function setupBillingAndAffiliate() {
                 if (data.phone) {
                     const cleanPhone = '+' + String(data.phone).replace(/^\+/, '').trim();
                     window.currentWhatsAppPhone = cleanPhone;
-                    try { localStorage.setItem('vendia_connected_phone', cleanPhone); } catch(e) {}
+                    try { 
+                        localStorage.setItem('vendia_connected_phone', cleanPhone);
+                        if (targetUserId) localStorage.setItem('vendia_connected_phone_' + targetUserId, cleanPhone);
+                    } catch(e) {}
                     try {
                         let u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
                         u.fullPhone = cleanPhone;
@@ -5754,7 +5762,24 @@ function setupBillingAndAffiliate() {
                     showToast("🎉 WhatsApp connecté avec succès ! Numéro : " + (data.phone ? '+' + data.phone : ''), "success");
                 }
             }
-            else if (data.status === 'ERROR' || pollAttempts > 45) {
+            else if (data.status === 'ERROR') {
+                if (statusInterval) clearInterval(statusInterval);
+                if (qrBox) {
+                    qrBox.innerHTML = `
+                        <div style="padding: 18px; text-align: center;">
+                            <i class="fa-solid fa-rotate" style="font-size: 28px; color: #25D366; margin-bottom: 10px;"></i>
+                            <p style="color: #fbbf24; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Session prête à être lancée</p>
+                            <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                                Cliquez ci-dessous pour initialiser votre QR Code officiel :
+                            </p>
+                            <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 8px 18px; font-size: 12px;">
+                                <i class="fa-solid fa-qrcode"></i> Afficher mon QR Code
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+            else if (pollAttempts > 45) {
                 if (statusInterval) clearInterval(statusInterval);
                 if (qrBox) {
                     qrBox.innerHTML = `
@@ -5764,7 +5789,7 @@ function setupBillingAndAffiliate() {
                                 Le navigateur Cloud redémarre sa session WhatsApp Web.<br>
                                 Cliquez ci-dessous pour afficher le QR Code.
                             </p>
-                            <button class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
+                            <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
                                 <i class="fa-solid fa-rotate-right"></i> Forcer la régénération du QR Code
                             </button>
                         </div>
@@ -5825,6 +5850,22 @@ function setupBillingAndAffiliate() {
                 window.applyWhatsAppState('CONNECTED', activeP);
                 setTimeout(() => { if (qrModal) qrModal.classList.remove('active'); }, 1200);
                 return;
+            } else if (data.status === 'ERROR') {
+                if (qrBox) {
+                    qrBox.innerHTML = `
+                        <div style="padding: 18px; text-align: center;">
+                            <i class="fa-solid fa-rotate" style="font-size: 28px; color: #25D366; margin-bottom: 10px;"></i>
+                            <p style="color: #fbbf24; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Initialisation de la liaison</p>
+                            <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                                Cliquez ci-dessous pour relancer et afficher votre QR Code :
+                            </p>
+                            <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 8px 18px; font-size: 12px;">
+                                <i class="fa-solid fa-qrcode"></i> Générer mon QR Code
+                            </button>
+                        </div>
+                    `;
+                }
+                return;
             }
             
             statusInterval = setInterval(checkStatus, 2000);
@@ -5832,17 +5873,14 @@ function setupBillingAndAffiliate() {
             console.error("Erreur connexion WhatsApp:", error);
             if (qrBox) {
                 qrBox.innerHTML = `
-                    <div style="padding: 14px; text-align: center;">
-                        <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⚡ Serveur WhatsApp Local Prêt</p>
+                    <div style="padding: 18px; text-align: center;">
+                        <i class="fa-solid fa-wifi" style="font-size: 28px; color: #f59e0b; margin-bottom: 10px;"></i>
+                        <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Connexion au Cloud en cours</p>
                         <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                            Le moteur local WhatsApp est actif sur votre machine.<br>
-                            Ouvrez l'interface locale pour scanner votre QR Code immédiatement :
+                            Le serveur prépare l'accès WhatsApp.<br>
+                            Cliquez ci-dessous pour actualiser :
                         </p>
-                        <a href="http://localhost:8080/dashboard.html" class="btn-primary-glow" style="display: inline-block; padding: 8px 16px; font-size: 12px; text-decoration: none; margin-bottom: 10px;">
-                            <i class="fa-solid fa-qrcode"></i> Ouvrir sur http://localhost:8080
-                        </a>
-                        <br>
-                        <button class="btn-secondary-glass" onclick="window.startWhatsApp(true)" style="padding: 5px 12px; font-size: 11px;">
+                        <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 8px 18px; font-size: 12px;">
                             <i class="fa-solid fa-rotate-right"></i> Réessayer la connexion
                         </button>
                     </div>

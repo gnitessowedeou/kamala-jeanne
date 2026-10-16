@@ -50,26 +50,32 @@ function getSessionDir(userId) {
 
 // Nettoyage préventif des verrous résiduels Chromium après redémarrage ou crash
 function cleanupChromiumLocks(sessionPath) {
-  if (!sessionPath || !fs.existsSync(sessionPath)) return;
-  const lockFiles = [
+  if (!sessionPath) return;
+  const lockNames = [
     'SingletonLock',
     'SingletonCookie',
     'SingletonSocket',
-    'DevToolsActivePort'
+    'DevToolsActivePort',
+    'lockfile',
+    'Local State'
   ];
 
-  const targetDirs = [sessionPath, path.join(sessionPath, 'Default')];
-  for (const dir of targetDirs) {
-    if (!fs.existsSync(dir)) continue;
-    for (const lockFile of lockFiles) {
-      const lockPath = path.join(dir, lockFile);
-      try {
-        if (fs.existsSync(lockPath)) {
-          fs.rmSync(lockPath, { force: true, recursive: true });
+  function cleanDir(dir) {
+    try {
+      if (!fs.existsSync(dir)) return;
+      const entries = fs.readdirSync(dir);
+      for (const entryName of entries) {
+        if (lockNames.some(l => entryName.toLowerCase().includes(l.toLowerCase()))) {
+          const fullPath = path.join(dir, entryName);
+          try { fs.unlinkSync(fullPath); } catch(e) {}
+          try { fs.rmSync(fullPath, { force: true, recursive: true }); } catch(e) {}
         }
-      } catch (e) {}
-    }
+      }
+    } catch(e) {}
   }
+
+  cleanDir(sessionPath);
+  cleanDir(path.join(sessionPath, 'Default'));
 }
 
 // Purge automatique globale au démarrage du serveur pour tous les profils existants
@@ -309,6 +315,7 @@ const waPairingCodes = {}; // Stocke les codes d'association WhatsApp (Pairing C
 const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_READY
 const waNumbers = {};    // Stocke le numero de telephone connecte
 const waHeartbeats = {}; // Intervalles keep-alive Chromium / WebSocket WhatsApp
+const waErrors = {};     // Stocke les erreurs d'initialisation de chaque client
 
 function getClientPhone(client, userId) {
   if (waNumbers[userId] && String(waNumbers[userId]).replace(/\D/g, '').length >= 6) {
@@ -881,8 +888,8 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     }
   }
 
-  // 2. Nettoyage explicite UNIQUEMENT si redémarrage forcé par l'utilisateur
-  if (restart) {
+  // 2. Nettoyage explicite si redémarrage forcé ou statut précédent en erreur
+  if (restart || waStatuses[userId] === 'ERROR') {
     if (waClients[userId]) {
       try { await waClients[userId].destroy(); } catch (e) {}
       delete waClients[userId];
@@ -894,14 +901,20 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
     delete waNumbers[userId];
+    delete waErrors[userId];
     if (hasExistingSession) {
       try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
     }
   }
 
-  // Nettoyage des verrous Chromium si session existante pour assurer un démarrage sans heurt
-  if (hasExistingSession) {
+  // Nettoyage des verrous Chromium résiduels pour assurer un démarrage sans heurt
+  if (fs.existsSync(authDir)) {
     cleanupChromiumLocks(authDir);
+  }
+
+  // Empêcher l'erreur "Can't open display" en conteneur headless
+  if (process.env.DISPLAY) {
+    try { delete process.env.DISPLAY; } catch(e) {}
   }
 
   // 3. Statut initial (si session existante sur disque, maintien du statut connecté/reconnexion sans paniquer l'interface)
@@ -917,7 +930,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     dataPath: AUTH_BASE_DIR 
   });
 
-  // Flags Puppeteer ultra-optimisés : empêchent Chromium de suspendre les timers et WebSockets en arrière-plan
+  // Flags Puppeteer ultra-optimisés pour conteneur Docker Linux (Railway)
   const clientOptions = {
     authStrategy,
     takeoverOnConflict: true,
@@ -925,6 +938,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     puppeteer: {
       headless: true,
       args: [
+        '--headless=new',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -945,7 +959,8 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
         '--enable-features=NetworkService,NetworkServiceInProcess',
         '--force-color-profile=srgb',
         '--metrics-recording-only',
-        '--mute-audio'
+        '--mute-audio',
+        '--disable-blink-features=AutomationControlled'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     },
@@ -967,11 +982,14 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
   // Gestion des événements QR Code & Code d'association
   client.on('qr', async (qr) => {
     try {
-      const qrImage = await qrcode.toDataURL(qr);
+      const qrImage = await qrcode.toDataURL(qr, { margin: 2, width: 280 });
       waSessionsQR[userId] = qrImage;
+      delete waErrors[userId];
       if (!waPairingCodes[userId]) waStatuses[userId] = 'QR_READY';
       console.log(`📱 [WA] QR Code prêt pour client ${userId}`);
-    } catch (e) {}
+    } catch (e) {
+      console.error(`[WA] Erreur génération QR data URL pour ${userId}:`, e.message);
+    }
   });
 
   client.on('code', (code) => {
@@ -1172,21 +1190,18 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
 
   client.initialize().catch(async (err) => {
     console.error(`[WA] Erreur initialize client ${userId}:`, err.message);
+    waStatuses[userId] = 'ERROR';
+    waErrors[userId] = err.message;
+    delete waSessionsQR[userId];
+    delete waClients[userId];
+
     if (err.message && (err.message.includes('Singleton') || err.message.includes('locked the profile') || err.message.includes('Code: 21'))) {
-      console.log(`[WA] Verrou résiduel Chromium détecté pour ${userId}. Purge et relance automatique...`);
+      console.log(`[WA] Verrou résiduel Chromium détecté pour ${userId}. Purge complète du dossier de session...`);
       cleanupChromiumLocks(authDir);
       try {
-        await new Promise(r => setTimeout(r, 1000));
-        await client.initialize();
-        console.log(`[WA] Initialisation réussie après purge pour ${userId}`);
-        return;
-      } catch (retryErr) {
-        console.error(`[WA] Échec seconde tentative initialize:`, retryErr.message);
-      }
+        if (fs.existsSync(authDir)) fs.rmSync(authDir, { recursive: true, force: true });
+      } catch (rmErr) {}
     }
-    waStatuses[userId] = 'ERROR';
-    waSessionsQR[userId] = err.message;
-    delete waClients[userId];
   });
 
   return client;
@@ -1202,22 +1217,32 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   }
 
   try {
+    delete waErrors[userId];
     await createOrGetWhatsAppClient(userId, { restart: !!restart, phoneNumber: cleanPhone });
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 15; i++) {
       if (waStatuses[userId] === 'CONNECTED') {
         return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null });
       }
-      if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
+      if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')) {
         return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
       }
-      await new Promise(r => setTimeout(r, 400));
+      if (waStatuses[userId] === 'CODE_READY' && waPairingCodes[userId]) {
+        return res.json({ status: 'CODE_READY', code: waPairingCodes[userId] });
+      }
+      if (waStatuses[userId] === 'ERROR') {
+        return res.json({ status: 'ERROR', error: waErrors[userId] || 'Erreur d\'initialisation Chromium' });
+      }
+      await new Promise(r => setTimeout(r, 600));
     }
 
-    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
+    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')) {
       return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
     }
-    return res.json({ status: waStatuses[userId] || 'STARTING' });
+    return res.json({ 
+      status: waStatuses[userId] || 'STARTING',
+      error: waErrors[userId] || null
+    });
   } catch (err) {
     console.error("[WA] Erreur start:", err);
     return res.status(500).json({ error: err.message });
@@ -1375,12 +1400,16 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
     } catch(e) {}
   }
 
+  const validQr = (waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/'))
+    ? waSessionsQR[userId]
+    : null;
+
   res.json({
     status: st,
-    qr: waSessionsQR[userId] || null,
+    qr: validQr,
     pairingCode: waPairingCodes[userId] || null,
     phone: (st === 'CONNECTED' && waNumbers[userId]) ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
-    error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null
+    error: (st === 'ERROR' || waErrors[userId]) ? (waErrors[userId] || 'Erreur d\'initialisation WhatsApp') : null
   });
 });
 
