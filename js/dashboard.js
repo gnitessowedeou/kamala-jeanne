@@ -5497,6 +5497,16 @@ function setupBillingAndAffiliate() {
             }
         }
 
+        // Contrôle de visibilité des boutons de déconnexion WhatsApp
+        const btnDisconnectDevice = document.getElementById("btn-disconnect-device");
+        if (btnDisconnectDevice) {
+            btnDisconnectDevice.style.display = isConnected ? "inline-flex" : "none";
+        }
+        const activeBox = document.getElementById("wa-active-connected-box");
+        if (activeBox) {
+            activeBox.style.display = isConnected ? "block" : "none";
+        }
+
         // Pré-remplissage immédiat de la modale QR/Pairing si présente
         if (typeof prefillWaPairingInput === 'function') {
             prefillWaPairingInput();
@@ -5745,9 +5755,83 @@ function setupBillingAndAffiliate() {
         }
     }
 
+    // Fonction de déconnexion explicite WhatsApp depuis l'interface VANDIAS AI
+    async function disconnectWhatsApp() {
+        const userId = typeof getAppUserId === 'function' ? getAppUserId() : null;
+        if (!userId) {
+            if (typeof showToast === 'function') showToast("Utilisateur non identifié.", "error");
+            return;
+        }
+
+        if (!confirm("Voulez-vous vraiment déconnecter votre compte WhatsApp de VANDIAS AI ? Vos réponses automatiques seront suspendues jusqu'à la prochaine reconnexion.")) {
+            return;
+        }
+
+        const btnModal = document.getElementById("btn-modal-disconnect-wa");
+        const btnCard = document.getElementById("btn-disconnect-device");
+        const origModal = btnModal ? btnModal.innerHTML : "";
+        const origCard = btnCard ? btnCard.innerHTML : "";
+        if (btnModal) { btnModal.disabled = true; btnModal.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Déconnexion...'; }
+        if (btnCard) { btnCard.disabled = true; btnCard.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Déconnexion...'; }
+
+        try {
+            if (statusInterval) clearInterval(statusInterval);
+            if (window._waPairingInterval) {
+                clearInterval(window._waPairingInterval);
+                window._waPairingInterval = null;
+            }
+
+            const token = localStorage.getItem("vendia_supabase_token") || "";
+            const res = await fetch("/api/whatsapp/disconnect", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ userId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (typeof showToast === 'function') showToast("✅ Session WhatsApp déconnectée avec succès.", "success");
+                window.currentWhatsAppStatus = "DISCONNECTED";
+                window.currentWhatsAppPhone = null;
+                try { localStorage.removeItem("vendia_connected_phone"); } catch(e) {}
+                if (typeof window.applyWhatsAppState === "function") {
+                    window.applyWhatsAppState("DISCONNECTED", null);
+                }
+                const activeBox = document.getElementById("wa-active-connected-box");
+                if (activeBox) activeBox.style.display = "none";
+
+                const qrCanvasBox = document.getElementById("qr-canvas-box");
+                if (qrCanvasBox) {
+                    qrCanvasBox.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center;">
+                            <i class="fa-solid fa-power-off" style="font-size: 38px; color: #f87171; margin-bottom: 12px;"></i>
+                            <p style="color: #ffffff; font-weight: 600; font-size: 14px; margin: 0;">Session WhatsApp déconnectée</p>
+                            <p style="font-size: 12px; color: #94a3b8; margin: 6px 0 14px;">La session a été réinitialisée sur le serveur. Cliquez ci-dessous pour reconnecter ou lier un nouveau numéro.</p>
+                            <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 8px 18px; font-size: 12px;">
+                                <i class="fa-solid fa-rotate-right"></i> Lier un nouveau numéro
+                            </button>
+                        </div>
+                    `;
+                }
+                const phoneBadge = document.getElementById("qr-modal-target-phone");
+                if (phoneBadge) phoneBadge.textContent = "Déconnecté";
+            } else {
+                if (typeof showToast === 'function') showToast("Erreur déconnexion : " + (data.error || "Inconnue"), "error");
+            }
+        } catch (err) {
+            if (typeof showToast === 'function') showToast("Erreur réseau : " + err.message, "error");
+        } finally {
+            if (btnModal) { btnModal.disabled = false; btnModal.innerHTML = origModal; }
+            if (btnCard) { btnCard.disabled = false; btnCard.innerHTML = origCard; }
+        }
+    }
+
     // Exportation globale immédiate (disponible sans délai sur window)
     window.startWhatsApp = startWhatsApp;
     window._realStartWhatsApp = startWhatsApp;
+    window.disconnectWhatsApp = disconnectWhatsApp;
     window.renderQrImage = renderQrImage;
     window.syncWhatsAppStatus = syncWhatsAppStatus;
     window.checkWhatsAppStatus = checkStatus;

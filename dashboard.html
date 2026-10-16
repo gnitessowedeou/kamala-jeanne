@@ -1184,6 +1184,9 @@
                 <button class="btn-secondary-glass btn-open-qr" style="flex: 1; justify-content: center;">
                   <i class="fa-solid fa-arrows-rotate"></i> Reconnecter
                 </button>
+                <button class="btn-secondary-glass" style="color: #f87171; border-color: rgba(239, 68, 68, 0.35); flex: 1; justify-content: center;" id="btn-disconnect-device" onclick="window.disconnectWhatsApp()">
+                  <i class="fa-solid fa-power-off"></i> Déconnecter
+                </button>
               </div>
             </div>
           </div>
@@ -2636,6 +2639,19 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       </div>
 
       <div class="modal-body qr-container">
+        <!-- Bannière de déconnexion si déjà connecté -->
+        <div id="wa-active-connected-box" style="display: none; padding: 12px 16px; background: rgba(37, 211, 102, 0.12); border: 1px solid rgba(37, 211, 102, 0.35); border-radius: 12px; margin-bottom: 14px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--whatsapp-green); font-weight: 700; font-size: 13.5px;">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Session WhatsApp actuellement active</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary); margin: 6px 0 10px;">Votre compte WhatsApp est synchronisé avec VANDIAS AI. Pour changer de numéro ou déconnecter votre session :</p>
+          <button type="button" class="btn-danger-glass" onclick="window.disconnectWhatsApp()" style="background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.45); color: #f87171; border-radius: 8px; padding: 7px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-power-off"></i>
+            <span>Déconnecter ce numéro WhatsApp</span>
+          </button>
+        </div>
+
         <!-- Dual Connection Mode Tabs -->
         <div class="wa-conn-tabs">
           <button type="button" class="wa-conn-tab active" id="tab-btn-qr" onclick="switchWaConnectMode('qr')">
@@ -2729,12 +2745,18 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary-glass" data-close-modal="qr-modal">Fermer</button>
-        <button type="button" class="btn-primary-glow" id="btn-force-refresh-qr" onclick="if(window.startWhatsApp) window.startWhatsApp(true);">
-          <i class="fa-solid fa-rotate-right"></i>
-          <span>Régénérer le QR Code</span>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <button type="button" class="btn-danger-glass" id="btn-modal-disconnect-wa" onclick="window.disconnectWhatsApp()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 8px; padding: 8px 16px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-power-off"></i>
+          <span>Déconnecter WhatsApp</span>
         </button>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn-secondary-glass" data-close-modal="qr-modal">Fermer</button>
+          <button type="button" class="btn-primary-glow" id="btn-force-refresh-qr" onclick="if(window.startWhatsApp) window.startWhatsApp(true);">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>Régénérer le QR Code</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

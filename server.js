@@ -50,7 +50,7 @@ function getSessionDir(userId) {
 
 // Nettoyage préventif des verrous résiduels Chromium après redémarrage ou crash
 function cleanupChromiumLocks(sessionPath) {
-  if (!sessionPath) return;
+  if (!sessionPath || !fs.existsSync(sessionPath)) return;
   const lockFiles = [
     'SingletonLock',
     'SingletonCookie',
@@ -58,32 +58,18 @@ function cleanupChromiumLocks(sessionPath) {
     'DevToolsActivePort'
   ];
 
-  // 1. Suppression forcée directe de tous les verrous (gère liens symboliques morts et sockets)
-  for (const lockFile of lockFiles) {
-    const lockPath = path.join(sessionPath, lockFile);
-    try {
-      fs.rmSync(lockPath, { force: true, recursive: true });
-      console.log(`[STORAGE] Verrou résiduel Chromium purgé : ${lockFile}`);
-    } catch (e) {}
-  }
-
-  // 2. Scan récursif pour éliminer tout lien symbolique ou verrou résiduel
-  try {
-    if (fs.existsSync(sessionPath)) {
-      const entries = fs.readdirSync(sessionPath, { withFileTypes: true });
-      for (const entry of entries) {
-        const full = path.join(sessionPath, entry.name);
-        if (entry.name.startsWith('Singleton') || entry.name === 'DevToolsActivePort') {
-          try {
-            fs.rmSync(full, { force: true, recursive: true });
-            console.log(`[STORAGE] Verrou récursif purgé : ${full}`);
-          } catch(e) {}
-        } else if (entry.isDirectory() && entry.name !== 'Default' && entry.name !== 'IndexedDB') {
-          cleanupChromiumLocks(full);
+  const targetDirs = [sessionPath, path.join(sessionPath, 'Default')];
+  for (const dir of targetDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const lockFile of lockFiles) {
+      const lockPath = path.join(dir, lockFile);
+      try {
+        if (fs.existsSync(lockPath)) {
+          fs.rmSync(lockPath, { force: true, recursive: true });
         }
-      }
+      } catch (e) {}
     }
-  } catch (e) {}
+  }
 }
 
 // Purge automatique globale au démarrage du serveur pour tous les profils existants
@@ -202,6 +188,10 @@ app.use('/js', express.static(path.join(__dirname, 'js'), { dotfiles: 'ignore' }
 if (fs.existsSync(path.join(__dirname, 'assets'))) {
   app.use('/assets', express.static(path.join(__dirname, 'assets'), { dotfiles: 'ignore' }));
 }
+
+// Healthcheck officiel pour Railway, Vercel et monitoring uptime
+app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'OK', uptime: Math.floor(process.uptime()), memory: process.memoryUsage() }));
 
 // Pages HTML publiques
 app.get('/api/diag', (req, res, next) => {
@@ -970,6 +960,8 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--js-flags=--max-old-space-size=256',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
@@ -2945,29 +2937,7 @@ app.use((req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[KAMALA JEANNE] Moteur Backend démarré sur http://localhost:${PORT}`);
-
-  // Restauration automatique de toutes les sessions WhatsApp sauvegardées sur le serveur
-  setTimeout(() => {
-    try {
-      const authBasePath = AUTH_BASE_DIR;
-      if (fs.existsSync(authBasePath)) {
-        const entries = fs.readdirSync(authBasePath);
-        for (const entry of entries) {
-          if (entry.startsWith('session-')) {
-            const userId = entry.replace('session-', '');
-            if (userId && !waClients[userId]) {
-              console.log(`🚀 [WA/STARTUP] Rétablissement automatique de la session persistante pour ${userId}...`);
-              createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
-                console.warn(`[WA/STARTUP] Notice restauration pour ${userId}:`, err.message);
-              });
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[WA/STARTUP] Erreur détection sessions existantes:', err.message);
-    }
-  }, 3500);
+  console.log(`[STORAGE] Dossier persistant WhatsApp : ${AUTH_BASE_DIR}`);
 });
 
 // Fix pour forcer le maintien du processus Node.js en vie
