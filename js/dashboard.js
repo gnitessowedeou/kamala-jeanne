@@ -4690,6 +4690,11 @@ function setupBillingAndAffiliate() {
 
   function openPayoutModal() {
     if (!payoutModal) return;
+    const statBal = document.getElementById("aff-stat-balance");
+    const payoutBal = document.getElementById("payout-available-balance");
+    if (statBal && payoutBal) {
+      payoutBal.textContent = statBal.textContent || "0 FCFA";
+    }
     payoutModal.classList.add("active");
     document.body.classList.add("modal-open-lock");
   }
@@ -6377,20 +6382,29 @@ async function syncAffiliateModule() {
           if (Array.isArray(d.referrals) && d.referrals.length > 0) {
             referralsTbody.innerHTML = d.referrals.map(r => `
               <tr>
-                <td>${escapeHtml(r.date)}</td>
+                <td style="color: var(--text-secondary); font-size: 13px;">${escapeHtml(r.date)}</td>
                 <td>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="conv-avatar" style="width: 28px; height: 28px; font-size: 11px; background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">
-                      ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'C')}
+                  <div style="display: flex; align-items: center; gap: 9px;">
+                    <div class="conv-avatar" style="width: 30px; height: 30px; font-size: 12px; background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(37, 211, 102, 0.25);">
+                      ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'F')}
                     </div>
-                    <span style="font-weight: 600;">${escapeHtml(r.name)}</span>
+                    <span style="font-weight: 600; color: #ffffff;">${escapeHtml(r.name)}</span>
                   </div>
                 </td>
-                <td><span class="badge badge-purple">${escapeHtml(r.plan)}</span></td>
-                <td style="color: var(--text-muted); font-size: 13px;">${escapeHtml(r.paymentAmount)}</td>
-                <td style="color: var(--whatsapp-green); font-weight: 700;">${escapeHtml(r.commissionAmount)}</td>
+                <td><span class="badge ${r.isPaid ? 'badge-purple' : 'badge-amber'}">${escapeHtml(r.plan)}</span></td>
+                <td style="color: ${r.isPaid ? '#ffffff' : 'var(--text-muted)'}; font-size: 13px; font-weight: ${r.isPaid ? '600' : '400'};">
+                  ${r.isPaid ? escapeHtml(r.paymentAmount) : '<span>0 FCFA <small style="opacity: 0.65; font-size: 11px;">(Essai)</small></span>'}
+                </td>
                 <td>
-                  <span class="badge ${r.isPaid ? 'badge-green' : 'badge-amber'}">${escapeHtml(r.status)}</span>
+                  ${r.isPaid
+                    ? `<span style="color: var(--whatsapp-green); font-weight: 800; font-size: 13.5px;">${escapeHtml(r.commissionAmount)}</span>`
+                    : `<div style="display: flex; flex-direction: column;"><span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">0 FCFA</span><span style="font-size: 10.5px; color: #94a3b8; font-style: italic;">Attente abonnement</span></div>`
+                  }
+                </td>
+                <td>
+                  <span class="badge ${r.isPaid ? 'badge-green' : 'badge-amber'}">
+                    <i class="fa-solid ${r.isPaid ? 'fa-circle-check' : 'fa-hourglass-half'}" style="margin-right: 4px;"></i>${escapeHtml(r.status)}
+                  </span>
                 </td>
               </tr>
             `).join("");
@@ -6410,11 +6424,11 @@ async function syncAffiliateModule() {
         if (referralsCardsMobile) {
           if (Array.isArray(d.referrals) && d.referrals.length > 0) {
             referralsCardsMobile.innerHTML = d.referrals.map(r => `
-              <div class="aff-referral-card">
+              <div class="aff-referral-card ${r.isPaid ? 'aff-card-paid' : 'aff-card-trial'}">
                 <div class="aff-card-top">
                   <div class="aff-user-info">
                     <div class="aff-avatar">
-                      ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'C')}
+                      ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'F')}
                     </div>
                     <div style="min-width: 0;">
                       <div class="aff-user-name">${escapeHtml(r.name)}</div>
@@ -6429,18 +6443,25 @@ async function syncAffiliateModule() {
                 <div class="aff-card-details">
                   <div class="aff-detail-row">
                     <span class="aff-detail-label">Formule choisie :</span>
-                    <span class="badge badge-purple">${escapeHtml(r.plan)}</span>
+                    <span class="badge ${r.isPaid ? 'badge-purple' : 'badge-amber'}">${escapeHtml(r.plan)}</span>
                   </div>
                   <div class="aff-detail-grid">
                     <div class="aff-grid-col">
                       <span class="aff-mini-label">Paiement Réel Client</span>
-                      <span class="aff-pay-amount">${escapeHtml(r.paymentAmount)}</span>
+                      <span class="aff-pay-amount">${r.isPaid ? escapeHtml(r.paymentAmount) : '0 FCFA (Essai)'}</span>
                     </div>
                     <div class="aff-grid-col aff-comm-col">
                       <span class="aff-mini-label">Votre Commission (20%)</span>
-                      <span class="aff-comm-amount">${escapeHtml(r.commissionAmount)}</span>
+                      <span class="aff-comm-amount ${r.isPaid ? 'aff-comm-positive' : 'aff-comm-zero'}">
+                        ${r.isPaid ? escapeHtml(r.commissionAmount) : '0 FCFA'}
+                      </span>
                     </div>
                   </div>
+                  ${!r.isPaid ? `
+                    <div class="aff-trial-notice">
+                      <i class="fa-solid fa-circle-info"></i> Commission débloquée dès son 1er abonnement payant
+                    </div>
+                  ` : ''}
                 </div>
               </div>
             `).join("");

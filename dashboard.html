@@ -1741,49 +1741,74 @@
           </div>
 
           <!-- 4 Stats Cards for Affiliation (Données Réelles Supabase) -->
-          <div class="kpi-grid" style="margin-bottom: 24px;">
-            <div class="glass-panel kpi-card">
+          <div class="kpi-grid aff-kpi-grid" style="margin-bottom: 24px;">
+            <div class="glass-panel kpi-card aff-kpi-card">
               <div class="kpi-header">
                 <div class="kpi-icon-box kpi-icon-purple"><i class="fa-solid fa-user-plus"></i></div>
-                <span class="kpi-title">Filleuls Inscrits</span>
+                <div class="aff-kpi-meta">
+                  <span class="kpi-title">Filleuls Inscrits</span>
+                  <span class="aff-kpi-sub">Comptes créés avec votre lien</span>
+                </div>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-signups">0</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-users"></i> Réel</span>
+                <span class="kpi-badge-trend aff-trend-purple"><i class="fa-solid fa-users"></i> Inscrits</span>
               </div>
             </div>
 
-            <div class="glass-panel kpi-card">
+            <div class="glass-panel kpi-card aff-kpi-card">
               <div class="kpi-header">
                 <div class="kpi-icon-box kpi-icon-green"><i class="fa-solid fa-receipt"></i></div>
-                <span class="kpi-title">Paiements Éligibles</span>
+                <div class="aff-kpi-meta">
+                  <span class="kpi-title">Abonnements Payants</span>
+                  <span class="aff-kpi-sub">Générateurs de commissions 20%</span>
+                </div>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-active">0</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-check"></i> Validés</span>
+                <span class="kpi-badge-trend aff-trend-green"><i class="fa-solid fa-check"></i> Validés</span>
               </div>
             </div>
 
-            <div class="glass-panel kpi-card">
+            <div class="glass-panel kpi-card aff-kpi-card">
               <div class="kpi-header">
                 <div class="kpi-icon-box kpi-icon-cyan"><i class="fa-solid fa-clock-rotate-left"></i></div>
-                <span class="kpi-title">Commissions en Attente</span>
+                <div class="aff-kpi-meta">
+                  <span class="kpi-title">Retraits en Cours</span>
+                  <span class="aff-kpi-sub">En traitement Mobile Money</span>
+                </div>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-pending">0 FCFA</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-hourglass-half"></i> Retrait</span>
+                <span class="kpi-badge-trend aff-trend-cyan"><i class="fa-solid fa-hourglass-half"></i> En cours</span>
               </div>
             </div>
 
-            <div class="glass-panel kpi-card">
+            <div class="glass-panel kpi-card aff-kpi-card">
               <div class="kpi-header">
                 <div class="kpi-icon-box kpi-icon-amber"><i class="fa-solid fa-sack-dollar"></i></div>
-                <span class="kpi-title">Total Gains Disponibles</span>
+                <div class="aff-kpi-meta">
+                  <span class="kpi-title">Solde Retirable</span>
+                  <span class="aff-kpi-sub">20% net prêt à être retiré</span>
+                </div>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-balance">0 FCFA</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-wallet"></i> 20% Net</span>
+                <span class="kpi-badge-trend aff-trend-amber"><i class="fa-solid fa-wallet"></i> Disponible</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Bannière explicative professionnelle et transparente sur le fonctionnement des commissions -->
+          <div class="aff-info-banner" style="margin-bottom: 24px;">
+            <div class="aff-info-icon">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="aff-info-content">
+              <div class="aff-info-title">Fonctionnement officiel de votre commission de 20% :</div>
+              <p class="aff-info-desc">
+                Chaque nouvel inscrit bénéficie de <strong>7 jours d'essai gratuit</strong> sans paiement obligatoire (commission affichée à <strong>0 FCFA</strong> pendant l'essai). Dès que votre filleul souscrit à une formule d'abonnement (Starter, Pro ou Business), vous touchez <strong>automatiquement 20% de commission nette</strong> sur chaque versement, crédité instantanément et retirable dès 10 000 FCFA via Wave ou Mobile Money.
+              </p>
             </div>
           </div>
 
@@ -1795,7 +1820,7 @@
                 <p class="card-subheading">Suivi en temps réel de vos commissions 20% certifiées et retraits via Mobile Money</p>
               </div>
               <div class="aff-calc-badge">
-                <i class="fa-solid fa-shield-halved" style="color: var(--whatsapp-green);"></i> Calcul officiel 20% net
+                <i class="fa-solid fa-circle-check" style="color: var(--whatsapp-green);"></i> Commissions certifiées 20%
               </div>
             </div>
 

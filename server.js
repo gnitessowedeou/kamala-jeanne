@@ -2995,7 +2995,7 @@ app.get('/api/affiliate/dashboard/:userId', authMiddleware, async (req, res) => 
           name: dispName,
           plan: 'Essai Gratuit 7j',
           paymentAmount: '0 FCFA',
-          commissionAmount: 'En attente',
+          commissionAmount: '0 FCFA',
           status: 'Inscrit (Essai)',
           isPaid: false
         });
