@@ -5781,16 +5781,21 @@ function setupBillingAndAffiliate() {
                 window._waPairingInterval = null;
             }
 
-            const token = localStorage.getItem("vendia_supabase_token") || "";
-            const res = await fetch("/api/whatsapp/disconnect", {
+            const targetUrl = (typeof API_URL !== 'undefined' ? API_URL : 'https://kamala-jeanne-production.up.railway.app') + '/api/whatsapp/disconnect';
+            const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+            const res = await fetch(targetUrl, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { "Authorization": `Bearer ${token}` } : {})
-                },
+                headers,
                 body: JSON.stringify({ userId })
             });
-            const data = await res.json();
+            let data = {};
+            const text = await res.text();
+            try {
+                data = JSON.parse(text);
+            } catch (jsonErr) {
+                console.warn("[DISCONNECT] Non-JSON response:", text);
+                throw new Error("Réponse inattendue du serveur (" + res.status + ")");
+            }
             if (data.success) {
                 if (typeof showToast === 'function') showToast("✅ Session WhatsApp déconnectée avec succès.", "success");
                 window.currentWhatsAppStatus = "DISCONNECTED";
@@ -6319,11 +6324,9 @@ async function syncAffiliateModule() {
   const token = localStorage.getItem("vandia_access_token") || localStorage.getItem("supabase_token") || "";
 
   try {
-    const res = await fetch(`/api/affiliate/dashboard/${encodeURIComponent(userId)}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const targetUrl = (typeof API_URL !== 'undefined' ? API_URL : 'https://kamala-jeanne-production.up.railway.app') + `/api/affiliate/dashboard/${encodeURIComponent(userId)}`;
+    const headers = typeof getAuthHeaders === 'function' ? getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
+    const res = await fetch(targetUrl, { headers });
 
     if (res.ok) {
       const json = await res.json();

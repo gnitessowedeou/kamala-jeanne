@@ -2396,7 +2396,8 @@
             localStorage.setItem('vandia_referral_code', refCode);
           }
           console.log('[AFFILIATE] Code de parrainage capturé :', refCode);
-          fetch('/api/affiliate/track-click', {
+          var backendUrl = 'https://kamala-jeanne-production.up.railway.app';
+          fetch(backendUrl + '/api/affiliate/track-click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: refCode })

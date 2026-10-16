@@ -2929,9 +2929,16 @@ app.post('/api/payouts/request', authMiddleware, async (req, res) => {
 // Route par dfaut (Frontend)
 
 
-app.use((req, res) => {
-  if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));
-  else res.status(404).json({ error: "Route API non trouvée" });
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) return res.sendFile(path.join(__dirname, 'index.html'));
+  res.status(404).json({ error: "Route API non trouvée" });
+});
+
+// Gestionnaire d'erreurs global (Garantit des réponses 100% JSON pour l'API)
+app.use((err, req, res, next) => {
+  console.error('[EXPRESS ERROR]', err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({ error: err.message || "Erreur interne du serveur" });
 });
 
 

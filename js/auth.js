@@ -396,7 +396,8 @@
         // Étape D : Confirmation serveur de l'attribution permanente du parrain
         if (cleanRefCode) {
           try {
-            await fetch('/api/affiliate/attribute', {
+            const backendUrl = typeof getBackendUrl === 'function' ? getBackendUrl() : 'https://kamala-jeanne-production.up.railway.app';
+            await fetch(`${backendUrl}/api/affiliate/attribute`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId, referralCode: cleanRefCode })
