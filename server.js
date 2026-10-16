@@ -103,7 +103,9 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    const isExplicitAllowed = allowedOrigins.indexOf(origin) !== -1;
+    const isOfficialVercel = origin === 'https://kamala-jeanne.vercel.app';
+    if (!origin || isExplicitAllowed || isOfficialVercel) {
       callback(null, true);
     } else {
       callback(null, false);
@@ -196,66 +198,31 @@ app.get('/api/health', (req, res) => res.status(200).json({ status: 'OK', uptime
 // Pages HTML publiques
 app.get('/api/diag', (req, res, next) => {
   const adminSecret = process.env.ADMIN_SECRET || process.env.SUPABASE_SERVICE_KEY;
-  const provided = req.headers['x-admin-key'] || req.query.admin_key;
-  if (process.env.NODE_ENV === 'production' && (!adminSecret || provided !== adminSecret)) {
+  const provided = req.headers['x-admin-key'];
+  if (!adminSecret || !provided || provided !== adminSecret) {
     return res.status(403).json({ error: 'Accès restreint aux administrateurs.' });
   }
   next();
-}, async (req, res) => {
-  const os = require('os');
-  const { execSync } = require('child_process');
-  let chromiumLocation = 'none';
-  try {
-    chromiumLocation = execSync('which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf8' }).trim();
-  } catch (e) {
-    chromiumLocation = 'which failed: ' + e.message;
-  }
-
-  let puppeteerTest = 'untested';
-  try {
-    const puppeteer = require('puppeteer');
-    const chromiumPath = getChromiumExecutablePath();
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--disable-gpu',
-        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
-      ],
-      ...(chromiumPath ? { executablePath: chromiumPath } : {})
-    });
-    const version = await browser.version();
-    await browser.close();
-    puppeteerTest = 'SUCCESS: ' + version;
-  } catch (pErr) {
-    puppeteerTest = 'FAILED: ' + pErr.message;
-  }
+}, (req, res) => {
+  const chromiumPath = getChromiumExecutablePath();
+  const sessionEntries = fs.existsSync(AUTH_BASE_DIR) ? fs.readdirSync(AUTH_BASE_DIR).filter(e => e.startsWith('session-')) : [];
 
   res.json({
+    status: 'OK',
     platform: process.platform,
     arch: process.arch,
-    chromiumLocation,
-    detectedPath: getChromiumExecutablePath(),
-    puppeteerTest,
-    env_PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH,
-    env_PORT: process.env.PORT,
+    detectedPath: chromiumPath,
+    chromiumAvailable: !!(chromiumPath && fs.existsSync(chromiumPath)),
     env_diagnostics: {
-      has_SASPAY_SECRET_KEY: !!process.env.SASPAY_SECRET_KEY,
-      has_SAASPAY_SECRET_KEY: !!process.env.SAASPAY_SECRET_KEY,
-      has_SASPAY_KEY: !!process.env.SASPAY_KEY,
-      has_SAASPAY_KEY: !!process.env.SAASPAY_KEY,
+      has_SASPAY_SECRET_KEY: !!(process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY),
       has_SUPABASE_SERVICE_KEY: !!process.env.SUPABASE_SERVICE_KEY,
       has_SUPABASE_URL: !!process.env.SUPABASE_URL,
-      saspayPrefix: (process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || '') ? (process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY).substring(0, 7) + '...' : 'none'
+      has_OPENAI_API_KEY: !!process.env.OPENAI_API_KEY
     },
     storage: {
       authBaseDir: AUTH_BASE_DIR,
       exists: fs.existsSync(AUTH_BASE_DIR),
-      sessions: fs.existsSync(AUTH_BASE_DIR) ? fs.readdirSync(AUTH_BASE_DIR).filter(e => e.startsWith('session-')) : []
+      sessionCount: sessionEntries.length
     }
   });
 });
@@ -287,44 +254,30 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
   const targetUserId = req.params.userId || (req.body && req.body.userId);
 
-  // 1. Validation cryptographique via JWT Supabase (si present)
-  if (token && supabase) {
+  if (!token) {
+    return res.status(401).json({ error: "Accès refusé : Authentification requise (jeton absent)." });
+  }
+
+  if (supabase) {
     try {
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (!error && user) {
         req.user = user;
-        // Protection stricte IDOR : L'utilisateur ne peut agir que sur son propre compte
+        // Protection stricte IDOR / BOLA : L'utilisateur ne peut agir que sur son propre compte
         if (targetUserId && req.user.id !== targetUserId) {
-          console.warn(`[SECURITE] IDOR bloque : ${req.user.id} a tente d'acceder a ${targetUserId}`);
-          return res.status(403).json({ error: "Acces interdit : Operation non autorisee pour ce compte." });
+          console.warn(`[SÉCURITÉ] IDOR bloqué : ${req.user.id} a tenté d'accéder aux données de ${targetUserId}`);
+          return res.status(403).json({ error: "Accès interdit : Opération non autorisée pour ce compte." });
         }
         return next();
       }
+      return res.status(401).json({ error: "Accès refusé : Session invalide ou expirée." });
     } catch (err) {
-      console.warn('[AUTH] Echec validation JWT :', err.message);
+      console.warn('[AUTH] Échec validation JWT :', err.message);
+      return res.status(401).json({ error: "Accès refusé : Échec de validation du jeton." });
     }
   }
 
-  // 2. Validation de secours avec profil verifie (compatibilite polling tableau de bord)
-  if (targetUserId) {
-    if (supabase) {
-      try {
-        const { data: profile } = await supabase.from('profiles').select('id').eq('id', targetUserId).maybeSingle();
-        if (profile) {
-          req.user = { id: profile.id };
-          return next();
-        }
-        return res.status(403).json({ error: "Accès refusé : Profil inexistant ou compte non enregistré." });
-      } catch (dbErr) {
-        console.warn('[AUTH] Erreur vérification profil DB:', dbErr.message);
-      }
-    } else {
-      req.user = { id: targetUserId };
-      return next();
-    }
-  }
-
-  return res.status(401).json({ error: "Acces refuse : Authentification requise." });
+  return res.status(500).json({ error: "Service d'authentification temporairement indisponible." });
 };
 
 function getChromiumExecutablePath() {
@@ -2369,19 +2322,26 @@ app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
             }
         }
 
-        const numericAmount = Math.round(Number(amount) || (planTier === 'basic' ? 7900 : planTier === 'pro' ? 14900 : 30000));
+        const OFFICIAL_PRICES = {
+            basic: { monthly: 7900, annual: 79000 },
+            pro: { monthly: 14900, annual: 149000 },
+            business: { monthly: 30000, annual: 300000 }
+        };
+        const safePlan = (planTier && OFFICIAL_PRICES[planTier]) ? planTier : 'pro';
+        const safeCycle = cycle === 'annual' ? 'annual' : 'monthly';
+        const numericAmount = OFFICIAL_PRICES[safePlan][safeCycle];
 
         const saspayPayload = {
             amount: numericAmount.toString(),
             currency: "XOF",
             customer_email: customerEmail,
             customer_name: customerName,
-            return_url: `${(req.headers.origin && !req.headers.origin.includes('localhost')) ? req.headers.origin : 'https://vandias.com'}/dashboard.html?payment=return&tier=${planTier || 'pro'}`,
+            return_url: `${(req.headers.origin && !req.headers.origin.includes('localhost')) ? req.headers.origin : 'https://vandias.com'}/dashboard.html?payment=return&tier=${safePlan}`,
             webhook_url: "https://kamala-jeanne-production.up.railway.app/api/payments/webhook",
             metadata: {
                 userId: userId || 'anonymous',
-                planTier: planTier || 'pro',
-                cycle: cycle || 'monthly'
+                planTier: safePlan,
+                cycle: safeCycle
             }
         };
 
@@ -2420,14 +2380,14 @@ app.post('/api/payments/webhook', async (req, res) => {
         const payload = req.body;
         console.log('[SASPAY WEBHOOK]', payload);
 
-        // 1. Verification de securite du Webhook
+        // 1. Verification de securite stricte du Webhook
         const webhookSecret = process.env.SASPAY_WEBHOOK_SECRET || process.env.SASPAY_SECRET_KEY;
         const incomingSecret = req.headers['x-webhook-secret'] || req.headers['x-saspay-signature'] || req.query.secret;
         
-        if (webhookSecret && incomingSecret) {
-            if (incomingSecret !== webhookSecret) {
-                console.warn('[SASPAY WEBHOOK] Tentative rejetee : secret invalide.');
-                return res.status(403).json({ error: 'Signature webhook non valide' });
+        if (webhookSecret) {
+            if (!incomingSecret || incomingSecret !== webhookSecret) {
+                console.warn('[SASPAY WEBHOOK] Tentative rejetee : secret webhook manquant ou invalide.');
+                return res.status(401).json({ error: 'Signature webhook non valide ou absente' });
             }
         }
 
@@ -2446,10 +2406,16 @@ app.post('/api/payments/webhook', async (req, res) => {
             const sessionId = sessionData.id || payload.id;
 
             const validPlans = {
-                basic: { credits: 1000, maxPrice: 7900 },
-                pro: { credits: 3000, maxPrice: 14900 },
-                business: { credits: 10000, maxPrice: 30000 }
+                basic: { credits: 1000, minPrice: 7000 },
+                pro: { credits: 3000, minPrice: 14000 },
+                business: { credits: 10000, minPrice: 28000 }
             };
+
+            const paidAmount = Number(sessionData.amount || payload.amount || 0);
+            if (paidAmount > 0 && validPlans[planTier] && paidAmount < validPlans[planTier].minPrice) {
+                console.warn(`[SASPAY WEBHOOK] Alerte fraude tarifaire pour plan ${planTier}: payé ${paidAmount}, minimum attendu ${validPlans[planTier].minPrice}`);
+                return res.status(400).json({ error: 'Montant insuffisant pour ce plan' });
+            }
 
             if (userId && validPlans[planTier] && supabase) {
                 const credits = validPlans[planTier].credits;
@@ -3073,7 +3039,10 @@ app.post('/api/integrations/payments', authMiddleware, async (req, res) => {
 
 // === 7. DEMANDE DE RETRAIT (AFFILIATION) ===
 app.post('/api/payouts/request', authMiddleware, async (req, res) => {
-    const userId = req.user ? req.user.id : req.body.userId;
+    const userId = req.user ? req.user.id : null;
+    if (!userId) {
+        return res.status(401).json({ error: 'Authentification requise pour demander un retrait' });
+    }
     const { payout_method, payout_number } = req.body;
     const amount = Number(req.body.amount);
 

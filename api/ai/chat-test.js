@@ -37,6 +37,7 @@ module.exports = async (req, res) => {
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
     const openAiKey = process.env.OPENAI_API_KEY;
 
+    let authenticatedUser = null;
     // Vérification d'authentification obligatoire si Supabase est configuré
     if (supabaseUrl && supabaseKey) {
       if (!token) {
@@ -47,6 +48,7 @@ module.exports = async (req, res) => {
       if (authErr || !user) {
         return res.status(401).json({ error: "Session invalide ou expirée." });
       }
+      authenticatedUser = user;
     }
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
@@ -54,11 +56,17 @@ module.exports = async (req, res) => {
     if (!message || typeof message !== 'string') return res.status(400).json({ error: "Message requis" });
     if (message.length > 1000) return res.status(400).json({ error: "Message trop long (max 1000 caractères)" });
 
+    // Sécurité BOLA : un utilisateur ne peut pas consulter le prompt d'un compte tiers
+    if (authenticatedUser && userId && userId !== authenticatedUser.id) {
+      return res.status(403).json({ error: "Accès refusé : Impossible d'accéder aux configurations d'un autre compte." });
+    }
+
+    const effectiveUserId = authenticatedUser ? authenticatedUser.id : userId;
     let systemPrompt = "Tu es un assistant commercial WhatsApp intelligent, chaleureux et persuasif pour VANDIAS AI.";
-    if (userId && supabaseUrl && supabaseKey) {
+    if (effectiveUserId && supabaseUrl && supabaseKey) {
       try {
         const supabase = createClient(supabaseUrl, supabaseKey);
-        const { data: profile } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
+        const { data: profile } = await supabase.from('profiles').select('ai_prompt').eq('id', effectiveUserId).single();
         if (profile && profile.ai_prompt) systemPrompt = profile.ai_prompt;
       } catch (e) {}
     }
