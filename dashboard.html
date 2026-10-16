@@ -4073,8 +4073,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       allBtns.forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
       var tone = btn.textContent.trim();
-      var userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
-      localStorage.setItem('vendia_agent_tone_' + userId, tone);
+      var userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+      if (userId) {
+        localStorage.setItem('vendia_agent_tone_' + userId, tone);
+      }
       localStorage.setItem('vendia_agent_tone', tone);
       if (typeof showToast === 'function') {
         showToast("Ton sélectionné : " + tone, "info");
@@ -4097,7 +4099,11 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         return;
       }
 
-      var userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+      var userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+      if (!userId) {
+        if (typeof showToast === 'function') showToast("Veuillez vous connecter pour enregistrer vos paramètres IA.", "error");
+        return;
+      }
       var agentName = nameInput ? nameInput.value.trim() : "Sarah - Conseillère Commerciale VANDIAS";
       var agentTone = activeToneBtn ? activeToneBtn.textContent.trim() : "Chaleureux & Persuasif";
       var isActive = activeSwitch ? activeSwitch.checked : true;

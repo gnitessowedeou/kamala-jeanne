@@ -366,6 +366,17 @@ function initAuthModal() {
       if (footerPrompt) footerPrompt.style.display = "block";
       if (footerText) footerText.textContent = "Déjà un compte VANDIAS ?";
       if (footerAction) footerAction.textContent = "Se connecter";
+
+      const refInput = document.getElementById("signup-referral-code");
+      const refHint = document.getElementById("referral-code-hint");
+      const activeRef = (typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : null) || localStorage.getItem("vandia_referral_code") || localStorage.getItem("vendia_ref");
+      if (activeRef && refInput) {
+        if (!refInput.value) refInput.value = activeRef;
+        if (refHint) {
+          refHint.style.display = "block";
+          refHint.innerHTML = `<i class="fa-solid fa-circle-check"></i> Code parrainage appliqué : <strong>${activeRef}</strong>`;
+        }
+      }
     } else if (mode === "login") {
       if (tabSignup) tabSignup.classList.remove("active");
       if (tabLogin) tabLogin.classList.add("active");
@@ -471,11 +482,11 @@ function initAuthModal() {
       const submitBtn = document.getElementById("btn-submit-signup");
       const originalText = submitBtn ? submitBtn.innerHTML : "";
 
-      // Attribution de parrainage : première attribution valide (lien d'abord, sinon code saisi)
-      const storedRef = localStorage.getItem("vandia_referral_code");
+      // Attribution de parrainage : première attribution valide (code saisi ou lien mémorisé)
       const refInputEl = document.getElementById("signup-referral-code");
       const enteredRef = refInputEl ? refInputEl.value.trim().toUpperCase() : "";
-      const referralCode = storedRef || enteredRef || null;
+      const storedRef = (typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : null) || localStorage.getItem("vandia_referral_code") || localStorage.getItem("vendia_ref");
+      const referralCode = enteredRef || storedRef || null;
 
       const data = {
         firstName: document.getElementById("signup-firstname").value,

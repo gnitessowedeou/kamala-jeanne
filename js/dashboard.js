@@ -88,7 +88,7 @@ function getAppUserId() {
     const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
     if (u && u.id) return u.id;
   } catch(e) {}
-  return '360ca892-6818-46e4-bb2a-451036e58d11';
+  return null;
 }
 window.getAppUserId = getAppUserId;
 
@@ -989,9 +989,9 @@ async function handlePaymentReturnCallback() {
     if (paymentAction === 'return' || paymentAction === 'success') {
       const tier = params.get('tier') || localStorage.getItem('vendia_pending_tier') || 'pro';
       const sessionId = params.get('session_id') || params.get('sessionId') || params.get('id') || params.get('reference') || localStorage.getItem('vendia_pending_session');
-      const userId = (typeof getAppUserId === 'function') ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+      const userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
       
-      if (!sessionId) {
+      if (!sessionId || !userId) {
         console.warn("[PAYMENT CALLBACK] Aucun identifiant de session trouvé.");
         if (window.history && window.history.replaceState) {
           window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
@@ -5547,14 +5547,6 @@ function setupBillingAndAffiliate() {
         }
     };
 
-    function getAppUserId() {
-        try {
-            const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-            if (u && u.id && u.id.length > 5 && !u.id.startsWith('usr_')) return u.id;
-        } catch(e) {}
-        return '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
-    }
-
     function renderQrImage(qrData) {
         const qrBox = document.getElementById('qr-canvas-box') || document.querySelector('#qr-modal .qr-code-box') || document.querySelector('.qr-code-box');
         if (!qrBox) return;
@@ -7145,7 +7137,13 @@ window.submitWhatsAppPairingCode = async function() {
     if (btn) btn.disabled = true;
     if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Génération...';
 
-    var targetUserId = (typeof getAppUserId === "function") ? getAppUserId() : '6f9cf58f-4439-4c0b-b860-a36ad9e23055';
+    var targetUserId = (typeof getAppUserId === "function") ? getAppUserId() : null;
+    if (!targetUserId) {
+        if (typeof showToast === "function") showToast("Veuillez vous connecter pour lier votre compte WhatsApp.", "error");
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.innerHTML = '<i class="fa-solid fa-key"></i> Obtenir mon code';
+        return;
+    }
 
     try {
         var res = await fetch(API_URL + "/api/whatsapp/pairing-code", {

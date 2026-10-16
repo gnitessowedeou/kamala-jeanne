@@ -2389,10 +2389,10 @@
         var refCode = params.get('ref') || params.get('referral');
         if (refCode) {
           refCode = String(refCode).trim().toUpperCase();
-          // Sauvegarder la première attribution valide
-          if (!localStorage.getItem('vandia_referral_code')) {
-            localStorage.setItem('vandia_referral_code', refCode);
-          }
+          try { localStorage.setItem('vandia_referral_code', refCode); } catch(e) {}
+          try { localStorage.setItem('vendia_ref', refCode); } catch(e) {}
+          try { sessionStorage.setItem('vandia_referral_code', refCode); } catch(e) {}
+          try { document.cookie = 'vandia_referral_code=' + encodeURIComponent(refCode) + '; path=/; max-age=2592000; SameSite=Lax'; } catch(e) {}
           console.log('[AFFILIATE] Code de parrainage capturé :', refCode);
           var backendUrl = 'https://kamala-jeanne-production.up.railway.app';
           fetch(backendUrl + '/api/affiliate/track-click', {
@@ -2404,12 +2404,18 @@
 
         // Pré-remplir automatiquement le champ dans le formulaire d'inscription
         function applyReferralInput() {
-          var activeRef = localStorage.getItem('vandia_referral_code') || refCode;
+          var activeRef = (typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : null) ||
+                          localStorage.getItem('vandia_referral_code') || 
+                          localStorage.getItem('vendia_ref') || 
+                          refCode;
           var input = document.getElementById('signup-referral-code');
           var hint = document.getElementById('referral-code-hint');
           if (activeRef && input) {
             input.value = activeRef;
-            if (hint) hint.style.display = 'block';
+            if (hint) {
+              hint.style.display = 'block';
+              hint.innerHTML = '<i class="fa-solid fa-circle-check"></i> Code parrainage appliqué : <strong>' + activeRef + '</strong>';
+            }
           }
         }
 

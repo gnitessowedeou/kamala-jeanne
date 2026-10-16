@@ -2008,7 +2008,7 @@ async function processAffiliateCommission({ payerId, paymentRef, rawAmount, plan
       const { data: spByCode } = await supabase
         .from('profiles')
         .select('id, affiliate_code, affiliate_balance, first_name, email')
-        .eq('affiliate_code', cleanSponsorCode)
+        .ilike('affiliate_code', cleanSponsorCode)
         .maybeSingle();
       if (spByCode) sponsor = spByCode;
     } catch (e) {}
@@ -2651,7 +2651,7 @@ app.get('/api/affiliate/validate/:code', async (req, res) => {
     const { data: sponsor, error } = await supabase
       .from('profiles')
       .select('id, affiliate_code, first_name')
-      .eq('affiliate_code', cleanCode)
+      .ilike('affiliate_code', cleanCode)
       .maybeSingle();
 
     if (error || !sponsor) {
@@ -2668,72 +2668,158 @@ app.get('/api/affiliate/validate/:code', async (req, res) => {
   }
 });
 
-// 2. Attribution permanente d'un parrain lors de l'inscription
+// 2. Attribution permanente d'un parrain lors de l'inscription (Sécurisée et Validée)
 app.post('/api/affiliate/attribute', async (req, res) => {
   try {
-    const { userId, referralCode } = req.body || {};
-    if (!userId || !referralCode) {
-      return res.status(400).json({ success: false, error: "userId et referralCode requis." });
+    const { userId, referralCode, sponsorCode, firstName, lastName, email, whatsappNumber } = req.body || {};
+    const effectiveCode = referralCode || sponsorCode;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "userId requis." });
     }
     if (!supabase) {
       return res.status(500).json({ success: false, error: "Base de données non disponible." });
     }
 
-    const cleanCode = String(referralCode).trim().toUpperCase();
+    // 1. S'assurer que le profil de l'utilisateur existe dans public.profiles (contourne le blocage RLS client)
+    let { data: userProfile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (!userProfile) {
+      const cleanNum = String(userId).replace(/\D/g, '').substring(0, 4) || String(Math.floor(1000 + Math.random() * 9000));
+      const userAffCode = `VD-${cleanNum}99`;
+      const newProfile = {
+        id: userId,
+        email: email || '',
+        first_name: firstName || '',
+        last_name: lastName || '',
+        full_name: `${firstName || ''} ${lastName || ''}`.trim() || 'Utilisateur VANDIAS',
+        whatsapp_number: whatsappNumber || '',
+        credits: 100,
+        affiliate_code: userAffCode,
+        affiliate_balance: 0,
+        created_at: new Date().toISOString()
+      };
+      const { data: created } = await supabase.from('profiles').upsert(newProfile).select().maybeSingle();
+      userProfile = created || newProfile;
+    }
 
-    // Vérifier si l'utilisateur a déjà une attribution permanente (règle : ne jamais écraser la première attribution valide)
-    let existingRef = null;
-    try {
-      const { data: p } = await supabase.from('profiles').select('referred_by').eq('id', userId).maybeSingle();
-      if (p && p.referred_by) existingRef = p.referred_by;
-    } catch(e) {}
+    // S'assurer que chaque utilisateur a son propre code de parrainage persistant
+    if (!userProfile.affiliate_code) {
+      const cleanNum = String(userId).replace(/\D/g, '').substring(0, 4) || String(Math.floor(1000 + Math.random() * 9000));
+      userProfile.affiliate_code = `VD-${cleanNum}99`;
+      try {
+        await supabase.from('profiles').update({ affiliate_code: userProfile.affiliate_code }).eq('id', userId);
+      } catch (e) {}
+    }
 
+    // Si aucun code de parrainage fourni, retourner succès avec son propre code
+    if (!effectiveCode || !String(effectiveCode).trim()) {
+      return res.json({ success: true, message: "Profil synchronisé sans parrain.", affiliateCode: userProfile.affiliate_code });
+    }
+
+    const cleanCode = String(effectiveCode).trim().toUpperCase();
+
+    // 2. Vérifier si l'utilisateur a DÉJÀ un parrain VALIDE et vérifié
+    // Règle : La première attribution valide est permanente et intouchable
+    let existingRef = userProfile && userProfile.referred_by ? String(userProfile.referred_by).trim().toUpperCase() : null;
     if (!existingRef) {
       try {
-        const { data: u } = await supabase.auth.admin.getUserById(userId);
-        if (u?.user?.user_metadata?.referred_by) existingRef = u.user.user_metadata.referred_by;
+        const { data: uAuth } = await supabase.auth.admin.getUserById(userId);
+        const metaRef = uAuth?.user?.user_metadata?.referred_by || uAuth?.user?.app_metadata?.referred_by;
+        if (metaRef) existingRef = String(metaRef).trim().toUpperCase();
       } catch(e) {}
     }
 
     if (existingRef) {
-      console.log(`[AFFILIATION] L'utilisateur ${userId} a déjà un parrain permanent (${existingRef}). Première attribution préservée.`);
-      return res.json({ success: true, permanent: true, sponsorCode: existingRef });
+      let validExistingSponsor = null;
+      try {
+        const { data: spByCode } = await supabase
+          .from('profiles')
+          .select('id, affiliate_code, first_name')
+          .ilike('affiliate_code', existingRef)
+          .maybeSingle();
+        if (spByCode) validExistingSponsor = spByCode;
+      } catch(e) {}
+
+      if (!validExistingSponsor && existingRef.includes('-')) {
+        try {
+          const { data: spById } = await supabase
+            .from('profiles')
+            .select('id, affiliate_code, first_name')
+            .eq('id', existingRef)
+            .maybeSingle();
+          if (spById) validExistingSponsor = spById;
+        } catch(e) {}
+      }
+
+      if (validExistingSponsor) {
+        console.log(`[AFFILIATION] L'utilisateur ${userId} a déjà un parrain valide (${validExistingSponsor.affiliate_code}). Première attribution préservée.`);
+        return res.json({
+          success: true,
+          permanent: true,
+          sponsorCode: validExistingSponsor.affiliate_code,
+          sponsorName: validExistingSponsor.first_name || 'Partenaire VANDIAS',
+          referrerId: validExistingSponsor.id
+        });
+      }
     }
 
-    // Trouver le parrain
+    // 3. Trouver le parrain correspondant au code fourni
     let sponsor = null;
-    try {
-      const { data: sp } = await supabase.from('profiles').select('id, affiliate_code, first_name').eq('affiliate_code', cleanCode).maybeSingle();
-      if (sp) sponsor = sp;
-    } catch(e) {}
+    const { data: spByCode } = await supabase
+      .from('profiles')
+      .select('id, affiliate_code, first_name, email')
+      .ilike('affiliate_code', cleanCode)
+      .maybeSingle();
+
+    if (spByCode) sponsor = spByCode;
+
+    // Si non trouvé par code et que la chaîne ressemble à un UUID, chercher par id
+    if (!sponsor && cleanCode.includes('-')) {
+      const { data: spById } = await supabase
+        .from('profiles')
+        .select('id, affiliate_code, first_name, email')
+        .eq('id', cleanCode)
+        .maybeSingle();
+      if (spById) sponsor = spById;
+    }
 
     if (!sponsor) {
-      return res.status(404).json({ success: false, error: "Code de parrainage introuvable." });
+      return res.status(404).json({ success: false, error: "Code de parrainage introuvable ou invalide." });
     }
 
-    // Sécurité : Bloquer l'auto-parrainage
+    // 4. Sécurité anti-fraude : Bloquer formellement l'auto-parrainage
     if (sponsor.id === userId) {
+      console.warn(`[AFFILIATION] Tentative d'auto-parrainage bloquée pour l'utilisateur ${userId}`);
       return res.status(400).json({ success: false, error: "Vous ne pouvez pas vous parrainer vous-même." });
     }
 
-    // Enregistrement permanent dans profiles et auth.users metadata
-    try {
-      await supabase.from('profiles').update({ referred_by: sponsor.affiliate_code }).eq('id', userId);
-    } catch(e) {}
-
+    // 5. Enregistrement permanent dans auth.users user_metadata (toujours garanti)
     try {
       const { data: u } = await supabase.auth.admin.getUserById(userId);
       const meta = u?.user?.user_metadata || {};
       await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: { ...meta, referred_by: sponsor.affiliate_code }
+        user_metadata: {
+          ...meta,
+          referred_by: sponsor.affiliate_code,
+          referrer_id: sponsor.id
+        }
       });
-    } catch(e) {}
+    } catch(authErr) {
+      console.warn('[AFFILIATION] Notice updateUserById:', authErr.message);
+    }
 
-    console.log(`[AFFILIATION] Attribution permanente réussie : ${userId} rattaché au parrain ${sponsor.affiliate_code} (${sponsor.first_name})`);
+    // 6. Enregistrement dans profiles (si la colonne existe)
+    try {
+      await supabase.from('profiles').update({ referred_by: sponsor.affiliate_code }).eq('id', userId);
+    } catch(dbErr) {
+      console.warn('[AFFILIATION] Notice update profiles.referred_by:', dbErr.message);
+    }
+
+    console.log(`🎉 [AFFILIATION] Attribution permanente réussie : ${userId} rattaché au parrain ${sponsor.affiliate_code} (${sponsor.first_name || sponsor.email})`);
     res.json({
       success: true,
       sponsorCode: sponsor.affiliate_code,
-      sponsorName: sponsor.first_name || 'Partenaire VANDIAS'
+      sponsorName: sponsor.first_name || 'Partenaire VANDIAS',
+      referrerId: sponsor.id
     });
   } catch (err) {
     console.error('[AFFILIATION ATTRIBUTE] Erreur:', err.message);
@@ -2778,7 +2864,7 @@ app.get('/api/affiliate/dashboard/:userId', authMiddleware, async (req, res) => 
       const { data: directRef } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, created_at, plan, plan_status')
-        .eq('referred_by', affCode);
+        .ilike('referred_by', affCode);
       if (Array.isArray(directRef)) referredUsers = directRef;
     } catch (e) {}
 
@@ -2794,6 +2880,37 @@ app.get('/api/affiliate/dashboard/:userId', authMiddleware, async (req, res) => 
         }
       }
     } catch (e) {}
+
+    // Recherche de secours infaillible dans auth.users (user_metadata)
+    if (referredUsers.length === 0) {
+      try {
+        const { data: uList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+        if (uList && Array.isArray(uList.users)) {
+          for (const u of uList.users) {
+            const metaRef = u.user_metadata?.referred_by || u.app_metadata?.referred_by;
+            const metaSponsorId = u.user_metadata?.referrer_id || u.app_metadata?.referrer_id;
+            if (
+              (metaRef && String(metaRef).toUpperCase() === affCode.toUpperCase()) ||
+              (metaSponsorId && metaSponsorId === userId)
+            ) {
+              if (!referredUsers.some(r => r.id === u.id) && u.id !== userId) {
+                referredUsers.push({
+                  id: u.id,
+                  first_name: u.user_metadata?.first_name || u.user_metadata?.firstName || 'Filleul',
+                  last_name: u.user_metadata?.last_name || u.user_metadata?.lastName || '',
+                  email: u.email,
+                  created_at: u.created_at,
+                  plan: u.app_metadata?.plan || 'Gratuit',
+                  plan_status: u.app_metadata?.plan_status || 'active'
+                });
+              }
+            }
+          }
+        }
+      } catch (authListErr) {
+        console.warn('[AFFILIATE/STATS] Notice listUsers:', authListErr.message);
+      }
+    }
 
     // 4. Récupérer l'historique réel des commissions
     let commissions = [];
@@ -3012,6 +3129,45 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`[KAMALA JEANNE] Moteur Backend démarré sur http://localhost:${PORT}`);
   console.log(`[STORAGE] Dossier persistant WhatsApp : ${AUTH_BASE_DIR}`);
+
+  // Restauration séquentielle sécurisée en tâche de fond pour que l'IA réponde 24/7 même si le marchand est absent
+  setTimeout(async () => {
+    try {
+      if (fs.existsSync(AUTH_BASE_DIR)) {
+        const entries = fs.readdirSync(AUTH_BASE_DIR);
+        const sessionDirs = entries.filter(e => e.startsWith('session-'));
+        if (sessionDirs.length > 0) {
+          console.log(`[WA/STARTUP] ${sessionDirs.length} session(s) WhatsApp détectée(s) sur le disque.`);
+          for (let i = 0; i < sessionDirs.length; i++) {
+            const entry = sessionDirs[i];
+            const userId = entry.replace('session-', '');
+            if (!userId || waClients[userId]) continue;
+
+            // Vérifier si l'utilisateur a un compte actif avec numéro WhatsApp
+            let shouldRestore = true;
+            if (supabase) {
+              try {
+                const { data: p } = await supabase.from('profiles').select('whatsapp_number, credits').eq('id', userId).maybeSingle();
+                if (p && p.whatsapp_number === null) {
+                  shouldRestore = false; // Utilisateur explicitement déconnecté
+                }
+              } catch(e) {}
+            }
+
+            if (shouldRestore) {
+              await new Promise(r => setTimeout(r, i === 0 ? 3000 : 7000));
+              console.log(`🚀 [WA/STARTUP] Auto-restauration de la session pour ${userId} en tâche de fond...`);
+              createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
+                console.warn(`[WA/STARTUP] Notice auto-restauration ${userId}:`, err.message);
+              });
+            }
+          }
+        }
+      }
+    } catch(err) {
+      console.warn('[WA/STARTUP] Erreur scan sessions:', err.message);
+    }
+  }, 4000);
 });
 
 // Arrêt gracieux lors des redéploiements Railway (évite l'erreur de crash code 143 / SIGTERM)

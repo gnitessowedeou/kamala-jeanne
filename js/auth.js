@@ -1,12 +1,33 @@
 
-// Capture d'affiliation
+// Capture et persistance globale d'affiliation (survit aux navigations et redirections)
 (function() {
     try {
         const params = new URLSearchParams(window.location.search);
-        const ref = params.get('ref');
-        if (ref) localStorage.setItem('vendia_ref', ref);
+        let ref = params.get('ref') || params.get('referral');
+        if (ref) {
+            ref = String(ref).trim().toUpperCase();
+            try { localStorage.setItem('vandia_referral_code', ref); } catch(e) {}
+            try { localStorage.setItem('vendia_ref', ref); } catch(e) {}
+            try { sessionStorage.setItem('vandia_referral_code', ref); } catch(e) {}
+            try { document.cookie = `vandia_referral_code=${encodeURIComponent(ref)}; path=/; max-age=2592000; SameSite=Lax`; } catch(e) {}
+        }
     } catch(e) {}
 })();
+
+function getStoredReferralCode() {
+  try {
+    const fromQuery = new URLSearchParams(window.location.search).get('ref') || new URLSearchParams(window.location.search).get('referral');
+    if (fromQuery) return String(fromQuery).trim().toUpperCase();
+    const fromLocal = localStorage.getItem('vandia_referral_code') || localStorage.getItem('vendia_ref');
+    if (fromLocal) return String(fromLocal).trim().toUpperCase();
+    const fromSession = sessionStorage.getItem('vandia_referral_code');
+    if (fromSession) return String(fromSession).trim().toUpperCase();
+    const match = document.cookie.match(/(?:^|;\s*)vandia_referral_code=([^;]*)/);
+    if (match && match[1]) return decodeURIComponent(match[1]).trim().toUpperCase();
+  } catch(e) {}
+  return null;
+}
+window.getStoredReferralCode = getStoredReferralCode;
 
 ﻿/**
  * ==============================================================================
@@ -349,7 +370,7 @@
       const parsedPhone = this.splitPhone(`${phoneCountry || '+225'} ${phoneNumber}`, phoneCountry || '+225');
       const fullPhone = parsedPhone.full;
       const cleanEmail = email.trim().toLowerCase();
-      const cleanRefCode = referralCode ? String(referralCode).trim().toUpperCase() : null;
+      const effectiveRefCode = cleanRefCode || (typeof getStoredReferralCode === 'function' ? getStoredReferralCode() : null);
 
       try {
         // Étape A : Création du compte dans auth.users de Supabase
@@ -357,7 +378,7 @@
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           whatsapp_number: fullPhone,
-          referred_by: cleanRefCode
+          referred_by: effectiveRefCode
         });
 
         const userId = signupRes?.id || signupRes?.user?.id;
@@ -384,8 +405,8 @@
             affiliate_code: userAffCode,
             affiliate_balance: 0
           };
-          if (cleanRefCode) {
-            profilePayload.referred_by = cleanRefCode;
+          if (effectiveRefCode) {
+            profilePayload.referred_by = effectiveRefCode;
           }
 
           await SupabaseRest.upsertProfile(profilePayload, accessToken);
@@ -393,16 +414,29 @@
           console.warn("Avertissement upsert table profiles:", profileErr);
         }
 
-        // Étape D : Confirmation serveur de l'attribution permanente du parrain
-        if (cleanRefCode) {
-          try {
-            const backendUrl = typeof getBackendUrl === 'function' ? getBackendUrl() : 'https://kamala-jeanne-production.up.railway.app';
-            await fetch(`${backendUrl}/api/affiliate/attribute`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId, referralCode: cleanRefCode })
-            });
-          } catch(e) {}
+        // Étape D : Confirmation et garantie d'enregistrement côté serveur (bypasse les restrictions RLS)
+        try {
+          const backendUrl = typeof getBackendUrl === 'function' ? getBackendUrl() : 'https://kamala-jeanne-production.up.railway.app';
+          const attrRes = await fetch(`${backendUrl}/api/affiliate/attribute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              referralCode: effectiveRefCode,
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              email: cleanEmail,
+              whatsappNumber: fullPhone
+            })
+          });
+          const attrData = await attrRes.json().catch(() => ({}));
+          if (attrData?.success && effectiveRefCode) {
+            try { localStorage.removeItem('vandia_referral_code'); } catch(e) {}
+            try { localStorage.removeItem('vendia_ref'); } catch(e) {}
+            try { sessionStorage.removeItem('vandia_referral_code'); } catch(e) {}
+          }
+        } catch(attrErr) {
+          console.warn("[AFFILIATE] Notice enregistrement attribution serveur:", attrErr.message);
         }
 
         // Étape C : Création de la session locale avec 300 crédits d'essai gratuit
