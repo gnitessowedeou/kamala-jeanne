@@ -288,15 +288,15 @@
             <span class="badge badge-green">-50% À VIE</span>
           </div>
           <div class="sub-progress-info">
-            <span>Crédits IA utilisés</span>
-            <span id="sub-token-pct">0.0%</span>
+            <span id="sub-credits-label">Solde Crédits IA</span>
+            <span id="sub-token-pct">...% restants</span>
           </div>
           <div class="sub-progress-bar">
-            <div class="sub-progress-fill" id="sub-token-fill" style="width: 0%;"></div>
+            <div class="sub-progress-fill" id="sub-token-fill" style="width: 100%;"></div>
           </div>
           <div class="sub-limits">
-            <span id="sub-tokens-used">0 crédit</span>
-            <span id="sub-tokens-max">Max ...</span>
+            <span id="sub-tokens-used" style="font-weight: 700; color: #ffffff;">... crédits disponibles</span>
+            <span id="sub-tokens-max" style="color: var(--text-muted);">sur ... inclus</span>
           </div>
           <button type="button" class="btn-sidebar-upgrade" id="btn-sidebar-upgrade" onclick="openPlanModal('pro')">
             <i class="fa-solid fa-bolt"></i>
@@ -1709,7 +1709,7 @@
               <div class="referral-link-input-row">
                 <div class="referral-link-box" style="flex: 1;">
                   <i class="fa-solid fa-hashtag" style="color: var(--whatsapp-green);"></i>
-                  <input type="text" id="affiliate-code-input" readonly value="VD-7842" class="referral-input" style="font-weight: 700; letter-spacing: 1px; font-size: 15px;">
+                  <input type="text" id="affiliate-code-input" readonly value="" placeholder="Chargement de votre code..." class="referral-input" style="font-weight: 700; letter-spacing: 1px; font-size: 15px;">
                 </div>
                 <button class="btn-primary-glow btn-copy-affiliate" id="btn-copy-affiliate-code">
                   <i class="fa-regular fa-copy"></i>
@@ -1726,7 +1726,7 @@
               <div class="referral-link-input-row">
                 <div class="referral-link-box" style="flex: 1;">
                   <i class="fa-solid fa-globe" style="color: var(--whatsapp-green);"></i>
-                  <input type="text" id="affiliate-link-input" readonly value="https://vandias.com/?ref=VD-7842" class="referral-input">
+                  <input type="text" id="affiliate-link-input" readonly value="" placeholder="Génération de votre lien personnalisé..." class="referral-input">
                 </div>
                 <button class="btn-primary-glow btn-copy-affiliate" id="btn-copy-affiliate-link">
                   <i class="fa-regular fa-copy"></i>

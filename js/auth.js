@@ -1088,29 +1088,49 @@
       // 7. Plan & Crédits IA dans la barre latérale
       const planNameEl = document.getElementById("sidebar-plan-name");
       const planTokensMaxEl = document.getElementById("sub-tokens-max");
+      const planTokensUsedEl = document.getElementById("sub-tokens-used");
+      const planPctEl = document.getElementById("sub-token-pct");
+      const planFillEl = document.getElementById("sub-token-fill");
+      const subCreditsLabel = document.getElementById("sub-credits-label");
       
-        const planTokensUsedEl = document.getElementById("sub-tokens-used");
-        const planPctEl = document.getElementById("sub-token-pct");
-        const planFillEl = document.getElementById("sub-token-fill");
-        
-        if (user.plan) {
-          if (planNameEl) planNameEl.textContent = user.plan.name || "Essai Gratuit 7j 🚀";
-          if (planTokensMaxEl) planTokensMaxEl.textContent = `Max ${(user.plan.tokensMax || 100).toLocaleString("fr-FR")} crédits`;
-          if (planTokensUsedEl) planTokensUsedEl.textContent = `${user.plan.tokensUsed || 0} crédit`;
-          
-          const max = user.plan.tokensMax || 100;
-          const used = user.plan.tokensUsed || 0;
-          const pct = max > 0 ? Math.min(100, Math.max(0, (used / max) * 100)).toFixed(1) : 0;
-          if (planPctEl) planPctEl.textContent = `${pct}%`;
-          if (planFillEl) planFillEl.style.width = `${pct}%`;
+      if (subCreditsLabel) subCreditsLabel.textContent = "Solde Crédits IA";
 
-            const billingCreditsDisplay = document.getElementById("billing-credits-display");
-            if (billingCreditsDisplay) {
-                billingCreditsDisplay.innerHTML = 'Crédits IA : <strong>' + (user.plan.tokensMax || 100).toLocaleString("fr-FR") + ' inclus</strong>';
-            }
+      if (user.plan) {
+        if (planNameEl) planNameEl.textContent = user.plan.name || "Essai Gratuit 7j 🚀";
+        const max = user.plan.tokensMax || 100;
+        const credits = (typeof user.credits === 'number') 
+          ? user.credits 
+          : (max - (user.plan.tokensUsed || 0));
+        const remainingPct = max > 0 ? Math.min(100, Math.max(0, (credits / max) * 100)).toFixed(0) : 100;
 
+        if (planTokensMaxEl) planTokensMaxEl.textContent = `sur ${max.toLocaleString("fr-FR")} inclus`;
+        if (planTokensUsedEl) planTokensUsedEl.textContent = `${credits} crédit${credits > 1 ? 's' : ''} disponible${credits > 1 ? 's' : ''}`;
+        if (planPctEl) planPctEl.textContent = `${remainingPct}% restants`;
+        if (planFillEl) {
+          planFillEl.style.width = `${remainingPct}%`;
+          planFillEl.style.background = remainingPct > 20 ? "linear-gradient(90deg, #25D366, #10b981)" : "linear-gradient(90deg, #f59e0b, #ef4444)";
         }
 
+        const billingCreditsDisplay = document.getElementById("billing-credits-display");
+        if (billingCreditsDisplay) {
+          billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} disponibles sur ${max} inclus</strong>`;
+        }
+      }
+
+      // 8. Code & Lien de Parrainage Personnalisé
+      const affCodeInput = document.getElementById("affiliate-code-input");
+      const affLinkInput = document.getElementById("affiliate-link-input");
+      const userAffCode = user.affiliateCode || user.affiliate_code;
+      if (userAffCode) {
+        if (affCodeInput) affCodeInput.value = userAffCode;
+        if (affLinkInput) affLinkInput.value = `${window.location.origin}/?ref=${userAffCode}`;
+        const affWaShare = document.getElementById("btn-share-affiliate-wa");
+        if (affWaShare) {
+          affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
+            `Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7. Inscris-toi avec mon lien officiel : ${window.location.origin}/?ref=${userAffCode} ou mon code parrainage ${userAffCode}`
+          );
+        }
+      }
     },
 
     /**

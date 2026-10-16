@@ -790,24 +790,29 @@ function updateTrialAndSubscriptionUI() {
   }
 
   // Crédits dans la sidebar
-  const credits = currentSubscriptionState.credits;
+  const credits = (typeof currentSubscriptionState.credits === 'number') ? currentSubscriptionState.credits : 100;
   const maxCredits = isPaid 
     ? (rawPlan === 'basic' ? 1000 : rawPlan === 'pro' ? 3000 : 10000) 
     : 100;
-  const usedCredits = Math.max(0, maxCredits - credits);
-  const pct = maxCredits > 0 ? ((usedCredits / maxCredits) * 100).toFixed(1) : "0.0";
+  const remainingPct = maxCredits > 0 ? Math.min(100, Math.max(0, (credits / maxCredits) * 100)).toFixed(0) : "100";
 
+  const subCreditsLabel = document.getElementById("sub-credits-label");
   const subTokenPct = document.getElementById("sub-token-pct");
   const subTokenFill = document.getElementById("sub-token-fill");
   const subTokensUsed = document.getElementById("sub-tokens-used");
   const subTokensMax = document.getElementById("sub-tokens-max");
-  if (subTokenPct) subTokenPct.textContent = `${pct}%`;
-  if (subTokenFill) subTokenFill.style.width = `${pct}%`;
-  if (subTokensUsed) subTokensUsed.textContent = `${usedCredits} crédit${usedCredits > 1 ? 's' : ''}`;
-  if (subTokensMax) subTokensMax.textContent = `Max ${maxCredits.toLocaleString('fr-FR')} crédits`;
+
+  if (subCreditsLabel) subCreditsLabel.textContent = "Solde Crédits IA";
+  if (subTokenPct) subTokenPct.textContent = `${remainingPct}% restants`;
+  if (subTokenFill) {
+    subTokenFill.style.width = `${remainingPct}%`;
+    subTokenFill.style.background = remainingPct > 20 ? "linear-gradient(90deg, #25D366, #10b981)" : "linear-gradient(90deg, #f59e0b, #ef4444)";
+  }
+  if (subTokensUsed) subTokensUsed.textContent = `${credits} crédit${credits > 1 ? 's' : ''} disponible${credits > 1 ? 's' : ''}`;
+  if (subTokensMax) subTokensMax.textContent = `sur ${maxCredits.toLocaleString('fr-FR')} inclus`;
 
   if (billingCreditsDisplay) {
-    billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} restants sur ${maxCredits} inclus</strong>`;
+    billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} disponibles sur ${maxCredits} inclus</strong>`;
   }
 }
 
@@ -5321,8 +5326,12 @@ function setupBillingAndAffiliate() {
     window.applyWhatsAppState = function(status, phone) {
         window.currentWhatsAppStatus = status || 'DISCONNECTED';
         if (phone) window.currentWhatsAppPhone = phone;
+        else if (status === 'DISCONNECTED') {
+            window.currentWhatsAppPhone = null;
+            try { localStorage.removeItem('vendia_connected_phone'); } catch(e) {}
+        }
 
-        const isConnected = (status === 'CONNECTED' || status === 'RECONNECTING');
+        const isConnected = (status === 'CONNECTED');
         let user = {};
         try { user = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
 
@@ -5801,6 +5810,15 @@ function setupBillingAndAffiliate() {
                 window.currentWhatsAppStatus = "DISCONNECTED";
                 window.currentWhatsAppPhone = null;
                 try { localStorage.removeItem("vendia_connected_phone"); } catch(e) {}
+                try {
+                    let u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+                    u.whatsapp_number = null;
+                    u.fullPhone = null;
+                    localStorage.setItem('vendia_current_user', JSON.stringify(u));
+                } catch(e) {}
+                if (window.SupabaseRest && userId) {
+                    try { window.SupabaseRest.updateProfile(userId, { whatsapp_number: null }); } catch(e) {}
+                }
                 if (typeof window.applyWhatsAppState === "function") {
                     window.applyWhatsAppState("DISCONNECTED", null);
                 }
@@ -6321,6 +6339,15 @@ async function syncAffiliateModule() {
 
   if (!userId) return;
 
+  // Pré-remplissage immédiat depuis le cache utilisateur local
+  let cachedUser = {};
+  try { cachedUser = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
+  const cachedCode = cachedUser?.affiliateCode || cachedUser?.affiliate_code;
+  if (cachedCode) {
+    if (affCodeInput) affCodeInput.value = cachedCode;
+    if (affLinkInput) affLinkInput.value = `${window.location.origin}/?ref=${cachedCode}`;
+  }
+
   const token = localStorage.getItem("vandia_access_token") || localStorage.getItem("supabase_token") || "";
 
   try {
@@ -6333,14 +6360,22 @@ async function syncAffiliateModule() {
       if (json && json.success && json.data) {
         const d = json.data;
 
-        // 1. Code et Lien de Parrainage
-        if (affCodeInput) affCodeInput.value = d.referralCode;
-        if (affLinkInput) affLinkInput.value = d.referralLink;
+        // 1. Code et Lien de Parrainage strictement identiques et personnalisés
+        const confirmedCode = d.referralCode || cachedCode;
+        const confirmedLink = `${window.location.origin}/?ref=${confirmedCode}`;
+        if (affCodeInput && confirmedCode) affCodeInput.value = confirmedCode;
+        if (affLinkInput && confirmedCode) affLinkInput.value = confirmedLink;
 
-        if (affWaShare) {
+        if (affWaShare && confirmedCode) {
           affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
-            `Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7. Inscris-toi avec mon lien officiel : ${d.referralLink} ou mon code parrainage ${d.referralCode}`
+            `Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7. Inscris-toi avec mon lien officiel : ${confirmedLink} ou mon code parrainage ${confirmedCode}`
           );
+        }
+
+        // Mettre à jour le cache local pour cohérence instantanée
+        if (confirmedCode && cachedUser) {
+          cachedUser.affiliateCode = confirmedCode;
+          try { localStorage.setItem('vendia_current_user', JSON.stringify(cachedUser)); } catch(e) {}
         }
 
         // 2. Statistiques Réelles de Supabase (Zéro valeur de démonstration)
@@ -6376,7 +6411,7 @@ async function syncAffiliateModule() {
               <tr>
                 <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">
                   <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
-                  Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(d.referralCode)}</strong> pour toucher 20% sur chaque abonnement !
+                  Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(confirmedCode || 'unique')}</strong> pour toucher 20% sur chaque abonnement !
                 </td>
               </tr>
             `;
@@ -6396,6 +6431,10 @@ async function syncAffiliateModule() {
       if (prof && prof.affiliate_code) {
         if (affCodeInput) affCodeInput.value = prof.affiliate_code;
         if (affLinkInput) affLinkInput.value = `${window.location.origin}/?ref=${prof.affiliate_code}`;
+        if (cachedUser) {
+          cachedUser.affiliateCode = prof.affiliate_code;
+          try { localStorage.setItem('vendia_current_user', JSON.stringify(cachedUser)); } catch(e) {}
+        }
       }
       if (prof && typeof prof.affiliate_balance === 'number' && statBalance) {
         statBalance.textContent = Number(prof.affiliate_balance).toLocaleString('fr-FR') + " FCFA";

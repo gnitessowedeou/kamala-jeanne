@@ -869,11 +869,38 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
       }
     }
 
-    // Déduire 1 crédit si le message a été délivré
-    if (delivered && supabase && userId && profile && profile.credits > 0) {
+    // Déduire 1 crédit de manière atomique et robuste si la réponse a été délivrée
+    if (delivered && supabase && userId) {
       try {
-        await supabase.from('profiles').update({ credits: profile.credits - 1 }).eq('id', userId);
-      } catch (crErr) {}
+        const { data: currentProf, error: fetchErr } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (fetchErr) {
+          console.error(`❌ [WA/CREDITS] Erreur lecture solde profil ${userId}:`, fetchErr.message);
+        }
+
+        const prevCredits = (currentProf && typeof currentProf.credits === 'number') 
+          ? currentProf.credits 
+          : ((profile && typeof profile.credits === 'number') ? profile.credits : 100);
+
+        const newCredits = Math.max(0, prevCredits - 1);
+
+        const { error: updateErr } = await supabase
+          .from('profiles')
+          .update({ credits: newCredits })
+          .eq('id', userId);
+
+        if (updateErr) {
+          console.error(`❌ [WA/CREDITS] Échec déduction crédit pour ${userId}:`, updateErr.message);
+        } else {
+          console.log(`💳 [WA/CREDITS] 1 crédit déduit pour ${userId} ! Ancien solde: ${prevCredits} -> Nouveau solde: ${newCredits} crédits.`);
+        }
+      } catch (crErr) {
+        console.error(`❌ [WA/CREDITS] Exception déduction crédit:`, crErr.message);
+      }
     }
   } catch (err) {
     console.error("[WA/IA] Erreur globale traitement message :", err);
@@ -937,14 +964,6 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     dataPath: AUTH_BASE_DIR 
   });
 
-  // PROTECTION CRITIQUE MULTI-DEVICE :
-  // whatsapp-web.js déclenche authStrategy.logout() dès qu'un événement transitoire
-  // comme 'logout_from_bridge' survient (lorsque le téléphone principal s'éteint ou est hors-ligne).
-  // On surcharge logout() pour interdire formellement toute suppression physique sur le disque !
-  authStrategy.logout = async function() {
-    console.warn(`[WA/GUARD] Appel authStrategy.logout() intercepté pour ${userId}. Les fichiers de session restent protégés et conservés sur disque.`);
-  };
-
   // Flags Puppeteer ultra-optimisés : empêchent Chromium de suspendre les timers et WebSockets en arrière-plan
   const clientOptions = {
     authStrategy,
@@ -961,7 +980,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
         '--no-zygote',
         '--disable-gpu',
         '--disable-software-rasterizer',
-        '--js-flags=--max-old-space-size=256',
+        '--js-flags=--max-old-space-size=512',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
@@ -1040,19 +1059,29 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     delete waPairingCodes[userId];
     console.log(`✅ [WA] Client ${userId} CONNECTÉ sur WhatsApp ! Numéro: ${waNumbers[userId] || 'Actif'}`);
 
-    // Heartbeat Keep-Alive toutes les 40 secondes : empêche Chromium / WebSocket de se déconnecter
+    // Sécurité Puppeteer : allonger les timeouts de navigation pour éviter les déconnexions sous forte charge
+    if (client && client.pupPage && !client.pupPage.isClosed()) {
+      try {
+        client.pupPage.setDefaultNavigationTimeout(120000);
+        client.pupPage.setDefaultTimeout(120000);
+      } catch (e) {}
+    }
+
+    // Heartbeat Keep-Alive ultra-stable toutes les 25 secondes :
+    // Utilise client.getState() natif de whatsapp-web.js pour maintenir la WebSocket Meta active en continu
     if (waHeartbeats[userId]) clearInterval(waHeartbeats[userId]);
     waHeartbeats[userId] = setInterval(async () => {
       try {
-        if (client && client.pupPage && !client.pupPage.isClosed()) {
-          await client.pupPage.evaluate(() => {
-            return (window.Store && window.Store.State) ? window.Store.State.default.state : 'HEARTBEAT_OK';
-          });
+        if (client && waStatuses[userId] === 'CONNECTED') {
+          const st = await client.getState().catch(() => null);
+          if (st && st !== 'CONNECTED') {
+            console.warn(`[WA/HEARTBEAT] État client inattendu pour ${userId}: ${st}`);
+          }
         }
       } catch (hbErr) {
         console.warn(`[WA/HEARTBEAT] Signal pour ${userId}:`, hbErr.message);
       }
-    }, 40000);
+    }, 25000);
 
     // Synchronisation automatique dans Supabase
     if (waNumbers[userId] && supabase) {
@@ -1076,8 +1105,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
 
   // HAUTE DISPONIBILITÉ MULTI-DEVICE :
   // Le smartphone principal peut être éteint, sans batterie ou hors-ligne sans perdre la liaison WhatsApp du bot !
-  // Les clés Multi-Device de l'appareil compagnon restent 100% valides sur les serveurs de Meta jusqu'à 14 jours.
-  // INTERDICTION STRICTE DE SUPPRIMER LES FICHIERS DE SESSION SUR DISQUE ICI.
+  // Les clés Multi-Device de l'appareil compagnon restent valides sur les serveurs de Meta.
   client.on('change_state', (state) => {
     console.log(`[WA/STATE] État de connexion changé pour ${userId} : ${state}`);
     if (state === 'CONNECTED') {
@@ -1094,22 +1122,42 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
       delete waHeartbeats[userId];
     }
 
-    // Quelle que soit la raison ('LOGOUT' provoqué par logout_from_bridge lors de la coupure du smartphone,
-    // TIMEOUT, CONFLICT, NAVIGATION, etc.), la session sur disque est PRÉSERVÉE ET PROTÉGÉE.
-    // Seul un appel explicite à POST /api/whatsapp/disconnect a le droit de purger la session.
-    waStatuses[userId] = 'RECONNECTING';
+    const strReason = String(reason || '').toUpperCase();
+    const isPermanentLogout = strReason.includes('LOGOUT') || strReason.includes('UNPAIRED') || strReason.includes('CONFLICT') || strReason.includes('BAN');
+
     delete waClients[userId];
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
+    delete waNumbers[userId];
 
     try { await client.destroy(); } catch (e) {}
 
-    console.log(`[WA/RECONNECT] Session préservée pour ${userId}. Reconnexion automatique en tâche de fond dans 4 secondes...`);
+    // Si l'utilisateur s'est déconnecté depuis son smartphone (WhatsApp > Appareils connectés > Déconnexion) :
+    // Purge immédiate de la session pour permettre une nouvelle connexion propre sans prétendre être connecté !
+    if (isPermanentLogout) {
+      console.log(`[WA/LOGOUT] Déconnexion définitive WhatsApp reçue pour ${userId} (${reason}). Nettoyage session locale et Supabase.`);
+      waStatuses[userId] = 'DISCONNECTED';
+      if (fs.existsSync(authDir)) {
+        try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+      }
+      if (supabase) {
+        try {
+          await supabase.from('profiles').update({ whatsapp_number: null }).eq('id', userId);
+        } catch (dbErr) {
+          console.warn('[WA/LOGOUT] Erreur reset whatsapp_number dans profiles:', dbErr.message);
+        }
+      }
+      return;
+    }
+
+    // Déconnexion transitoire (ex: micro-coupure réseau temporaire)
+    waStatuses[userId] = 'RECONNECTING';
+    console.log(`[WA/RECONNECT] Coupure transitoire pour ${userId}. Reconnexion automatique dans 5 secondes...`);
     setTimeout(() => {
       createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
         console.warn(`[WA/RECONNECT] Notice tentative reconnexion ${userId} :`, err.message);
       });
-    }, 4000);
+    }, 5000);
   });
 
   // Déduplication & écouteurs d'événements messages (Garantit 100% des réceptions)
@@ -1242,6 +1290,11 @@ app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
   if (fs.existsSync(authDir)) {
     try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
   }
+  if (supabase) {
+    try {
+      await supabase.from('profiles').update({ whatsapp_number: null }).eq('id', userId);
+    } catch (e) {}
+  }
   res.json({ success: true, message: "Session WhatsApp déconnectée et réinitialisée avec succès." });
 });
 
@@ -1334,16 +1387,20 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const authDir = getSessionDir(userId);
   const hasExistingSession = fs.existsSync(authDir);
 
-  // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer silencieusement
-  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING') {
+  // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer
+  // UNIQUEMENT si le statut n'est pas déjà 'DISCONNECTED'
+  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING' && waStatuses[userId] !== 'DISCONNECTED') {
     createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(() => {});
-    waStatuses[userId] = 'RECONNECTING';
+    waStatuses[userId] = 'STARTING';
   }
 
-  let st = waStatuses[userId] || (hasExistingSession ? 'CONNECTED' : 'DISCONNECTED');
-  // Pendant la reconnexion automatique en tâche de fond, maintenir 'CONNECTED' pour ne pas paniquer le frontend
-  if (st === 'AUTHENTICATED' || st === 'RECONNECTING') {
-    st = 'CONNECTED';
+  let st = waStatuses[userId] || 'DISCONNECTED';
+
+  // Ne JAMAIS déguiser RECONNECTING ou DISCONNECTED en CONNECTED !
+  // CONNECTED n'est vrai QUE si waStatuses[userId] === 'CONNECTED' ET que le client existe
+  if (st === 'CONNECTED' && !client) {
+    st = hasExistingSession ? 'RECONNECTING' : 'DISCONNECTED';
+    waStatuses[userId] = st;
   }
 
   let detectedPhone = getClientPhone(client, userId);
@@ -1353,7 +1410,9 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   if (!detectedPhone && waNumbers[userId]) {
     detectedPhone = waNumbers[userId];
   }
-  if (detectedPhone) waNumbers[userId] = detectedPhone;
+  if (detectedPhone && st === 'CONNECTED') {
+    waNumbers[userId] = detectedPhone;
+  }
 
   // Si connecté et qu'on a le numéro, synchroniser Supabase immédiatement
   if (st === 'CONNECTED' && waNumbers[userId] && supabase) {
@@ -1367,7 +1426,7 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
     status: st,
     qr: waSessionsQR[userId] || null,
     pairingCode: waPairingCodes[userId] || null,
-    phone: waNumbers[userId] ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
+    phone: (st === 'CONNECTED' && waNumbers[userId]) ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
     error: waStatuses[userId] === 'ERROR' ? (waSessionsQR[userId] || 'Erreur inconnue') : null
   });
 });
@@ -2826,9 +2885,17 @@ app.get('/api/affiliate/dashboard/:userId', authMiddleware, async (req, res) => 
       }
     }
 
-    const host = req.get('host') || 'vandias.com';
-    const protocol = req.protocol || 'https';
-    const referralLink = `${protocol}://${host}/?ref=${affCode}`;
+    let frontendOrigin = 'https://vandias.com';
+    const referer = req.get('referer') || req.get('origin');
+    if (referer) {
+      try {
+        const u = new URL(referer);
+        if (u.host && !u.host.includes('railway.app')) {
+          frontendOrigin = `${u.protocol}//${u.host}`;
+        }
+      } catch (e) {}
+    }
+    const referralLink = `${frontendOrigin}/?ref=${affCode}`;
 
     res.json({
       success: true,
