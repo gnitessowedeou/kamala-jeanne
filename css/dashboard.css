@@ -1525,6 +1525,200 @@
 }
 
 /* ==========================================================================
+   GLOBAL BADGES & AFFILIATE REFERRALS SECTION
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.badge-purple {
+  background: rgba(168, 85, 247, 0.15) !important;
+  color: #c084fc !important;
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+.badge-green {
+  background: rgba(37, 211, 102, 0.15) !important;
+  color: var(--whatsapp-green) !important;
+  border: 1px solid rgba(37, 211, 102, 0.3) !important;
+}
+
+.badge-amber {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.aff-history-panel {
+  padding: 24px;
+}
+
+.aff-history-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.aff-calc-badge {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.affiliate-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.affiliate-cards-mobile-view {
+  display: none;
+}
+
+.aff-referral-card {
+  background: rgba(16, 25, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 15px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.aff-referral-card:hover {
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+.aff-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.aff-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.aff-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  font-size: 12px !important;
+  background: rgba(37, 211, 102, 0.16) !important;
+  color: var(--whatsapp-green) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 700 !important;
+  flex-shrink: 0 !important;
+  border: 1px solid rgba(37, 211, 102, 0.3) !important;
+}
+
+.aff-user-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aff-user-date {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aff-card-details {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+
+.aff-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.aff-detail-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.aff-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(8, 14, 24, 0.65);
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.aff-grid-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.aff-comm-col {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.aff-mini-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.aff-pay-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.aff-comm-amount {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--whatsapp-green);
+  letter-spacing: -0.01em;
+}
+
+.aff-empty-state-mobile {
+  text-align: center;
+  padding: 24px 14px;
+  background: rgba(16, 25, 42, 0.5);
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+
+/* ==========================================================================
    VIEW: INBOX (#inbox)
    ========================================================================== */
 .inbox-layout {
@@ -5658,6 +5852,48 @@ body.modal-open-lock {
 
   #view-integrations {
     padding-bottom: 50px !important;
+  }
+
+  /* Affiliate Section Mobile Enhancements */
+  #view-affiliation {
+    padding-bottom: 70px !important;
+  }
+
+  .aff-history-panel {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+    margin-top: 14px !important;
+  }
+
+  .aff-history-top-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .aff-calc-badge {
+    font-size: 11.5px !important;
+    color: var(--text-muted) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: rgba(37, 211, 102, 0.08) !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(37, 211, 102, 0.2) !important;
+  }
+
+  .affiliate-table-wrapper {
+    display: none !important;
+  }
+
+  .affiliate-cards-mobile-view {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin-top: 6px !important;
   }
 }
 

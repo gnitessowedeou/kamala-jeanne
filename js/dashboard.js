@@ -6331,6 +6331,7 @@ async function syncAffiliateModule() {
   const statPending = document.getElementById("aff-stat-pending");
   const statBalance = document.getElementById("aff-stat-balance");
   const referralsTbody = document.getElementById("affiliate-referrals-tbody");
+  const referralsCardsMobile = document.getElementById("affiliate-referrals-cards-mobile");
 
   if (!userId) return;
 
@@ -6379,7 +6380,7 @@ async function syncAffiliateModule() {
         if (statPending) statPending.textContent = Number(d.pendingCommissions || 0).toLocaleString('fr-FR') + " FCFA";
         if (statBalance) statBalance.textContent = Number(d.availableBalance || 0).toLocaleString('fr-FR') + " FCFA";
 
-        // 3. Table Réelle des Filleuls & Commissions
+        // 3. Table Réelle des Filleuls & Commissions (Vue Desktop / Tablette)
         if (referralsTbody) {
           if (Array.isArray(d.referrals) && d.referrals.length > 0) {
             referralsTbody.innerHTML = d.referrals.map(r => `
@@ -6409,6 +6410,55 @@ async function syncAffiliateModule() {
                   Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(confirmedCode || 'unique')}</strong> pour toucher 20% sur chaque abonnement !
                 </td>
               </tr>
+            `;
+          }
+        }
+
+        // 4. Cartes Mobiles Haute Définition (Vue Smartphone native sans défilement horizontal cassé)
+        if (referralsCardsMobile) {
+          if (Array.isArray(d.referrals) && d.referrals.length > 0) {
+            referralsCardsMobile.innerHTML = d.referrals.map(r => `
+              <div class="aff-referral-card">
+                <div class="aff-card-top">
+                  <div class="aff-user-info">
+                    <div class="aff-avatar">
+                      ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'C')}
+                    </div>
+                    <div style="min-width: 0;">
+                      <div class="aff-user-name">${escapeHtml(r.name)}</div>
+                      <div class="aff-user-date"><i class="fa-regular fa-calendar-days"></i> ${escapeHtml(r.date)}</div>
+                    </div>
+                  </div>
+                  <span class="badge ${r.isPaid ? 'badge-green' : 'badge-amber'}">
+                    <i class="fa-solid ${r.isPaid ? 'fa-circle-check' : 'fa-hourglass-half'}"></i> ${escapeHtml(r.status)}
+                  </span>
+                </div>
+
+                <div class="aff-card-details">
+                  <div class="aff-detail-row">
+                    <span class="aff-detail-label">Formule choisie :</span>
+                    <span class="badge badge-purple">${escapeHtml(r.plan)}</span>
+                  </div>
+                  <div class="aff-detail-grid">
+                    <div class="aff-grid-col">
+                      <span class="aff-mini-label">Paiement Réel Client</span>
+                      <span class="aff-pay-amount">${escapeHtml(r.paymentAmount)}</span>
+                    </div>
+                    <div class="aff-grid-col aff-comm-col">
+                      <span class="aff-mini-label">Votre Commission (20%)</span>
+                      <span class="aff-comm-amount">${escapeHtml(r.commissionAmount)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `).join("");
+          } else {
+            referralsCardsMobile.innerHTML = `
+              <div class="aff-empty-state-mobile">
+                <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
+                <p style="font-weight: 600; color: #ffffff; margin-bottom: 4px; font-size: 13.5px;">Aucun filleul enregistré pour le moment</p>
+                <p style="font-size: 12px; color: var(--text-muted); line-height: 1.45; margin: 0;">Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(confirmedCode || 'unique')}</strong> pour toucher 20% sur chaque abonnement !</p>
+              </div>
             `;
           }
         }
