@@ -176,7 +176,16 @@ window.getStoredReferralCode = getStoredReferralCode;
     },
 
     async recoverPassword(email) {
-      return await this.request("/auth/v1/recover", "POST", { email });
+      let siteUrl = window.location.origin + window.location.pathname;
+      if (!siteUrl.endsWith('.html')) {
+        siteUrl = siteUrl.replace(/\/$/, '') + '/index.html';
+      }
+      return await this.request(`/auth/v1/recover?redirect_to=${encodeURIComponent(siteUrl)}`, "POST", { email });
+    },
+
+    async updateUserPassword(newPassword, token = null) {
+      const authToken = token || this.getToken();
+      return await this.request("/auth/v1/user", "PUT", { password: newPassword }, authToken);
     }
   };
 
@@ -612,6 +621,33 @@ window.getStoredReferralCode = getStoredReferralCode;
       }
     },
 
+    async updateUserPassword(newPassword) {
+      if (!newPassword || newPassword.length < 8) {
+        return { success: false, error: "Le mot de passe doit comporter au moins 8 caractères." };
+      }
+      try {
+        const token = this._recoveryToken || SupabaseRest.getToken() || sessionStorage.getItem('vendia_recovery_token');
+        if (!token) {
+          return { success: false, error: "Session de récupération expirée ou invalide. Veuillez redemander un lien." };
+        }
+        const updatedUser = await SupabaseRest.updateUserPassword(newPassword, token);
+        if (!updatedUser || !updatedUser.id) {
+          return { success: false, error: "Impossible d'enregistrer le nouveau mot de passe." };
+        }
+
+        // Sauvegarder la session active pour connecter l'utilisateur immédiatement
+        SupabaseRest.setToken(token);
+        this.saveCurrentUser(updatedUser);
+        try { sessionStorage.removeItem('vendia_recovery_token'); } catch(e) {}
+        delete this._recoveryToken;
+
+        return { success: true, user: updatedUser };
+      } catch (err) {
+        console.error("Erreur updateUserPassword:", err);
+        return { success: false, error: err.message || "Erreur lors de la mise à jour du mot de passe." };
+      }
+    },
+
     logout() {
       SupabaseRest.setToken(null);
       localStorage.removeItem(STORAGE_KEY_USER);
@@ -667,15 +703,42 @@ window.getStoredReferralCode = getStoredReferralCode;
         if (!hash) return false;
 
         const params = new URLSearchParams(hash.substring(1));
+        const authType = params.get("type");
+
+        // GESTION PRIORITAIRE DU LIEN DE RÉCUPÉRATION DE MOT DE PASSE (type=recovery)
+        if (authType === "recovery" || hash.includes("type=recovery")) {
+          console.log("[AUTH RECOVERY] Lien de réinitialisation détecté !");
+          const accessToken = params.get("access_token");
+          if (accessToken) {
+            this._recoveryToken = accessToken;
+            try { sessionStorage.setItem('vendia_recovery_token', accessToken); } catch(e) {}
+            SupabaseRest.setToken(accessToken);
+          }
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname);
+          }
+          setTimeout(() => {
+            if (typeof window.openAuthModal === "function") {
+              window.openAuthModal("reset");
+              if (typeof window.showAuthAlert === "function") {
+                window.showAuthAlert("Lien validé avec succès. Définissez dès maintenant votre nouveau mot de passe.", "success");
+              }
+            }
+          }, 150);
+          return true;
+        }
+
         const errorDesc = params.get("error_description") || params.get("error");
         if (errorDesc) {
-          console.error("Erreur retour OAuth:", errorDesc);
+          console.error("Erreur retour Auth:", errorDesc);
           const decodedErr = decodeURIComponent(errorDesc.replace(/\+/g, " "));
+          const isRecoveryErr = decodedErr.toLowerCase().includes("email") || decodedErr.toLowerCase().includes("link") || decodedErr.toLowerCase().includes("token") || decodedErr.toLowerCase().includes("otp");
+          const errPrefix = isRecoveryErr ? "Lien de réinitialisation invalide ou expiré" : "Erreur de connexion";
           if (typeof window.showAuthAlert === "function") {
-            window.showAuthAlert("Erreur Google : " + decodedErr, "error");
-            if (typeof window.openAuthModal === "function") window.openAuthModal("login");
+            window.showAuthAlert(`${errPrefix} : ${decodedErr}`, "error");
+            if (typeof window.openAuthModal === "function") window.openAuthModal(isRecoveryErr ? "forgot" : "login");
           } else {
-            this.showToast("Erreur de connexion : " + decodedErr, "error");
+            this.showToast(`${errPrefix} : ${decodedErr}`, "error");
           }
           if (window.history && window.history.replaceState) {
             window.history.replaceState(null, null, window.location.pathname);

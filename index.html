@@ -2369,6 +2369,50 @@
           </div>
         </form>
 
+        <!-- ================= FORMULAIRE 4: RÉINITIALISATION DU MOT DE PASSE ================= -->
+        <form id="form-reset-password" style="display: none;" novalidate>
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 18px; margin-bottom: 8px;">
+              <i class="fa-solid fa-key"></i>
+            </div>
+            <h3 style="font-size: 17px; font-weight: 700; color: #ffffff; margin: 0 0 4px 0;">Nouveau Mot de Passe</h3>
+            <p style="font-size: 12.5px; color: #94a3b8; margin: 0; line-height: 1.45;">
+              Votre lien de récupération a été validé. Définissez dès maintenant votre nouveau mot de passe.
+            </p>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="reset-new-password">Nouveau mot de passe <span class="required">*</span></label>
+            <div class="auth-input-wrapper">
+              <i class="fa-solid fa-lock auth-input-icon"></i>
+              <input type="password" class="auth-input has-icon" id="reset-new-password" placeholder="Min. 8 caractères" required autocomplete="new-password">
+              <button type="button" class="password-toggle-btn" data-target="reset-new-password" aria-label="Afficher ou masquer le mot de passe">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="reset-confirm-password">Confirmer le nouveau mot de passe <span class="required">*</span></label>
+            <div class="auth-input-wrapper">
+              <i class="fa-solid fa-lock auth-input-icon"></i>
+              <input type="password" class="auth-input has-icon" id="reset-confirm-password" placeholder="Répéter votre mot de passe" required autocomplete="new-password">
+              <button type="button" class="password-toggle-btn" data-target="reset-confirm-password" aria-label="Afficher ou masquer le mot de passe">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-auth-submit" id="btn-submit-reset">
+            <i class="fa-solid fa-check"></i>
+            <span>Enregistrer mon nouveau mot de passe</span>
+          </button>
+
+          <div style="text-align: center; margin-top: 14px;">
+            <a href="#" class="auth-switch-link" id="link-reset-back-to-login" style="font-size: 13px;">&larr; Retour à la connexion</a>
+          </div>
+        </form>
+
 
 
         <!-- Footer toggle link -->
@@ -2384,9 +2428,9 @@
 
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261015_v46"></script>
-  <script src="js/auth.js?v=20261015_v46"></script>
-  <script src="js/script.js?v=20261015_v46"></script>
+  <script src="js/i18n.js?v=20261016_v51"></script>
+  <script src="js/auth.js?v=20261016_v51"></script>
+  <script src="js/script.js?v=20261016_v51"></script>
 
   <!-- VANDIAS Referral & Affiliate Tracker -->
   <script>

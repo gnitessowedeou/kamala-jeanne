@@ -3151,6 +3151,31 @@ app.post('/api/user/profile', authMiddleware, async (req, res) => {
   }
 });
 
+app.post('/api/user/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: "Le mot de passe doit comporter au moins 8 caractères." });
+    }
+    const userId = req.user ? req.user.id : null;
+    if (!userId) return res.status(401).json({ error: "Non authentifié" });
+
+    if (!supabase) return res.status(500).json({ error: "Base de données non disponible" });
+
+    const { error } = await supabase.auth.admin.updateUserById(userId, { password });
+    if (error) {
+      console.error("[CHANGE PASSWORD] Erreur Supabase:", error.message);
+      return res.status(400).json({ error: error.message });
+    }
+
+    console.log(`[CHANGE PASSWORD] Mot de passe mis à jour avec succès pour ${userId}`);
+    res.json({ success: true, message: "Mot de passe modifié avec succès." });
+  } catch (err) {
+    console.error("[CHANGE PASSWORD] Erreur:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // === 7. DEMANDE DE RETRAIT (AFFILIATION) ===
 app.post('/api/payouts/request', authMiddleware, async (req, res) => {
     const userId = req.user ? req.user.id : null;

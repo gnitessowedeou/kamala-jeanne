@@ -321,6 +321,7 @@ function initAuthModal() {
   const formSignup = document.getElementById("form-signup");
   const formLogin = document.getElementById("form-login");
   const formForgot = document.getElementById("form-forgot");
+  const formReset = document.getElementById("form-reset-password");
   const alertBox = document.getElementById("auth-alert-box");
   const socialSection = document.getElementById("auth-social-section");
   const footerPrompt = document.getElementById("auth-footer-prompt");
@@ -328,6 +329,7 @@ function initAuthModal() {
   const footerAction = document.getElementById("auth-footer-action");
   const linkForgot = document.getElementById("link-forgot-password");
   const linkBackLogin = document.getElementById("link-back-to-login");
+  const linkResetBackLogin = document.getElementById("link-reset-back-to-login");
 
   if (!modal) return;
 
@@ -362,6 +364,7 @@ function initAuthModal() {
       if (formSignup) formSignup.style.display = "block";
       if (formLogin) formLogin.style.display = "none";
       if (formForgot) formForgot.style.display = "none";
+      if (formReset) formReset.style.display = "none";
       if (socialSection) socialSection.style.display = "none";
       if (footerPrompt) footerPrompt.style.display = "block";
       if (footerText) footerText.textContent = "Déjà un compte VANDIAS ?";
@@ -383,6 +386,7 @@ function initAuthModal() {
       if (formSignup) formSignup.style.display = "none";
       if (formLogin) formLogin.style.display = "block";
       if (formForgot) formForgot.style.display = "none";
+      if (formReset) formReset.style.display = "none";
       if (socialSection) socialSection.style.display = "none";
       if (footerPrompt) footerPrompt.style.display = "block";
       if (footerText) footerText.textContent = "Pas encore de compte ?";
@@ -393,6 +397,16 @@ function initAuthModal() {
       if (formSignup) formSignup.style.display = "none";
       if (formLogin) formLogin.style.display = "none";
       if (formForgot) formForgot.style.display = "block";
+      if (formReset) formReset.style.display = "none";
+      if (socialSection) socialSection.style.display = "none";
+      if (footerPrompt) footerPrompt.style.display = "none";
+    } else if (mode === "reset") {
+      if (tabSignup) tabSignup.classList.remove("active");
+      if (tabLogin) tabLogin.classList.remove("active");
+      if (formSignup) formSignup.style.display = "none";
+      if (formLogin) formLogin.style.display = "none";
+      if (formForgot) formForgot.style.display = "none";
+      if (formReset) formReset.style.display = "block";
       if (socialSection) socialSection.style.display = "none";
       if (footerPrompt) footerPrompt.style.display = "none";
     }
@@ -438,6 +452,10 @@ function initAuthModal() {
     setMode("forgot");
   });
   if (linkBackLogin) linkBackLogin.addEventListener("click", (e) => {
+    e.preventDefault();
+    setMode("login");
+  });
+  if (linkResetBackLogin) linkResetBackLogin.addEventListener("click", (e) => {
     e.preventDefault();
     setMode("login");
   });
@@ -576,6 +594,47 @@ function initAuthModal() {
         showAlert(res.message, "success");
       } else {
         showAlert(res.error, "error");
+      }
+    });
+  }
+
+  // Form Submit: Nouveau mot de passe (Réinitialisation)
+  if (formReset) {
+    formReset.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const submitBtn = document.getElementById("btn-submit-reset");
+      const originalText = submitBtn ? submitBtn.innerHTML : "";
+      const p1 = (document.getElementById("reset-new-password")?.value || "").trim();
+      const p2 = (document.getElementById("reset-confirm-password")?.value || "").trim();
+
+      if (p1.length < 8) {
+        showAlert("Le mot de passe doit comporter au moins 8 caractères.", "error");
+        return;
+      }
+      if (p1 !== p2) {
+        showAlert("Les deux mots de passe ne correspondent pas.", "error");
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Enregistrement...</span>';
+      }
+
+      const res = await window.AuthEngine.updateUserPassword(p1);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+
+      if (res && res.success) {
+        showAlert("Mot de passe mis à jour avec succès ! Connexion à votre compte...", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1200);
+      } else {
+        showAlert((res && res.error) || "Erreur lors de la réinitialisation du mot de passe.", "error");
       }
     });
   }

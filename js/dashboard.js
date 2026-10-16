@@ -4652,9 +4652,17 @@ function setupProfileSystem() {
         showToast("Veuillez renseigner votre nom.", "info");
         return;
       }
-      if (window.AuthEngine && !window.AuthEngine.isValidPhone(phoneNumber)) {
-        showToast("Veuillez renseigner un numéro WhatsApp valide.", "info");
-        return;
+      const newPass = (document.getElementById("profile-new-password")?.value || "").trim();
+      const confirmPass = (document.getElementById("profile-confirm-password")?.value || "").trim();
+      if (newPass) {
+        if (newPass.length < 8) {
+          showToast("Le nouveau mot de passe doit comporter au moins 8 caractères.", "info");
+          return;
+        }
+        if (newPass !== confirmPass) {
+          showToast("Les deux mots de passe ne correspondent pas.", "info");
+          return;
+        }
       }
 
       if (saveBtn) {
@@ -4678,6 +4686,30 @@ function setupProfileSystem() {
 
       const res = await window.AuthEngine.updateProfile(updates);
 
+      // Si un nouveau mot de passe est renseigné, le mettre à jour de façon sécurisée
+      if (newPass && res.success) {
+        try {
+          const bUrl = getBackendUrl();
+          const headers = getAuthHeaders();
+          const pwRes = await fetch(`${bUrl}/api/user/change-password`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ password: newPass })
+          });
+          const pwData = await pwRes.json().catch(() => ({}));
+          if (pwRes.ok && pwData.success) {
+            const el1 = document.getElementById("profile-new-password");
+            const el2 = document.getElementById("profile-confirm-password");
+            if (el1) el1.value = "";
+            if (el2) el2.value = "";
+          } else if (pwData.error) {
+            showToast("Profil enregistré, mais erreur mot de passe : " + pwData.error, "info");
+          }
+        } catch(pwErr) {
+          console.warn("[PASSWORD UPDATE]", pwErr);
+        }
+      }
+
       if (saveBtn) {
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
@@ -4690,7 +4722,7 @@ function setupProfileSystem() {
         if (typeof window.applyWhatsAppState === 'function') {
           window.applyWhatsAppState(window.currentWhatsAppStatus || 'DISCONNECTED', res.user?.fullPhone || '');
         }
-        window.AuthEngine.showToast("Profil mis à jour avec succès.", "success");
+        window.AuthEngine.showToast("Profil" + (newPass ? " et mot de passe mis à jour" : " mis à jour") + " avec succès.", "success");
       } else {
         showToast(res.error || "Une erreur est survenue lors de la mise à jour.", "info");
       }
