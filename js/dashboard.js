@@ -6482,10 +6482,10 @@ async function syncAffiliateModule() {
     console.warn("[AFFILIATE] Notice sync dashboard API:", err.message);
   }
 
-  // Secours direct via SupabaseClient si l'API rencontre un délai
-  if (supabaseClient && userId) {
+  // Secours direct via SupabaseRest si l'API rencontre un délai
+  if (window.SupabaseRest && userId) {
     try {
-      const { data: prof } = await supabaseClient.from('profiles').select('affiliate_code, affiliate_balance').eq('id', userId).single();
+      const prof = await window.SupabaseRest.getProfile(userId);
       if (prof && prof.affiliate_code) {
         if (affCodeInput) affCodeInput.value = prof.affiliate_code;
         if (affLinkInput) affLinkInput.value = `${window.location.origin}/?ref=${prof.affiliate_code}`;

@@ -390,7 +390,13 @@ window.getStoredReferralCode = getStoredReferralCode;
         }
 
         // Étape B : Génération du code d'affiliation permanent unique pour ce nouvel utilisateur
-        const userAffCode = `VD-${(userId.replace(/\D/g, '').substring(0, 4) || Math.floor(1000 + Math.random()*9000))}99`;
+        const cleanName = (firstName.trim().replace(/[^a-zA-Z]/g, '').substring(0, 3) || 'VD').toUpperCase();
+        const randNum = Math.floor(1000 + Math.random() * 9000);
+        const userAffCode = `VD-${cleanName}${randNum}`;
+
+        if (accessToken) {
+          SupabaseRest.setToken(accessToken);
+        }
 
         // Étape C : Enregistrement DIRECT dans la table 'profiles' de Supabase
         try {
@@ -440,7 +446,7 @@ window.getStoredReferralCode = getStoredReferralCode;
           console.warn("[AFFILIATE] Notice enregistrement attribution serveur:", attrErr.message);
         }
 
-        // Étape C : Création de la session locale avec 300 crédits d'essai gratuit
+        // Étape E : Création de la session locale avec 100 crédits d'essai gratuit
         const newUser = {
           id: userId,
           firstName: firstName.trim(),
@@ -454,6 +460,8 @@ window.getStoredReferralCode = getStoredReferralCode;
           role: "Administrateur",
           avatarUrl: "",
           provider: "supabase",
+          affiliateCode: userAffCode,
+          affiliate_code: userAffCode,
           plan: {
             name: "Essai Gratuit 7j 🦾",
             badge: "ESSAI",
@@ -540,6 +548,8 @@ window.getStoredReferralCode = getStoredReferralCode;
           role: "Administrateur",
           avatarUrl: profile?.avatar_url || meta.avatar_url || "",
           provider: "supabase",
+          affiliateCode: profile?.affiliate_code || userObj?.user_metadata?.affiliate_code || null,
+          affiliate_code: profile?.affiliate_code || userObj?.user_metadata?.affiliate_code || null,
           plan: {
             name: isPaid ? `Formule ${activePlan.toUpperCase()}` : "Essai Gratuit 7j 🦾",
             type: activePlan,
@@ -1026,9 +1036,11 @@ window.getStoredReferralCode = getStoredReferralCode;
       
         
         const affiliateLinkEl = document.getElementById("affiliate-link-input");
-        if (affiliateLinkEl) {
-            const codeToUse = user.affiliateCode || ("REF-" + (user.firstName || "").substring(0,3) + Math.floor(Math.random()*1000)).toUpperCase();
-            affiliateLinkEl.value = window.location.origin + "/?ref=" + codeToUse;
+        const affCodeEl = document.getElementById("affiliate-code-input");
+        const codeToUse = user.affiliateCode || user.affiliate_code;
+        if (codeToUse) {
+            if (affiliateLinkEl) affiliateLinkEl.value = window.location.origin + "/?ref=" + codeToUse;
+            if (affCodeEl) affCodeEl.value = codeToUse;
         }
 
         

@@ -42,7 +42,12 @@ ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS plan_status TEXT DEFAULT 'trial';
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS credits NUMERIC DEFAULT 100;
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS affiliate_balance NUMERIC DEFAULT 0;
+ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS affiliate_code TEXT;
+ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS referred_by TEXT;
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
+
+CREATE INDEX IF NOT EXISTS idx_profiles_affiliate_code ON public.profiles(affiliate_code);
+CREATE INDEX IF NOT EXISTS idx_profiles_referred_by ON public.profiles(referred_by);
 
 -- Trigger empêchant les utilisateurs connectés de modifier leurs crédits, solde, plan ou rôle
 CREATE OR REPLACE FUNCTION public.protect_sensitive_profile_columns()
