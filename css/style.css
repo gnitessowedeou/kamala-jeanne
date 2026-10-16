@@ -4339,10 +4339,21 @@ img {
    ========================================================================== */
 .goog-te-banner-frame.skiptranslate,
 .goog-te-banner-frame,
+.goog-te-menu-frame,
+.goog-te-gadget,
+.goog-te-gadget-simple,
+.goog-te-spinner-pos,
 #goog-gt-tt,
-.goog-te-balloon-frame {
+.goog-te-balloon-frame,
+iframe.goog-te-banner-frame,
+iframe[src*="translate.google"],
+.skiptranslate {
   display: none !important;
   visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 
 body {
@@ -4355,6 +4366,8 @@ body {
   position: absolute;
   top: -9999px;
   left: -9999px;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .goog-tooltip,

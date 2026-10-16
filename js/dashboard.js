@@ -1094,11 +1094,6 @@ function initDashboard() {
   } else {
     showView("overview");
   }
-
-  // Welcome Toast
-  setTimeout(() => {
-    showToast("Connexion WhatsApp active • Agent IA prêt en 24/7", "info");
-  }, 900);
 }
 
 // ==============================================================================

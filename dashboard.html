@@ -3027,28 +3027,28 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             </div>
 
             <!-- Customer Contact Information -->
-            <div class="form-group" style="margin-top: 18px; margin-bottom: 12px; background: rgba(16, 25, 42, 0.6); padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08);">
-              <label class="form-label" style="margin-bottom: 12px; font-size: 13px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <div class="modal-customer-info-box">
+              <label class="form-label modal-customer-info-label" for="modal-customer-lastname">
                 <i class="fa-solid fa-user-shield" style="color: var(--whatsapp-green);"></i> Vos coordonnées pour l'activation du forfait :
               </label>
 
-              <div class="customer-fields-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <div>
+              <div class="customer-fields-grid">
+                <div class="customer-field-col">
                   <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-lastname">Nom *</label>
                   <input type="text" class="form-control" id="modal-customer-lastname" placeholder="Ex: Kouassi" required>
                 </div>
-                <div>
+                <div class="customer-field-col">
                   <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-firstname">Prénom *</label>
                   <input type="text" class="form-control" id="modal-customer-firstname" placeholder="Ex: Jean-Marc" required>
                 </div>
               </div>
 
-              <div class="customer-fields-grid" style="display: grid; grid-template-columns: 1fr 1.1fr; gap: 12px;">
-                <div>
+              <div class="customer-fields-grid">
+                <div class="customer-field-col">
                   <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-email">Adresse Email *</label>
                   <input type="email" class="form-control" id="modal-customer-email" placeholder="contact@entreprise.com" required>
                 </div>
-                <div>
+                <div class="customer-field-col">
                   <label class="form-label" style="font-size: 11.5px; margin-bottom: 4px;" for="modal-customer-phone">Numéro WhatsApp / Téléphone *</label>
                   <div class="phone-input-group">
                     <select class="country-code-select" id="modal-customer-country" aria-label="Indicatif pays">
