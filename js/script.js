@@ -524,6 +524,20 @@ function initAuthModal() {
 
       const res = await window.AuthEngine.signUp(data);
       if (res.success) {
+        if (res.requiresConfirmation) {
+          showAlert(res.message || "Compte créé ! Veuillez vérifier votre boîte e-mail et cliquer sur le lien pour activer votre compte.", "success");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+          }
+          setTimeout(() => {
+            if (typeof window.setAuthMode === 'function') {
+              window.setAuthMode('login');
+              showAlert("Veuillez cliquer sur le lien reçu par e-mail, puis connectez-vous avec vos identifiants.", "info");
+            }
+          }, 4500);
+          return;
+        }
         showAlert("Compte créé avec succès ! Redirection vers votre tableau de bord...", "success");
         setTimeout(() => {
           window.location.href = "dashboard.html";

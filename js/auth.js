@@ -455,6 +455,18 @@ window.getStoredReferralCode = getStoredReferralCode;
           console.warn("[AFFILIATE] Notice enregistrement attribution serveur:", attrErr.message);
         }
 
+        const userObj = signupRes?.user || signupRes;
+        const isEmailConfirmed = Boolean(userObj?.confirmed_at || userObj?.email_confirmed_at || accessToken);
+
+        // Si la confirmation d'e-mail est activée dans Supabase (pas de token immédiat)
+        if (!accessToken && !isEmailConfirmed) {
+          return {
+            success: true,
+            requiresConfirmation: true,
+            message: `Compte créé avec succès ! Un e-mail de confirmation a été envoyé à ${cleanEmail}. Veuillez cliquer sur le lien reçu pour activer votre compte.`
+          };
+        }
+
         // Étape E : Création de la session locale avec 100 crédits d'essai gratuit
         const newUser = {
           id: userId,
