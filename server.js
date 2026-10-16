@@ -2376,7 +2376,7 @@ app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {
             currency: "XOF",
             customer_email: customerEmail,
             customer_name: customerName,
-            return_url: `https://kamala-jeanne.vercel.app/dashboard.html?payment=return&tier=${planTier || 'pro'}`,
+            return_url: `${(req.headers.origin && !req.headers.origin.includes('localhost')) ? req.headers.origin : 'https://vandias.com'}/dashboard.html?payment=return&tier=${planTier || 'pro'}`,
             webhook_url: "https://kamala-jeanne-production.up.railway.app/api/payments/webhook",
             metadata: {
                 userId: userId || 'anonymous',
