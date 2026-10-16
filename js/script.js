@@ -471,6 +471,12 @@ function initAuthModal() {
       const submitBtn = document.getElementById("btn-submit-signup");
       const originalText = submitBtn ? submitBtn.innerHTML : "";
 
+      // Attribution de parrainage : première attribution valide (lien d'abord, sinon code saisi)
+      const storedRef = localStorage.getItem("vandia_referral_code");
+      const refInputEl = document.getElementById("signup-referral-code");
+      const enteredRef = refInputEl ? refInputEl.value.trim().toUpperCase() : "";
+      const referralCode = storedRef || enteredRef || null;
+
       const data = {
         firstName: document.getElementById("signup-firstname").value,
         lastName: document.getElementById("signup-lastname").value,
@@ -478,7 +484,8 @@ function initAuthModal() {
         phoneCountry: document.getElementById("signup-phone-country").value,
         phoneNumber: document.getElementById("signup-phone").value,
         password: document.getElementById("signup-password").value,
-        passwordConfirm: document.getElementById("signup-password-confirm").value
+        passwordConfirm: document.getElementById("signup-password-confirm").value,
+        referralCode: referralCode
       };
 
       if (submitBtn) {

@@ -1585,7 +1585,7 @@ app.post('/api/ai/config', authMiddleware, async (req, res) => {
 // ============================================================================
 app.post('/api/auth/oauth-verify', async (req, res) => {
   try {
-    const { accessToken, mode } = req.body || {};
+    const { accessToken, mode, referralCode } = req.body || {};
     if (!accessToken) {
       return res.status(400).json({ success: false, error: "Jeton d'accès (accessToken) requis." });
     }
@@ -1636,8 +1636,6 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
     const authMode = String(mode || 'login').toLowerCase().trim();
 
     // REGLE 1 : TENTATIVE DE CONNEXION (LOGIN)
-    // Si l'utilisateur clique sur "Se connecter" avec un compte Google qui n'est pas enregistré dans public.profiles :
-    // INTERDICTION ABSOLUE D'ACCÈS AU DASHBOARD (Code HTTP 403 NO_ACCOUNT)
     if (authMode === 'login' && !profile) {
       console.warn(`[AUTH OAUTH] Blocage connexion : Aucun compte enregistré pour ${cleanEmail} (${user.id})`);
       return res.status(403).json({
@@ -1654,10 +1652,10 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
     }
 
     // REGLE 2 : INSCRIPTION (SIGNUP)
-    // Si l'utilisateur clique sur "Créer un compte" et n'a pas encore de profil :
-    // Création officielle du profil avec 100 crédits et rattachement à Supabase
     if (!profile) {
       console.log(`[AUTH OAUTH] Nouvelle inscription Google pour ${cleanEmail} (${user.id})`);
+      const newAffCode = `VD-${(user.id.replace(/\D/g, '').substring(0, 4) || Math.floor(1000 + Math.random()*9000))}99`;
+      
       const newProfile = {
         id: user.id,
         first_name: firstName,
@@ -1667,9 +1665,15 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
         whatsapp_number: '',
         avatar_url: avatarUrl,
         credits: 100,
+        affiliate_code: newAffCode,
+        affiliate_balance: 0,
         created_at: user.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      if (referralCode) {
+        newProfile.referred_by = String(referralCode).trim().toUpperCase();
+      }
 
       const { data: created, error: insertErr } = await supabase
         .from('profiles')
@@ -1680,6 +1684,15 @@ app.post('/api/auth/oauth-verify', async (req, res) => {
       if (insertErr) {
         console.error('[AUTH OAUTH] Erreur création profil Supabase:', insertErr.message);
         return res.status(500).json({ success: false, error: "Impossible d'initialiser le profil utilisateur." });
+      }
+
+      // Si parrain fourni, enregistrer également dans auth.users user_metadata
+      if (referralCode) {
+        try {
+          await supabase.auth.admin.updateUserById(user.id, {
+            user_metadata: { ...meta, referred_by: String(referralCode).trim().toUpperCase() }
+          });
+        } catch(e) {}
       }
 
       profile = created || newProfile;
@@ -1888,6 +1901,263 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * MOTEUR D'AFFILIATION AUTOMATIQUE VANDIAS AI - COMMISSION 20%
+ * Calcule et crédite automatiquement 20% sur chaque paiement d'abonnement confirmé.
+ * Idempotent, sécurisé contre l'auto-parrainage et tracé dans Supabase.
+ */
+async function processAffiliateCommission({ payerId, paymentRef, rawAmount, planTier = 'pro' }) {
+  if (!supabase || !payerId || !paymentRef) {
+    return { processed: false, reason: 'missing_params' };
+  }
+
+  try {
+    const validPlans = {
+      basic: { maxPrice: 7900 },
+      pro: { maxPrice: 14900 },
+      business: { maxPrice: 30000 }
+    };
+    const maxAllowed = validPlans[planTier]?.maxPrice || 30000;
+    const eligibleAmount = Math.min(Math.max(0, parseFloat(rawAmount || "0")), maxAllowed);
+
+    if (eligibleAmount <= 0) {
+      console.log(`[AFFILIATION] Montant éligible nul ou négatif (${rawAmount}), aucune commission générée.`);
+      return { processed: false, reason: 'zero_amount' };
+    }
+
+    // 1. Détermination du parrain (profiles.referred_by ou auth.users.user_metadata.referred_by)
+    let sponsorCode = null;
+    try {
+      const { data: payerProfile } = await supabase
+        .from('profiles')
+        .select('referred_by')
+        .eq('id', payerId)
+        .maybeSingle();
+      if (payerProfile && payerProfile.referred_by) {
+        sponsorCode = payerProfile.referred_by;
+      }
+    } catch (e) {}
+
+    if (!sponsorCode) {
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(payerId);
+        sponsorCode = uData?.user?.user_metadata?.referred_by || null;
+      } catch (e) {}
+    }
+
+    if (!sponsorCode) {
+      console.log(`[AFFILIATION] Aucun parrain rattaché pour l'utilisateur ${payerId}.`);
+      return { processed: false, reason: 'no_referrer' };
+    }
+
+    // 2. Recherche du profil parrain par son code d'affiliation
+    const cleanSponsorCode = String(sponsorCode).trim().toUpperCase();
+    let sponsor = null;
+    try {
+      const { data: spByCode } = await supabase
+        .from('profiles')
+        .select('id, affiliate_code, affiliate_balance, first_name, email')
+        .eq('affiliate_code', cleanSponsorCode)
+        .maybeSingle();
+      if (spByCode) sponsor = spByCode;
+    } catch (e) {}
+
+    // Si non trouvé par code, chercher par id au cas où referred_by contient le uuid
+    if (!sponsor && cleanSponsorCode.includes('-')) {
+      try {
+        const { data: spById } = await supabase
+          .from('profiles')
+          .select('id, affiliate_code, affiliate_balance, first_name, email')
+          .eq('id', cleanSponsorCode)
+          .maybeSingle();
+        if (spById) sponsor = spById;
+      } catch (e) {}
+    }
+
+    if (!sponsor) {
+      console.warn(`[AFFILIATION] Parrain introuvable avec le code ${cleanSponsorCode}`);
+      return { processed: false, reason: 'sponsor_not_found' };
+    }
+
+    // 3. Sécurité : Empêcher formellement l'auto-parrainage
+    if (sponsor.id === payerId) {
+      console.warn(`[AFFILIATION/SÉCURITÉ] Auto-parrainage bloqué : L'utilisateur ${payerId} ne peut pas se parrainer lui-même.`);
+      return { processed: false, reason: 'self_referral_blocked' };
+    }
+
+    // 4. Idempotence : vérifier si cette commission a déjà été créditée pour cette référence
+    let alreadyCredited = false;
+    try {
+      const { data: existingComm } = await supabase
+        .from('commissions')
+        .select('id, status')
+        .eq('payment_reference', paymentRef)
+        .maybeSingle();
+      if (existingComm && existingComm.status === 'CONFIRMED') {
+        alreadyCredited = true;
+      }
+    } catch (e) {}
+
+    // Vérification de sécurité dans les métadonnées parrain (double idempotence)
+    if (!alreadyCredited) {
+      try {
+        const { data: spUser } = await supabase.auth.admin.getUserById(sponsor.id);
+        const creditedRefs = spUser?.user?.app_metadata?.credited_commissions || [];
+        if (creditedRefs.includes(paymentRef)) {
+          alreadyCredited = true;
+        }
+      } catch (e) {}
+    }
+
+    if (alreadyCredited) {
+      console.log(`[AFFILIATION] Commission déjà créditée pour la référence ${paymentRef} (Idempotence respectée).`);
+      return { processed: false, reason: 'already_credited' };
+    }
+
+    // 5. Règle de calcul : 20% du montant net éligible payé
+    const commissionRate = 0.20;
+    const commissionAmount = Math.floor(eligibleAmount * commissionRate);
+
+    if (commissionAmount <= 0) {
+      return { processed: false, reason: 'commission_zero' };
+    }
+
+    // 6. Créditer le solde d'affiliation du parrain
+    const currentBalance = parseFloat(sponsor.affiliate_balance) || 0;
+    const newBalance = currentBalance + commissionAmount;
+    await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
+
+    // 7. Enregistrer la transaction dans la table commissions
+    const commPayload = {
+      referrer_id: sponsor.id,
+      referred_user_id: payerId,
+      payment_reference: paymentRef,
+      payment_amount: eligibleAmount,
+      commission_rate: commissionRate,
+      commission_amount: commissionAmount,
+      status: 'CONFIRMED',
+      plan_tier: planTier,
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      await supabase.from('commissions').insert(commPayload);
+      console.log(`[AFFILIATION] Commission enregistrée dans table commissions pour parrain ${sponsor.id}`);
+    } catch (dbCommErr) {
+      console.warn(`[AFFILIATION] Notice insert table commissions:`, dbCommErr.message);
+    }
+
+    // 8. Enregistrer dans app_metadata du parrain pour persistance et redondance totale
+    try {
+      const { data: spUser } = await supabase.auth.admin.getUserById(sponsor.id);
+      const appMeta = spUser?.user?.app_metadata || {};
+      const existingComms = appMeta.commissions || [];
+      const creditedRefs = appMeta.credited_commissions || [];
+      await supabase.auth.admin.updateUserById(sponsor.id, {
+        app_metadata: {
+          ...appMeta,
+          credited_commissions: [...creditedRefs, paymentRef],
+          commissions: [commPayload, ...existingComms].slice(0, 50)
+        }
+      });
+    } catch (metaErr) {}
+
+    console.log(`🎉 [AFFILIATION SUCCÈS] 20% de commission (${commissionAmount} FCFA sur ${eligibleAmount} FCFA) versée au parrain ${sponsor.affiliate_code} (Nouveau solde: ${newBalance} FCFA)`);
+    return {
+      processed: true,
+      sponsorId: sponsor.id,
+      sponsorCode: sponsor.affiliate_code,
+      eligibleAmount,
+      commissionAmount,
+      newBalance
+    };
+  } catch (err) {
+    console.error(`[AFFILIATION] Erreur calcul commission:`, err.message);
+    return { processed: false, error: err.message };
+  }
+}
+
+/**
+ * GESTION DES REMBOURSEMENTS & CHARGEBACKS
+ * Annule ou ajuste la commission en cas de transaction remboursée ou contestée.
+ */
+async function reverseAffiliateCommission({ paymentRef, reason = 'refund' }) {
+  if (!supabase || !paymentRef) return { reversed: false, reason: 'missing_params' };
+  try {
+    let comm = null;
+    try {
+      const { data } = await supabase.from('commissions').select('*').eq('payment_reference', paymentRef).maybeSingle();
+      if (data) comm = data;
+    } catch (e) {}
+
+    let sponsorId = comm?.referrer_id;
+    let commAmount = parseFloat(comm?.commission_amount || 0);
+
+    // Fallback recherche dans app_metadata si la table commissions n'a pas la ligne
+    if (!comm) {
+      try {
+        const { data: sponsors } = await supabase.from('profiles').select('id');
+        if (Array.isArray(sponsors)) {
+          for (const sp of sponsors) {
+            const { data: spUser } = await supabase.auth.admin.getUserById(sp.id);
+            const mComms = spUser?.user?.app_metadata?.commissions || [];
+            const found = mComms.find(c => c.payment_reference === paymentRef);
+            if (found) {
+              comm = found;
+              sponsorId = sp.id;
+              commAmount = parseFloat(found.commission_amount || 0);
+              break;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!comm) {
+      return { reversed: false, reason: 'commission_not_found' };
+    }
+
+    if (comm.status === 'REVERSED') {
+      return { reversed: false, reason: 'already_reversed' };
+    }
+
+    // 1. Déduire la commission du solde du parrain (minimum 0)
+    if (sponsorId && commAmount > 0) {
+      try {
+        const { data: spProfile } = await supabase.from('profiles').select('id, affiliate_balance').eq('id', sponsorId).maybeSingle();
+        if (spProfile) {
+          const curBal = parseFloat(spProfile.affiliate_balance) || 0;
+          const newBal = Math.max(0, curBal - commAmount);
+          await supabase.from('profiles').update({ affiliate_balance: newBal }).eq('id', sponsorId);
+        }
+      } catch (e) {}
+    }
+
+    // 2. Marquer comme REVERSED dans la table commissions
+    try {
+      await supabase.from('commissions').update({ status: 'REVERSED' }).eq('payment_reference', paymentRef);
+    } catch (e) {}
+
+    // 3. Mettre à jour app_metadata du parrain
+    if (sponsorId) {
+      try {
+        const { data: spUser } = await supabase.auth.admin.getUserById(sponsorId);
+        const appMeta = spUser?.user?.app_metadata || {};
+        const comms = (appMeta.commissions || []).map(c => c.payment_reference === paymentRef ? { ...c, status: 'REVERSED' } : c);
+        await supabase.auth.admin.updateUserById(sponsorId, {
+          app_metadata: { ...appMeta, commissions: comms }
+        });
+      } catch (e) {}
+    }
+
+    console.log(`[AFFILIATION REVERSAL] Commission de ${commAmount} FCFA annulée pour réf ${paymentRef} (Motif: ${reason}).`);
+    return { reversed: true, paymentRef, commAmount, sponsorId };
+  } catch (err) {
+    console.error('[AFFILIATION REVERSAL] Erreur:', err.message);
+    return { reversed: false, error: err.message };
+  }
+}
+
 app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
   try {
     const { sessionId, userId } = req.body;
@@ -1994,20 +2264,14 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
           console.error('[VERIFY SESSION] Notice updateUserById:', err.message);
         }
 
-        // 4. Commission d'affiliation 20%
+        // 4. Attribution de la commission d'affiliation automatique 20%
         try {
-          const rawAmount = parseFloat(session.amount || "0");
-          const amountPaid = Math.min(Math.max(0, rawAmount), validPlans[planTier]?.maxPrice || 30000);
-          const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', targetUserId).single();
-          if (payer && payer.referred_by && amountPaid > 0) {
-            const commission = Math.floor(amountPaid * 0.20);
-            const { data: sponsor } = await supabase.from('profiles').select('id, affiliate_balance').eq('affiliate_code', payer.referred_by).single();
-            if (sponsor) {
-              const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
-              await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
-              console.log(`[AFFILIATION] Commission de ${commission} FCFA créditée au parrain ${payer.referred_by}`);
-            }
-          }
+          await processAffiliateCommission({
+            payerId: targetUserId,
+            paymentRef: sessionId,
+            rawAmount: session.amount,
+            planTier
+          });
         } catch (affErr) {
           console.error('[AFFILIATION] Erreur verify-session:', affErr.message);
         }
@@ -2205,25 +2469,30 @@ app.post('/api/payments/webhook', async (req, res) => {
                         
                     console.log(`[PAIEMENT WEBHOOK] Compte ${userId} activé avec forfait ${planTier} et ${credits} crédits.`);
                     
-                    // LOGIQUE D'AFFILIATION 20%
+                    // LOGIQUE D'AFFILIATION 20% AUTOMATIQUE
                     try {
-                        const rawAmount = parseFloat(sessionData.amount || "0");
-                        const amountPaid = Math.min(Math.max(0, rawAmount), validPlans[planTier].maxPrice);
-
-                        const { data: payer } = await supabase.from('profiles').select('referred_by').eq('id', userId).single();
-                        if (payer && payer.referred_by && amountPaid > 0) {
-                            const commission = Math.floor(amountPaid * 0.20);
-                            const { data: sponsor } = await supabase.from('profiles').select('id, affiliate_balance').eq('affiliate_code', payer.referred_by).single();
-                            if (sponsor) {
-                                const newBalance = (parseFloat(sponsor.affiliate_balance) || 0) + commission;
-                                await supabase.from('profiles').update({ affiliate_balance: newBalance }).eq('id', sponsor.id);
-                                console.log(`[AFFILIATION] Commission certifiée de ${commission} FCFA versée au parrain ${payer.referred_by}`);
-                            }
-                        }
+                        const hookRef = sessionData.id || sessionData.transactionId || sessionData.transaction || ('hook_' + Date.now());
+                        await processAffiliateCommission({
+                            payerId: userId,
+                            paymentRef: hookRef,
+                            rawAmount: sessionData.amount,
+                            planTier
+                        });
                     } catch(affErr) {
                         console.error("[AFFILIATION WEBHOOK] Erreur:", affErr.message);
                     }
                 }
+            }
+        } else {
+            // 2. Gestion automatique des Remboursements et Chargebacks (Règle 4)
+            const isRefund = (payload.event === 'transaction.refunded' || 
+                              payload.event === 'chargeback' || 
+                              payload.status === 'REFUNDED' || 
+                              sessionData.status === 'REFUNDED');
+            if (isRefund) {
+                const refundRef = sessionData.id || sessionData.transactionId || sessionData.transaction || payload.id;
+                console.log(`[SASPAY WEBHOOK] Transaction remboursée ou contestée détectée (${refundRef}). Ajustement de commission...`);
+                await reverseAffiliateCommission({ paymentRef: refundRef, reason: 'SaaSPay refund/chargeback' });
             }
         }
         res.status(200).send('Webhook OK');
@@ -2317,6 +2586,288 @@ app.post('/api/affiliate/track-click', async (req, res) => {
     res.json({ success: true, message: "Clic comptabilise" });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// 1. Validation d'un code de parrainage
+app.get('/api/affiliate/validate/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) return res.status(400).json({ valid: false, error: "Code manquant" });
+    if (!supabase) return res.json({ valid: true, code: code.toUpperCase() });
+
+    const cleanCode = String(code).trim().toUpperCase();
+    const { data: sponsor, error } = await supabase
+      .from('profiles')
+      .select('id, affiliate_code, first_name')
+      .eq('affiliate_code', cleanCode)
+      .maybeSingle();
+
+    if (error || !sponsor) {
+      return res.json({ valid: false, error: "Code de parrainage introuvable ou invalide" });
+    }
+
+    res.json({
+      valid: true,
+      code: sponsor.affiliate_code,
+      sponsorName: sponsor.first_name || "Partenaire VANDIAS"
+    });
+  } catch (err) {
+    res.status(500).json({ valid: false, error: err.message });
+  }
+});
+
+// 2. Attribution permanente d'un parrain lors de l'inscription
+app.post('/api/affiliate/attribute', async (req, res) => {
+  try {
+    const { userId, referralCode } = req.body || {};
+    if (!userId || !referralCode) {
+      return res.status(400).json({ success: false, error: "userId et referralCode requis." });
+    }
+    if (!supabase) {
+      return res.status(500).json({ success: false, error: "Base de données non disponible." });
+    }
+
+    const cleanCode = String(referralCode).trim().toUpperCase();
+
+    // Vérifier si l'utilisateur a déjà une attribution permanente (règle : ne jamais écraser la première attribution valide)
+    let existingRef = null;
+    try {
+      const { data: p } = await supabase.from('profiles').select('referred_by').eq('id', userId).maybeSingle();
+      if (p && p.referred_by) existingRef = p.referred_by;
+    } catch(e) {}
+
+    if (!existingRef) {
+      try {
+        const { data: u } = await supabase.auth.admin.getUserById(userId);
+        if (u?.user?.user_metadata?.referred_by) existingRef = u.user.user_metadata.referred_by;
+      } catch(e) {}
+    }
+
+    if (existingRef) {
+      console.log(`[AFFILIATION] L'utilisateur ${userId} a déjà un parrain permanent (${existingRef}). Première attribution préservée.`);
+      return res.json({ success: true, permanent: true, sponsorCode: existingRef });
+    }
+
+    // Trouver le parrain
+    let sponsor = null;
+    try {
+      const { data: sp } = await supabase.from('profiles').select('id, affiliate_code, first_name').eq('affiliate_code', cleanCode).maybeSingle();
+      if (sp) sponsor = sp;
+    } catch(e) {}
+
+    if (!sponsor) {
+      return res.status(404).json({ success: false, error: "Code de parrainage introuvable." });
+    }
+
+    // Sécurité : Bloquer l'auto-parrainage
+    if (sponsor.id === userId) {
+      return res.status(400).json({ success: false, error: "Vous ne pouvez pas vous parrainer vous-même." });
+    }
+
+    // Enregistrement permanent dans profiles et auth.users metadata
+    try {
+      await supabase.from('profiles').update({ referred_by: sponsor.affiliate_code }).eq('id', userId);
+    } catch(e) {}
+
+    try {
+      const { data: u } = await supabase.auth.admin.getUserById(userId);
+      const meta = u?.user?.user_metadata || {};
+      await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: { ...meta, referred_by: sponsor.affiliate_code }
+      });
+    } catch(e) {}
+
+    console.log(`[AFFILIATION] Attribution permanente réussie : ${userId} rattaché au parrain ${sponsor.affiliate_code} (${sponsor.first_name})`);
+    res.json({
+      success: true,
+      sponsorCode: sponsor.affiliate_code,
+      sponsorName: sponsor.first_name || 'Partenaire VANDIAS'
+    });
+  } catch (err) {
+    console.error('[AFFILIATION ATTRIBUTE] Erreur:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Tableau de bord complet d'affiliation (Données réelles transparentes de Supabase)
+app.get('/api/affiliate/dashboard/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+    if (!supabase) return res.status(500).json({ error: "Base de données non disponible" });
+
+    // 1. Récupérer le profil du parrain
+    let { data: profile } = await supabase
+      .from('profiles')
+      .select('id, affiliate_code, affiliate_balance, first_name, email')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!profile) {
+      return res.status(404).json({ error: "Profil introuvable" });
+    }
+
+    // 2. Garantir un code de parrainage permanent unique
+    let affCode = profile.affiliate_code;
+    if (!affCode || affCode.trim() === '') {
+      const cleanNum = String(userId).replace(/\D/g, '').substring(0, 4) || String(Math.floor(1000 + Math.random() * 9000));
+      affCode = `VD-${cleanNum}99`;
+      try {
+        await supabase.from('profiles').update({ affiliate_code: affCode }).eq('id', userId);
+        profile.affiliate_code = affCode;
+      } catch (e) {}
+    }
+
+    const availableBalance = parseFloat(profile.affiliate_balance) || 0;
+
+    // 3. Récupérer la liste des utilisateurs parrainés (filleuls réels inscrits)
+    let referredUsers = [];
+    try {
+      const { data: directRef } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, created_at, plan, plan_status')
+        .eq('referred_by', affCode);
+      if (Array.isArray(directRef)) referredUsers = directRef;
+    } catch (e) {}
+
+    // Recherche de secours par ID
+    try {
+      const { data: idRef } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, created_at, plan, plan_status')
+        .eq('referred_by', userId);
+      if (Array.isArray(idRef)) {
+        for (const r of idRef) {
+          if (!referredUsers.some(u => u.id === r.id)) referredUsers.push(r);
+        }
+      }
+    } catch (e) {}
+
+    // 4. Récupérer l'historique réel des commissions
+    let commissions = [];
+    try {
+      const { data: comms } = await supabase
+        .from('commissions')
+        .select('*')
+        .eq('referrer_id', userId)
+        .order('created_at', { ascending: false });
+      if (Array.isArray(comms)) commissions = comms;
+    } catch (e) {}
+
+    // Récupérer également les commissions stockées en métadonnées de secours
+    try {
+      const { data: uData } = await supabase.auth.admin.getUserById(userId);
+      const metaComms = uData?.user?.app_metadata?.commissions || [];
+      for (const mc of metaComms) {
+        if (!commissions.some(c => c.payment_reference === mc.payment_reference)) {
+          commissions.push(mc);
+        }
+      }
+    } catch (e) {}
+
+    // 5. Récupérer les retraits en attente
+    let pendingPayoutsTotal = 0;
+    try {
+      const { data: payouts } = await supabase
+        .from('payouts')
+        .select('amount, status')
+        .eq('user_id', userId)
+        .eq('status', 'PENDING');
+      if (Array.isArray(payouts)) {
+        pendingPayoutsTotal = payouts.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      }
+    } catch (e) {}
+
+    // 6. Calculs réels transparents
+    const confirmedComms = commissions.filter(c => c.status === 'CONFIRMED');
+    const totalEarnings = confirmedComms.reduce((sum, c) => sum + (parseFloat(c.commission_amount) || 0), 0);
+    const eligiblePaymentsCount = confirmedComms.length;
+
+    // 7. Mise en forme de la table des filleuls & transactions
+    const referralsTableData = [];
+
+    // Ajouter d'abord les commissions confirmées
+    for (const comm of commissions) {
+      const payer = referredUsers.find(u => u.id === comm.referred_user_id);
+      let payerDisplayName = 'Client VANDIAS';
+      if (payer) {
+        const fName = payer.first_name || '';
+        const lInitial = payer.last_name ? payer.last_name.charAt(0) + '.' : '';
+        payerDisplayName = `${fName} ${lInitial}`.trim() || (payer.email ? payer.email.split('@')[0] : 'Client VANDIAS');
+      }
+
+      const planName = comm.plan_tier === 'pro' ? 'Formule Pro (14 900 FCFA)' :
+                       comm.plan_tier === 'business' ? 'Formule Business (30 000 FCFA)' :
+                       comm.plan_tier === 'basic' ? 'Formule Starter (7 900 FCFA)' : 'Abonnement Mensuel';
+
+      referralsTableData.push({
+        id: comm.id || comm.payment_reference,
+        date: comm.created_at ? new Date(comm.created_at).toLocaleDateString('fr-FR') : 'Récemment',
+        name: payerDisplayName,
+        plan: planName,
+        paymentAmount: `${Number(comm.payment_amount || 0).toLocaleString('fr-FR')} FCFA`,
+        commissionAmount: `+${Number(comm.commission_amount || 0).toLocaleString('fr-FR')} FCFA`,
+        status: comm.status === 'CONFIRMED' ? 'Actif & Payé' : (comm.status === 'REVERSED' ? 'Remboursé' : 'En attente'),
+        isPaid: comm.status === 'CONFIRMED'
+      });
+    }
+
+    // Ajouter les filleuls inscrits qui n'ont pas encore souscrit
+    for (const refUser of referredUsers) {
+      const alreadyListed = referralsTableData.some(r => r.name.toLowerCase().includes((refUser.first_name || '').toLowerCase()));
+      if (!alreadyListed) {
+        const fName = refUser.first_name || '';
+        const lInitial = refUser.last_name ? refUser.last_name.charAt(0) + '.' : '';
+        const dispName = `${fName} ${lInitial}`.trim() || (refUser.email ? refUser.email.split('@')[0] : 'Nouveau Filleul');
+
+        referralsTableData.push({
+          id: refUser.id,
+          date: refUser.created_at ? new Date(refUser.created_at).toLocaleDateString('fr-FR') : 'Récemment',
+          name: dispName,
+          plan: 'Essai Gratuit 7j',
+          paymentAmount: '0 FCFA',
+          commissionAmount: 'En attente',
+          status: 'Inscrit (Essai)',
+          isPaid: false
+        });
+      }
+    }
+
+    const host = req.get('host') || 'vandias.com';
+    const protocol = req.protocol || 'https';
+    const referralLink = `${protocol}://${host}/?ref=${affCode}`;
+
+    res.json({
+      success: true,
+      data: {
+        referralCode: affCode,
+        referralLink,
+        referredUsersCount: referredUsers.length,
+        eligiblePaymentsCount,
+        pendingCommissions: pendingPayoutsTotal,
+        confirmedCommissions: totalEarnings,
+        totalEarnings,
+        availableBalance,
+        referrals: referralsTableData
+      }
+    });
+  } catch (err) {
+    console.error('[AFFILIATE DASHBOARD] Erreur:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Inversion / Ajustement de commission (Remboursements & Litiges)
+app.post('/api/affiliate/reverse', authMiddleware, async (req, res) => {
+  try {
+    const { paymentRef, reason } = req.body;
+    if (!paymentRef) return res.status(400).json({ success: false, error: "paymentRef requis" });
+    const result = await reverseAffiliateCommission({ paymentRef, reason: reason || 'Demande manuelle ou webhook' });
+    res.json({ success: result.reversed, ...result });
+  } catch (err) {
+    console.error('[AFFILIATE REVERSE API] Erreur:', err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

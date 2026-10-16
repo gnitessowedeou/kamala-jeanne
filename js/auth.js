@@ -324,7 +324,7 @@
      * ==============================================================================
      */
     async signUp(data) {
-      const { firstName, lastName, email, phoneCountry, phoneNumber, password, passwordConfirm } = data;
+      const { firstName, lastName, email, phoneCountry, phoneNumber, password, passwordConfirm, referralCode } = data;
 
       // 1. Validations de sécurité
       if (!firstName || !firstName.trim()) {
@@ -349,13 +349,15 @@
       const parsedPhone = this.splitPhone(`${phoneCountry || '+225'} ${phoneNumber}`, phoneCountry || '+225');
       const fullPhone = parsedPhone.full;
       const cleanEmail = email.trim().toLowerCase();
+      const cleanRefCode = referralCode ? String(referralCode).trim().toUpperCase() : null;
 
       try {
         // Étape A : Création du compte dans auth.users de Supabase
         const signupRes = await SupabaseRest.signUp(cleanEmail, password, {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          whatsapp_number: fullPhone
+          whatsapp_number: fullPhone,
+          referred_by: cleanRefCode
         });
 
         const userId = signupRes?.id || signupRes?.user?.id;
@@ -365,10 +367,12 @@
           throw new Error("L'identifiant utilisateur n'a pas pu être généré par Supabase.");
         }
 
-        // Étape B : Enregistrement DIRECT dans la table 'profiles' de Supabase
-        // Garantit que le profil (prénom, nom, WhatsApp, crédits) apparaît immédiatement dans la table
+        // Étape B : Génération du code d'affiliation permanent unique pour ce nouvel utilisateur
+        const userAffCode = `VD-${(userId.replace(/\D/g, '').substring(0, 4) || Math.floor(1000 + Math.random()*9000))}99`;
+
+        // Étape C : Enregistrement DIRECT dans la table 'profiles' de Supabase
         try {
-          await SupabaseRest.upsertProfile({
+          const profilePayload = {
             id: userId,
             first_name: firstName.trim(),
             last_name: lastName.trim(),
@@ -377,10 +381,27 @@
             whatsapp_number: fullPhone,
             avatar_url: "",
             credits: 100,
-            affiliate_code: (firstName.trim().substring(0,3) + Math.floor(Math.random()*10000)).toUpperCase()
-          }, accessToken);
+            affiliate_code: userAffCode,
+            affiliate_balance: 0
+          };
+          if (cleanRefCode) {
+            profilePayload.referred_by = cleanRefCode;
+          }
+
+          await SupabaseRest.upsertProfile(profilePayload, accessToken);
         } catch (profileErr) {
           console.warn("Avertissement upsert table profiles:", profileErr);
+        }
+
+        // Étape D : Confirmation serveur de l'attribution permanente du parrain
+        if (cleanRefCode) {
+          try {
+            await fetch('/api/affiliate/attribute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, referralCode: cleanRefCode })
+            });
+          } catch(e) {}
         }
 
         // Étape C : Création de la session locale avec 300 crédits d'essai gratuit

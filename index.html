@@ -2289,6 +2289,15 @@
                 </button>
               </div>
             </div>
+          <div class="auth-form-group" style="margin-top: 6px;">
+            <label class="auth-label" for="signup-referral-code">Code de Parrainage <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(Optionnel)</span></label>
+            <div class="auth-input-wrapper">
+              <i class="fa-solid fa-gift auth-input-icon" style="color: var(--whatsapp-green);"></i>
+              <input type="text" class="auth-input has-icon" id="signup-referral-code" placeholder="Ex: VD-7842" autocomplete="off" style="text-transform: uppercase; letter-spacing: 0.5px;">
+            </div>
+            <div id="referral-code-hint" style="font-size: 11px; color: var(--whatsapp-green); margin-top: 4px; display: none;">
+              <i class="fa-solid fa-circle-check"></i> <span>Code de parrainage actif</span>
+            </div>
           </div>
 
           <button type="submit" class="btn-auth-submit" id="btn-submit-signup">
@@ -2379,13 +2388,34 @@
         var params = new URLSearchParams(window.location.search);
         var refCode = params.get('ref') || params.get('referral');
         if (refCode) {
-          localStorage.setItem('vandia_referral_code', refCode);
-          console.log('[AFFILIATE] Code de parrainage capture :', refCode);
+          refCode = String(refCode).trim().toUpperCase();
+          // Sauvegarder la première attribution valide
+          if (!localStorage.getItem('vandia_referral_code')) {
+            localStorage.setItem('vandia_referral_code', refCode);
+          }
+          console.log('[AFFILIATE] Code de parrainage capturé :', refCode);
           fetch('/api/affiliate/track-click', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: refCode })
           }).catch(function() {});
+        }
+
+        // Pré-remplir automatiquement le champ dans le formulaire d'inscription
+        function applyReferralInput() {
+          var activeRef = localStorage.getItem('vandia_referral_code') || refCode;
+          var input = document.getElementById('signup-referral-code');
+          var hint = document.getElementById('referral-code-hint');
+          if (activeRef && input) {
+            input.value = activeRef;
+            if (hint) hint.style.display = 'block';
+          }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyReferralInput);
+        } else {
+          applyReferralInput();
         }
       } catch (e) {}
     })();

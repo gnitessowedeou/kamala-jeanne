@@ -5211,6 +5211,44 @@ function setupBillingAndAffiliate() {
     });
   }
 
+  // 6b. Copy Personal Affiliate Referral Code
+  const copyAffiliateCodeBtn = document.getElementById("btn-copy-affiliate-code");
+  const affiliateCodeInput = document.getElementById("affiliate-code-input");
+
+  if (copyAffiliateCodeBtn && affiliateCodeInput) {
+    copyAffiliateCodeBtn.addEventListener("click", () => {
+      const codeToCopy = affiliateCodeInput.value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(codeToCopy).then(() => {
+          triggerCodeSuccess();
+        }).catch(() => {
+          fallbackCopyCode();
+        });
+      } else {
+        fallbackCopyCode();
+      }
+
+      function fallbackCopyCode() {
+        affiliateCodeInput.select();
+        document.execCommand("copy");
+        triggerCodeSuccess();
+      }
+
+      function triggerCodeSuccess() {
+        const originalContent = copyAffiliateCodeBtn.innerHTML;
+        copyAffiliateCodeBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>✓ Code copié !</span>';
+        copyAffiliateCodeBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+
+        setTimeout(() => {
+          copyAffiliateCodeBtn.innerHTML = originalContent;
+          copyAffiliateCodeBtn.style.background = "";
+        }, 2500);
+
+        showToast("Code de parrainage copié ! Partagez-le avec vos prospects.", "success");
+      }
+    });
+  }
+
   // 7. Request Payout Modal Triggers
   const requestPayoutBtn = document.getElementById("btn-request-payout");
   if (requestPayoutBtn) {
@@ -6178,106 +6216,106 @@ function updateAnalyticsStats(period, userTriggered = false) {
 // ==============================================================================
 // GESTIONNAIRE D'AFFILIATION SYNCHRONISÉ & REVENU PASSIF (20%)
 // ==============================================================================
+// ==============================================================================
+// GESTIONNAIRE D'AFFILIATION SYNCHRONISÉ & REVENU PASSIF (20% AUTOMATIQUE)
+// ==============================================================================
 async function syncAffiliateModule() {
   const userId = getAppUserId();
-  const affInput = document.getElementById("affiliate-link-input");
+  const affCodeInput = document.getElementById("affiliate-code-input");
+  const affLinkInput = document.getElementById("affiliate-link-input");
   const affWaShare = document.getElementById("btn-share-affiliate-wa");
-  const statClicks = document.getElementById("aff-stat-clicks");
   const statSignups = document.getElementById("aff-stat-signups");
   const statActive = document.getElementById("aff-stat-active");
+  const statPending = document.getElementById("aff-stat-pending");
   const statBalance = document.getElementById("aff-stat-balance");
   const referralsTbody = document.getElementById("affiliate-referrals-tbody");
 
-  let affCode = "VD-" + (userId ? userId.substring(0, 4).toUpperCase() : "7842") + "99";
+  if (!userId) return;
 
-  // Récupération depuis Supabase si connecté
+  const token = localStorage.getItem("vandia_access_token") || localStorage.getItem("supabase_token") || "";
+
+  try {
+    const res = await fetch(`/api/affiliate/dashboard/${encodeURIComponent(userId)}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        const d = json.data;
+
+        // 1. Code et Lien de Parrainage
+        if (affCodeInput) affCodeInput.value = d.referralCode;
+        if (affLinkInput) affLinkInput.value = d.referralLink;
+
+        if (affWaShare) {
+          affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
+            `Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7. Inscris-toi avec mon lien officiel : ${d.referralLink} ou mon code parrainage ${d.referralCode}`
+          );
+        }
+
+        // 2. Statistiques Réelles de Supabase (Zéro valeur de démonstration)
+        if (statSignups) statSignups.textContent = d.referredUsersCount;
+        if (statActive) statActive.textContent = d.eligiblePaymentsCount;
+        if (statPending) statPending.textContent = Number(d.pendingCommissions || 0).toLocaleString('fr-FR') + " FCFA";
+        if (statBalance) statBalance.textContent = Number(d.availableBalance || 0).toLocaleString('fr-FR') + " FCFA";
+
+        // 3. Table Réelle des Filleuls & Commissions
+        if (referralsTbody) {
+          if (Array.isArray(d.referrals) && d.referrals.length > 0) {
+            referralsTbody.innerHTML = d.referrals.map(r => `
+              <tr>
+                <td>${escapeHtml(r.date)}</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="conv-avatar" style="width: 28px; height: 28px; font-size: 11px; background: rgba(37, 211, 102, 0.15); color: var(--whatsapp-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                      ${escapeHtml(r.name ? r.name.charAt(0).toUpperCase() : 'C')}
+                    </div>
+                    <span style="font-weight: 600;">${escapeHtml(r.name)}</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-purple">${escapeHtml(r.plan)}</span></td>
+                <td style="color: var(--text-muted); font-size: 13px;">${escapeHtml(r.paymentAmount)}</td>
+                <td style="color: var(--whatsapp-green); font-weight: 700;">${escapeHtml(r.commissionAmount)}</td>
+                <td>
+                  <span class="badge ${r.isPaid ? 'badge-green' : 'badge-amber'}">${escapeHtml(r.status)}</span>
+                </td>
+              </tr>
+            `).join("");
+          } else {
+            referralsTbody.innerHTML = `
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                  <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
+                  Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien ou votre code de parrainage <strong>${escapeHtml(d.referralCode)}</strong> pour toucher 20% sur chaque abonnement !
+                </td>
+              </tr>
+            `;
+          }
+        }
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("[AFFILIATE] Notice sync dashboard API:", err.message);
+  }
+
+  // Secours direct via SupabaseClient si l'API rencontre un délai
   if (supabaseClient && userId) {
     try {
       const { data: prof } = await supabaseClient.from('profiles').select('affiliate_code, affiliate_balance').eq('id', userId).single();
       if (prof && prof.affiliate_code) {
-        affCode = prof.affiliate_code;
-      } else if (prof) {
-        // Enregistrer le code généré
-        await supabaseClient.from('profiles').update({ affiliate_code: affCode }).eq('id', userId);
+        if (affCodeInput) affCodeInput.value = prof.affiliate_code;
+        if (affLinkInput) affLinkInput.value = `${window.location.origin}/?ref=${prof.affiliate_code}`;
       }
       if (prof && typeof prof.affiliate_balance === 'number' && statBalance) {
-        statBalance.textContent = prof.affiliate_balance.toLocaleString() + " FCFA";
+        statBalance.textContent = Number(prof.affiliate_balance).toLocaleString('fr-FR') + " FCFA";
       }
-    } catch (e) {
-      console.warn("[AFFILIATE] Notice sync profile:", e.message);
-    }
-  }
-
-  // Lien dynamique adapté au domaine courant
-  const baseUrl = window.location.origin;
-  const dynamicAffLink = baseUrl + "/?ref=" + affCode;
-
-  if (affInput) affInput.value = dynamicAffLink;
-  if (affWaShare) {
-    affWaShare.href = "https://wa.me/?text=" + encodeURIComponent(
-      "Bonjour ! Je te recommande VANDIAS AI pour automatiser tes ventes et paiements Wave sur WhatsApp 24/7 : " + dynamicAffLink
-    );
-  }
-
-  // Charger les stats depuis localStorage ou serveur
-  const savedStats = JSON.parse(localStorage.getItem("vandia_affiliate_stats_" + affCode) || '{"clicks": 14, "signups": 3, "active": 2, "balance": 14900, "referrals": []}');
-
-  if (statClicks) statClicks.textContent = savedStats.clicks;
-  if (statSignups) statSignups.textContent = savedStats.signups;
-  if (statActive) statActive.textContent = savedStats.active;
-  if (statBalance) statBalance.textContent = savedStats.balance.toLocaleString() + " FCFA";
-
-  // Rendu de la table des filleuls
-  if (referralsTbody && savedStats.referrals && savedStats.referrals.length > 0) {
-    referralsTbody.innerHTML = savedStats.referrals.map(r => `
-      <tr>
-        <td>${r.date}</td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="conv-avatar" style="width: 28px; height: 28px; font-size: 11px;">${r.name[0]}</div>
-            <span>${r.name}</span>
-          </div>
-        </td>
-        <td><span class="badge badge-purple">${r.plan}</span></td>
-        <td style="color: var(--whatsapp-green); font-weight: 700;">${r.commission}</td>
-        <td><span class="badge badge-green">${r.status}</span></td>
-      </tr>
-    `).join("");
+    } catch (e) {}
   }
 }
-
-// Fonction de simulation/test immédiat pour l'utilisateur
-window.simulateAffiliateTest = function() {
-  const userId = getAppUserId();
-  const affInput = document.getElementById("affiliate-link-input");
-  const affCode = affInput?.value ? (affInput.value.split("ref=")[1] || "VD-7842") : "VD-7842";
-  const key = "vandia_affiliate_stats_" + affCode;
-
-  const current = JSON.parse(localStorage.getItem(key) || '{"clicks": 14, "signups": 3, "active": 2, "balance": 14900, "referrals": []}');
-  current.clicks += 1;
-  current.signups += 1;
-  current.active += 1;
-  current.balance += 2980; // 20% de 14 900 FCFA
-
-  const nowStr = new Date().toLocaleDateString();
-  const names = ["Cabinet Alpha", "Digital Shop", "Marc K.", "Awa Traoré", "Boutique Prestige"];
-  const randomName = names[Math.floor(Math.random() * names.length)] + " (" + (current.signups) + ")";
-
-  current.referrals = [
-    {
-      date: nowStr,
-      name: randomName,
-      plan: "Formule Pro (14 900 FCFA)",
-      commission: "+2 980 FCFA/mois",
-      status: "Actif & Payé"
-    },
-    ...(current.referrals || [])
-  ];
-
-  localStorage.setItem(key, JSON.stringify(current));
-  syncAffiliateModule();
-  showToast(`🎉 Test réussi ! +1 Clic et +1 Filleul inscrit synchronisé avec +2 980 FCFA de commission !`, "success");
-};
 
 // ==============================================================================
 // GESTION DES MEMBRES DE L'ÉQUIPE & INVITATIONS VANDIAS AI

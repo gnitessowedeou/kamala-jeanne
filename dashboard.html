@@ -1688,49 +1688,57 @@
             </div>
           </div>
 
-          <!-- Unique Referral Link Card -->
+          <!-- Unique Referral Link & Code Cards -->
           <div class="glass-panel affiliate-link-card" style="margin-bottom: 24px;">
             <div class="card-top-header">
               <div>
-                <h3 class="card-heading">Votre Lien de Parrainage Unique</h3>
-                <p class="card-subheading">Chaque personne qui s'inscrit via ce lien devient automatiquement votre filleul à vie</p>
+                <h3 class="card-heading">Votre Code &amp; Lien de Parrainage Officiels</h3>
+                <p class="card-subheading">Chaque personne qui s'inscrit avec votre code ou votre lien devient automatiquement votre filleul permanent</p>
               </div>
-              <span class="badge badge-green">Lien Actif • Commission 20%</span>
+              <span class="badge badge-green">Actif • Commission 20% à Vie</span>
             </div>
 
-            <div class="referral-link-input-row">
-              <div class="referral-link-box">
-                <i class="fa-solid fa-link" style="color: var(--whatsapp-green);"></i>
-                <input type="text" id="affiliate-link-input" readonly value="https://vandias.com/?ref=VD-7842" class="referral-input">
+            <!-- Row 1: Code de Parrainage Unique -->
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <i class="fa-solid fa-gift" style="color: var(--whatsapp-green); margin-right: 6px;"></i>Votre Code de Parrainage Personnel
+              </label>
+              <div class="referral-link-input-row">
+                <div class="referral-link-box" style="flex: 1;">
+                  <i class="fa-solid fa-hashtag" style="color: var(--whatsapp-green);"></i>
+                  <input type="text" id="affiliate-code-input" readonly value="VD-7842" class="referral-input" style="font-weight: 700; letter-spacing: 1px; font-size: 15px;">
+                </div>
+                <button class="btn-primary-glow btn-copy-affiliate" id="btn-copy-affiliate-code">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>Copier mon code</span>
+                </button>
               </div>
-              <button class="btn-primary-glow btn-copy-affiliate" id="btn-copy-affiliate-link">
-                <i class="fa-regular fa-copy"></i>
-                <span>Copier mon lien</span>
-              </button>
-              <a href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary-glass btn-share-whatsapp" id="btn-share-affiliate-wa" title="Partager directement sur WhatsApp">
-                <i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green);"></i>
-                <span>Partager sur WhatsApp</span>
-              </a>
-              <button type="button" class="btn-secondary-glass" onclick="simulateAffiliateTest()" title="Tester le lien d'affiliation" style="font-size: 12px; gap: 6px;">
-                <i class="fa-solid fa-flask" style="color: var(--whatsapp-green);"></i>
-                <span>Tester le lien</span>
-              </button>
+            </div>
+
+            <!-- Row 2: Lien de Parrainage Direct -->
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <i class="fa-solid fa-link" style="color: var(--whatsapp-green); margin-right: 6px;"></i>Votre Lien d'Affiliation Direct
+              </label>
+              <div class="referral-link-input-row">
+                <div class="referral-link-box" style="flex: 1;">
+                  <i class="fa-solid fa-globe" style="color: var(--whatsapp-green);"></i>
+                  <input type="text" id="affiliate-link-input" readonly value="https://vandias.com/?ref=VD-7842" class="referral-input">
+                </div>
+                <button class="btn-primary-glow btn-copy-affiliate" id="btn-copy-affiliate-link">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>Copier mon lien</span>
+                </button>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary-glass btn-share-whatsapp" id="btn-share-affiliate-wa" title="Partager directement sur WhatsApp">
+                  <i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green);"></i>
+                  <span>Partager sur WhatsApp</span>
+                </a>
+              </div>
             </div>
           </div>
 
-          <!-- 4 Stats Cards for Affiliation -->
+          <!-- 4 Stats Cards for Affiliation (Données Réelles Supabase) -->
           <div class="kpi-grid" style="margin-bottom: 24px;">
-            <div class="glass-panel kpi-card">
-              <div class="kpi-header">
-                <div class="kpi-icon-box kpi-icon-cyan"><i class="fa-solid fa-mouse-pointer"></i></div>
-                <span class="kpi-title">Clics Enregistrés</span>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value" id="aff-stat-clicks">0</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 0%</span>
-              </div>
-            </div>
-
             <div class="glass-panel kpi-card">
               <div class="kpi-header">
                 <div class="kpi-icon-box kpi-icon-purple"><i class="fa-solid fa-user-plus"></i></div>
@@ -1738,57 +1746,72 @@
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-signups">0</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 0%</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-users"></i> Réel</span>
               </div>
             </div>
 
             <div class="glass-panel kpi-card">
               <div class="kpi-header">
-                <div class="kpi-icon-box kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
-                <span class="kpi-title">Abonnements Actifs</span>
+                <div class="kpi-icon-box kpi-icon-green"><i class="fa-solid fa-receipt"></i></div>
+                <span class="kpi-title">Paiements Éligibles</span>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-active">0</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 0%</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-check"></i> Validés</span>
+              </div>
+            </div>
+
+            <div class="glass-panel kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-icon-box kpi-icon-cyan"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                <span class="kpi-title">Commissions en Attente</span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="aff-stat-pending">0 FCFA</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-hourglass-half"></i> Retrait</span>
               </div>
             </div>
 
             <div class="glass-panel kpi-card">
               <div class="kpi-header">
                 <div class="kpi-icon-box kpi-icon-amber"><i class="fa-solid fa-sack-dollar"></i></div>
-                <span class="kpi-title">Commissions Disponibles</span>
+                <span class="kpi-title">Total Gains Disponibles</span>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value" id="aff-stat-balance">0 FCFA</span>
-                <span class="kpi-badge-trend"><i class="fa-solid fa-arrow-up"></i> 20%/mois</span>
+                <span class="kpi-badge-trend"><i class="fa-solid fa-wallet"></i> 20% Net</span>
               </div>
             </div>
           </div>
 
-          <!-- Payout & Referrals Table -->
+          <!-- Payout & Referrals Table (Données Réelles Supabase) -->
           <div class="glass-panel" style="padding: 24px;">
             <div class="card-top-header">
               <div>
                 <h3 class="card-heading">Mes Filleuls &amp; Historique des Versements</h3>
-                <p class="card-subheading">Suivi en temps réel de vos commissions et retraits via Wave / Mobile Money</p>
+                <p class="card-subheading">Suivi en temps réel de vos commissions 20% certifiées et retraits via Mobile Money</p>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                <i class="fa-solid fa-shield-halved" style="color: var(--whatsapp-green);"></i> Calcul officiel 20% net
               </div>
             </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Date d'inscription</th>
+                    <th>Date</th>
                     <th>Filleul</th>
-                    <th>Plan Souscrit</th>
-                    <th>Commission Mensuelle</th>
+                    <th>Formule</th>
+                    <th>Paiement Réel</th>
+                    <th>Commission (20%)</th>
                     <th>Statut</th>
                   </tr>
                 </thead>
                 <tbody id="affiliate-referrals-tbody">
                   <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">
                       <i class="fa-solid fa-users" style="font-size: 28px; opacity: 0.3; margin-bottom: 10px; display: block;"></i>
-                      Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien de parrainage ci-dessus pour toucher vos premières commissions !
+                      Vous n'avez pas encore de filleuls enregistrés. Partagez votre lien ou votre code de parrainage ci-dessus pour toucher 20% sur chaque abonnement !
                     </td>
                   </tr>
                 </tbody>
