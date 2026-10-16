@@ -3009,13 +3009,39 @@ app.use((err, req, res, next) => {
 });
 
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`[KAMALA JEANNE] Moteur Backend démarré sur http://localhost:${PORT}`);
   console.log(`[STORAGE] Dossier persistant WhatsApp : ${AUTH_BASE_DIR}`);
 });
 
-// Fix pour forcer le maintien du processus Node.js en vie
+// Arrêt gracieux lors des redéploiements Railway (évite l'erreur de crash code 143 / SIGTERM)
+const gracefulShutdown = (signal) => {
+  console.log(`[SERVER] Signal ${signal} reçu. Arrêt gracieux en cours...`);
+  try {
+    for (const [userId, client] of Object.entries(waClients)) {
+      if (client) {
+        client.destroy().catch(() => {});
+      }
+    }
+  } catch (e) {}
+
+  server.close(() => {
+    console.log('[SERVER] Serveur HTTP fermé avec succès. Sortie propre code 0.');
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.log('[SERVER] Délai d\'arrêt dépassé. Sortie forcée code 0.');
+    process.exit(0);
+  }, 4000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Maintien actif de l'event-loop
 setInterval(() => {}, 1000 * 60 * 60);
+
 
 
 
