@@ -968,7 +968,7 @@ window.getStoredReferralCode = getStoredReferralCode;
         whatsapp_number: parsedPhone.full
       };
 
-      // Synchronisation directe avec la table 'profiles' de Supabase
+      // 1. Synchronisation directe avec la table 'profiles' de Supabase
       if (current.id) {
         try {
           await SupabaseRest.updateProfile(current.id, {
@@ -981,11 +981,60 @@ window.getStoredReferralCode = getStoredReferralCode;
         } catch (err) {
           console.warn("Avertissement mise à jour table profiles:", err);
         }
+
+        // 2. Synchronisation avec le Backend Railway pour synchroniser auth.users user_metadata
+        try {
+          const bUrl = getBackendUrl();
+          const token = SupabaseRest.getToken() || (typeof getAuthHeaders === 'function' ? (getAuthHeaders().Authorization || '').replace('Bearer ', '') : null);
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+          await fetch(`${bUrl}/api/user/profile`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              userId: current.id,
+              firstName: updated.firstName,
+              lastName: updated.lastName,
+              whatsappNumber: parsedPhone.full,
+              phoneCountry: parsedPhone.country,
+              phoneNumber: parsedPhone.number,
+              company: updated.company,
+              role: updated.role,
+              avatarUrl: updated.avatarUrl
+            })
+          });
+        } catch (apiErr) {
+          console.warn("[AUTH ENGINE] Notice synchronisation backend profile:", apiErr.message);
+        }
+
+        // 3. Mettre à jour en local le jeton Supabase SDK (sb-*-auth-token) pour cohérence immédiate
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+              const su = JSON.parse(localStorage.getItem(k) || '{}');
+              if (su && su.user) {
+                su.user.user_metadata = {
+                  ...(su.user.user_metadata || {}),
+                  first_name: updated.firstName,
+                  last_name: updated.lastName,
+                  whatsapp_number: parsedPhone.full,
+                  phoneCountry: parsedPhone.country,
+                  phoneNumber: parsedPhone.number
+                };
+                localStorage.setItem(k, JSON.stringify(su));
+              }
+            }
+          }
+        } catch (suErr) {}
       }
 
       if (parsedPhone.full) {
         try {
           localStorage.setItem('vendia_connected_phone', parsedPhone.full);
+          if (current.id) {
+            localStorage.setItem('vendia_connected_phone_' + current.id, parsedPhone.full);
+          }
           window.currentWhatsAppPhone = parsedPhone.full;
         } catch(e) {}
       }

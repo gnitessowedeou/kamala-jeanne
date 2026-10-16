@@ -3013,20 +3013,60 @@ app.post('/api/affiliate/reverse', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/integrations/payments/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+    if (!supabase) return res.status(500).json({ error: "Base de données non disponible" });
+
+    const { data: uData } = await supabase.auth.admin.getUserById(userId);
+    const integrations = uData?.user?.user_metadata?.payment_integrations || null;
+    res.json({ success: true, integrations });
+  } catch (err) {
+    console.error("[GET PAYMENTS] Erreur:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/integrations/payments', authMiddleware, async (req, res) => {
   try {
-    const { userId, method, phone, beneficiary, note, active } = req.body;
+    const { userId, method, phone, beneficiary, note, active, integrations } = req.body;
     console.log(`[PAYMENTS] Mise a jour passerelle ${method} pour client ${userId}: ${phone} (${beneficiary})`);
     
-    // Mettre a jour le prompt du profil si necessaire pour que l'IA connaisse toujours le bon numero
-    if (supabase && userId && phone) {
-      const { data: prof } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
-      if (prof && prof.ai_prompt) {
-        // Enregistrer discrètement les coordonnées de paiement à la fin du prompt
-        const marker = "\n\n[COORDONNEES DE PAIEMENT ACTUELLES DU VENDEUR] :";
-        const cleanPrompt = prof.ai_prompt.split(marker)[0];
-        const updatedPrompt = `${cleanPrompt}${marker}\nMoyen: ${method.toUpperCase()} | Numero: ${phone} | Beneficiaire: ${beneficiary} | Statut: ${active ? 'Actif' : 'Pause'}`;
-        await supabase.from('profiles').update({ ai_prompt: updatedPrompt }).eq('id', userId);
+    if (supabase && userId) {
+      // 1. Sauvegarder dans user_metadata pour persistance cloud permanente par utilisateur
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(userId);
+        const existingMeta = uData?.user?.user_metadata || {};
+        const currentInteg = existingMeta.payment_integrations || [];
+        let updatedInteg = Array.isArray(integrations) ? integrations : currentInteg;
+        if (!Array.isArray(integrations) && method) {
+          const idx = updatedInteg.findIndex(x => x.key === method);
+          if (idx >= 0) {
+            updatedInteg[idx] = { ...updatedInteg[idx], phone, beneficiary, note, active };
+          } else {
+            updatedInteg.push({ key: method, phone, beneficiary, note, active });
+          }
+        }
+        await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            ...existingMeta,
+            payment_integrations: updatedInteg
+          }
+        });
+      } catch (metaErr) {
+        console.warn("[PAYMENTS] Notice meta save:", metaErr.message);
+      }
+
+      // 2. Mettre a jour le prompt du profil pour que l'IA connaisse toujours le bon numero vendeur
+      if (phone) {
+        const { data: prof } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
+        if (prof && prof.ai_prompt) {
+          const marker = "\n\n[COORDONNEES DE PAIEMENT ACTUELLES DU VENDEUR] :";
+          const cleanPrompt = prof.ai_prompt.split(marker)[0];
+          const updatedPrompt = `${cleanPrompt}${marker}\nMoyen: ${String(method || 'PAIEMENT').toUpperCase()} | Numero: ${phone} | Beneficiaire: ${beneficiary} | Statut: ${active ? 'Actif' : 'Pause'}`;
+          await supabase.from('profiles').update({ ai_prompt: updatedPrompt }).eq('id', userId);
+        }
       }
     }
 
@@ -3034,6 +3074,51 @@ app.post('/api/integrations/payments', authMiddleware, async (req, res) => {
   } catch (e) {
     console.error("Erreur save payment:", e);
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/user/profile', authMiddleware, async (req, res) => {
+  try {
+    const { userId, firstName, lastName, whatsappNumber, phoneCountry, phoneNumber, company, role, avatarUrl } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+    if (!supabase) return res.status(500).json({ error: "Base de données non disponible" });
+
+    // 1. Mettre à jour la table profiles
+    const profileUpdates = {
+      first_name: firstName || "",
+      last_name: lastName || "",
+      whatsapp_number: whatsappNumber || "",
+      avatar_url: avatarUrl || "",
+      updated_at: new Date().toISOString()
+    };
+    if (company) profileUpdates.company = company;
+    if (role) profileUpdates.role = role;
+
+    await supabase.from('profiles').update(profileUpdates).eq('id', userId);
+
+    // 2. Mettre à jour user_metadata dans auth.users pour persistance permanente
+    try {
+      const { data: uData } = await supabase.auth.admin.getUserById(userId);
+      const existingMeta = uData?.user?.user_metadata || {};
+      await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          ...existingMeta,
+          first_name: firstName || "",
+          last_name: lastName || "",
+          whatsapp_number: whatsappNumber || "",
+          phoneCountry: phoneCountry || "+225",
+          phoneNumber: phoneNumber || ""
+        }
+      });
+    } catch (metaErr) {
+      console.warn("[USER PROFILE] Notice meta update:", metaErr.message);
+    }
+
+    console.log(`[PROFILE] Profil mis à jour et synchronisé pour ${userId}: ${firstName} ${lastName} (${whatsappNumber})`);
+    res.json({ success: true, message: "Profil mis à jour avec succès." });
+  } catch (err) {
+    console.error("[PROFILE UPDATE] Erreur:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

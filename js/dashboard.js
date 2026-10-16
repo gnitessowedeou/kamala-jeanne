@@ -366,50 +366,50 @@ const MOCK_DATA = {
     {
       key: "wave",
       name: "Wave (Sénégal & Côte d'Ivoire)",
-      status: "Connecté & Actif",
-      badgeClass: "badge-green",
+      status: "À configurer",
+      badgeClass: "badge-amber",
       desc: "Réception instantanée sans frais. Numéro et nom communiqués automatiquement aux clients lors de la commande.",
-      phone: "+226 05 15 84 94",
-      beneficiary: "Gnitou Essowedeou",
+      phone: "+225 00 00 00 00",
+      beneficiary: "Non configuré",
       color: "#1dc4e9",
       icon: "fa-water",
-      active: true
+      active: false
     },
     {
       key: "orange_money",
       name: "Orange Money (Burkina Faso, Mali, etc.)",
-      status: "Connecté & Actif",
-      badgeClass: "badge-green",
+      status: "À configurer",
+      badgeClass: "badge-amber",
       desc: "Paiements rapides par Orange Money en Afrique de l'Ouest. Détection automatique selon le préfixe du pays.",
-      phone: "+226 05 15 84 94",
-      beneficiary: "Gnitou Essowedeou",
+      phone: "+226 00 00 00 00",
+      beneficiary: "Non configuré",
       color: "#ff6600",
       icon: "fa-mobile-retro",
-      active: true
+      active: false
     },
     {
       key: "mtn_momo",
       name: "MTN Mobile Money (Bénin, Côte d'Ivoire)",
-      status: "Connecté & Actif",
-      badgeClass: "badge-green",
+      status: "À configurer",
+      badgeClass: "badge-amber",
       desc: "Routage automatique vers MTN MoMo pour les clients du Bénin (+229) et pays partenaires.",
-      phone: "+229 01 62 63 95 93",
-      beneficiary: "Gnitou Essowedeou",
+      phone: "+229 00 00 00 00",
+      beneficiary: "Non configuré",
       color: "#ffcc00",
       icon: "fa-money-bill-transfer",
-      active: true
+      active: false
     },
     {
       key: "moov_money",
       name: "Moov Africa Flooz (Bénin, Togo, etc.)",
-      status: "Prêt",
-      badgeClass: "badge-green",
+      status: "À configurer",
+      badgeClass: "badge-amber",
       desc: "Paiement par Flooz Moov Money. Numéro communiqué aux clients togolais et béninois.",
-      phone: "+229 01 62 63 95 93",
-      beneficiary: "Gnitou Essowedeou",
+      phone: "+228 00 00 00 00",
+      beneficiary: "Non configuré",
       color: "#0055a5",
       icon: "fa-coins",
-      active: true
+      active: false
     },
     {
       key: "saspay",
@@ -901,14 +901,17 @@ async function syncSubscriptionStatusFromServer() {
         const rawDbPhone = (profile.whatsapp_number || profile.phone || "").toString().trim();
         try {
           const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-          const candidatePhone = rawDbPhone || u.fullPhone || u.whatsapp_number || localStorage.getItem('vendia_connected_phone') || "";
+          const candidatePhone = rawDbPhone || (u?.id ? localStorage.getItem('vendia_connected_phone_' + u.id) : null) || u.whatsapp_number || u.fullPhone || "";
           const split = parseAppPhone(candidatePhone, u.phoneCountry || '+225');
           if (split.full) {
             u.fullPhone = split.full;
             u.phoneNumber = split.number;
             u.phoneCountry = split.country;
             u.whatsapp_number = split.full;
-            try { localStorage.setItem('vendia_connected_phone', split.full); } catch(e) {}
+            try { 
+              localStorage.setItem('vendia_connected_phone', split.full);
+              if (u.id) localStorage.setItem('vendia_connected_phone_' + u.id, split.full);
+            } catch(e) {}
             window.currentWhatsAppPhone = split.full;
           }
           if (profile.first_name) u.firstName = profile.first_name;
@@ -973,14 +976,17 @@ async function syncSubscriptionStatusFromServer() {
           if (data.whatsappNumber !== undefined) {
             let apiPhone = (data.whatsappNumber || '').toString().trim();
             if (apiPhone === '+229 62639593' || apiPhone === '22962639593') apiPhone = '';
-            const phoneToUse = apiPhone || u.fullPhone || u.whatsapp_number || localStorage.getItem('vendia_connected_phone') || '';
+            const phoneToUse = apiPhone || (u?.id ? localStorage.getItem('vendia_connected_phone_' + u.id) : null) || u.whatsapp_number || u.fullPhone || '';
             const split = parseAppPhone(phoneToUse, u.phoneCountry || '+225');
             if (split.full) {
               u.fullPhone = split.full;
               u.phoneNumber = split.number;
               u.phoneCountry = split.country;
               u.whatsapp_number = split.full;
-              try { localStorage.setItem('vendia_connected_phone', split.full); } catch(e) {}
+              try { 
+                localStorage.setItem('vendia_connected_phone', split.full);
+                if (u.id) localStorage.setItem('vendia_connected_phone_' + u.id, split.full);
+              } catch(e) {}
               window.currentWhatsAppPhone = split.full;
             }
             if (typeof window.applyWhatsAppState === 'function') {
@@ -3273,20 +3279,60 @@ function setupTemplateModalEngine() {
 }
 
 
-// Gestionnaire de passerelles de paiement personnalisables
+// Gestionnaire de passerelles de paiement personnalisables et isolées par utilisateur
 function getSavedIntegrations() {
+  const userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+  const storageKey = userId ? `vandia_user_integrations_${userId}` : "vandia_user_integrations";
   try {
-    const raw = localStorage.getItem("vandia_user_integrations");
+    const raw = localStorage.getItem(storageKey);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  return MOCK_DATA.integrations;
+  return MOCK_DATA.integrations.map(item => ({ ...item }));
 }
 
 function saveIntegrationsList(list) {
+  const userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+  const storageKey = userId ? `vandia_user_integrations_${userId}` : "vandia_user_integrations";
   try {
-    localStorage.setItem("vandia_user_integrations", JSON.stringify(list));
+    localStorage.setItem(storageKey, JSON.stringify(list));
   } catch (e) {}
   MOCK_DATA.integrations = list;
+}
+
+// Synchronisation automatique depuis le Cloud Supabase pour l'utilisateur connecté
+async function syncUserIntegrationsFromCloud() {
+  const userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+  if (!userId) return;
+  try {
+    const res = await fetch(API_URL + '/api/integrations/payments/' + encodeURIComponent(userId), {
+      headers: (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {}
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && Array.isArray(data.integrations) && data.integrations.length > 0) {
+        // Fusionner avec les métadonnées locales (icônes, couleurs, descriptions)
+        const merged = MOCK_DATA.integrations.map(defItem => {
+          const savedItem = data.integrations.find(x => x.key === defItem.key);
+          if (savedItem) {
+            return {
+              ...defItem,
+              phone: savedItem.phone || defItem.phone,
+              beneficiary: savedItem.beneficiary || defItem.beneficiary,
+              note: savedItem.note || '',
+              active: typeof savedItem.active === 'boolean' ? savedItem.active : defItem.active,
+              status: (savedItem.active ? 'Connecté & Actif' : 'En pause')
+            };
+          }
+          return defItem;
+        });
+        saveIntegrationsList(merged);
+        const container = document.getElementById("integrations-grid-container");
+        if (container) renderIntegrations(false);
+      }
+    }
+  } catch (err) {
+    console.warn("[INTEGRATIONS] Notice synchronisation cloud:", err.message);
+  }
 }
 
 function getOperatorBrandColor(key) {
@@ -3365,9 +3411,13 @@ function getOperatorLogo(key, size = 48) {
   }
 }
 
-function renderIntegrations() {
+function renderIntegrations(triggerSync = true) {
   const container = document.getElementById("integrations-grid-container");
   if (!container) return;
+
+  if (triggerSync && typeof syncUserIntegrationsFromCloud === 'function') {
+    syncUserIntegrationsFromCloud();
+  }
 
   const items = getSavedIntegrations();
 
@@ -3483,9 +3533,21 @@ window.openPaymentConfigModal = function(key) {
   const titleEl = document.getElementById("payment-modal-title");
   const iconBox = document.getElementById("payment-modal-icon-box");
 
+  let u = null;
+  try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
+  const userFullName = u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : "";
+
   if (keyInput) keyInput.value = item.key;
-  if (phoneInput) phoneInput.value = item.phone || "";
-  if (nameInput) nameInput.value = item.beneficiary || "Gnitou Essowedeou";
+  if (phoneInput) {
+    phoneInput.value = (item.phone && !item.phone.includes('00 00 00')) ? item.phone : "";
+    phoneInput.placeholder = "Ex: +225 07 00 00 00 00";
+  }
+  if (nameInput) {
+    nameInput.value = (item.beneficiary && item.beneficiary !== 'Non configuré' && item.beneficiary !== 'Gnitou Essowedeou') 
+      ? item.beneficiary 
+      : (userFullName || "");
+    nameInput.placeholder = "Ex: " + (userFullName || "Votre Nom Officiel");
+  }
   if (noteInput) noteInput.value = item.note || "";
   if (activeToggle) activeToggle.checked = Boolean(item.active);
   if (titleEl) titleEl.textContent = "Configurer " + item.name;
@@ -3510,22 +3572,23 @@ window.closePaymentConfigModal = function() {
 window.handleSavePaymentConfig = async function(e) {
   e.preventDefault();
   const key = document.getElementById("payment-method-key")?.value;
-  const phone = document.getElementById("payment-phone-input")?.value;
-  const name = document.getElementById("payment-name-input")?.value;
-  const note = document.getElementById("payment-note-input")?.value;
+  const phone = document.getElementById("payment-phone-input")?.value?.trim() || "";
+  const name = document.getElementById("payment-name-input")?.value?.trim() || "";
+  const note = document.getElementById("payment-note-input")?.value?.trim() || "";
   const isActive = document.getElementById("payment-active-toggle")?.checked;
 
   const items = getSavedIntegrations();
   const updated = items.map(x => x.key === key ? {
     ...x,
-    phone: phone,
-    beneficiary: name,
+    phone: phone || "+225 00 00 00 00",
+    beneficiary: name || "Non configuré",
     note: note,
-    active: isActive
+    active: isActive,
+    status: isActive ? "Connecté & Actif" : "En pause"
   } : x);
 
   saveIntegrationsList(updated);
-  renderIntegrations();
+  renderIntegrations(false);
   closePaymentConfigModal();
 
   // Synchronisation avec le serveur Cloud / Supabase
@@ -3535,12 +3598,12 @@ window.handleSavePaymentConfig = async function(e) {
       await fetch(API_URL + '/api/integrations/payments', {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ userId, method: key, phone, beneficiary: name, note, active: isActive })
+        body: JSON.stringify({ userId, method: key, phone, beneficiary: name, note, active: isActive, integrations: updated })
       });
     }
   } catch (err) {}
 
-  showToast("Coordonnées de paiement enregistrées et synchronisées avec l'agent IA !", "success");
+  showToast("Coordonnées de paiement enregistrées et synchronisées avec succès !", "success");
 };
 
 // ==============================================================================
@@ -5392,15 +5455,15 @@ function setupBillingAndAffiliate() {
 
         // Récupération du numéro personnel :
         // 1. Numéro en direct de la connexion active
-        // 2. Numéro mémorisé en session globale
-        // 3. Numéro stocké en cache local
-        // 4. Numéro du profil utilisateur (Supabase / local)
+        // 2. Numéro du profil réel (Supabase / local)
+        // 3. Numéro mémorisé pour ce compte utilisateur spécifique
         let userRawPhone = (
             phone || 
+            user?.whatsapp_number || 
+            user?.fullPhone || 
+            (user?.id ? localStorage.getItem('vendia_connected_phone_' + user.id) : null) ||
             window.currentWhatsAppPhone || 
             localStorage.getItem('vendia_connected_phone') || 
-            user?.fullPhone || 
-            user?.whatsapp_number || 
             user?.phone || 
             user?.phoneNumber || 
             ''
