@@ -960,9 +960,6 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
     takeoverTimeoutMs: 10000,
     authTimeoutMs: 120000, // 2 minutes : permet aux bundles WhatsApp Web de se charger sereinement
     bypassCSP: true,       // Contourne les restrictions CSP bloquant l'injection des modules
-    webVersionCache: {
-      type: 'none'
-    },
     puppeteer: {
       headless: true,
       protocolTimeout: 120000,
@@ -970,25 +967,11 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
         '--disable-gpu',
-        '--disable-extensions',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-breakpad',
-        '--disable-component-update',
-        '--disable-default-apps',
-        '--disable-ipc-flooding-protection',
-        '--force-color-profile=srgb',
-        '--metrics-recording-only',
-        '--mute-audio',
-        '--disable-blink-features=AutomationControlled'
+        '--no-first-run'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
-    },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    }
   };
 
   if (cleanPhone && cleanPhone.length >= 8 && !hasExistingSession) {
