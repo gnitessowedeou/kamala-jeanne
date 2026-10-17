@@ -968,7 +968,8 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--no-first-run'
+        '--no-first-run',
+        '--js-flags=--max-old-space-size=200'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     }
