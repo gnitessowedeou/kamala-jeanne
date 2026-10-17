@@ -316,6 +316,7 @@ const waStatuses = {};   // DISCONNECTED, STARTING, QR_READY, CONNECTED, CODE_RE
 const waNumbers = {};    // Stocke le numero de telephone connecte
 const waHeartbeats = {}; // Intervalles keep-alive Chromium / WebSocket WhatsApp
 const waErrors = {};     // Stocke les erreurs d'initialisation de chaque client
+const waInFlightStarts = new Map(); // Protection absolue contre les lancements concurrents simultanés
 
 function getClientPhone(client, userId) {
   if (waNumbers[userId] && String(waNumbers[userId]).replace(/\D/g, '').length >= 6) {
@@ -873,23 +874,44 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
 // =============================================================================
 
 async function createOrGetWhatsAppClient(userId, options = {}) {
+  if (waInFlightStarts.has(userId)) {
+    console.log(`[WA] Lancement déjà en cours pour ${userId}, mutualisation de la requête...`);
+    return waInFlightStarts.get(userId);
+  }
+
+  const promise = (async () => {
+    try {
+      return await _executeCreateOrGetWhatsAppClient(userId, options);
+    } finally {
+      waInFlightStarts.delete(userId);
+    }
+  })();
+
+  waInFlightStarts.set(userId, promise);
+  return promise;
+}
+
+async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
   const { restart = false, phoneNumber = null, autoRestore = false } = options;
   const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
   const authDir = getSessionDir(userId);
-  const hasExistingSession = fs.existsSync(authDir);
+  let hasExistingSession = fs.existsSync(authDir);
 
   // 1. Si déjà actif et connecté
   if (waClients[userId] && !restart) {
     if (waStatuses[userId] === 'CONNECTED') {
       return waClients[userId];
     }
-    if (waStatuses[userId] === 'STARTING' || waStatuses[userId] === 'RECONNECTING') {
+    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId]) {
+      return waClients[userId];
+    }
+    if (waStatuses[userId] === 'STARTING') {
       return waClients[userId];
     }
   }
 
   // 2. Nettoyage explicite si redémarrage forcé ou statut précédent en erreur
-  if (restart || waStatuses[userId] === 'ERROR') {
+  if (restart || waStatuses[userId] === 'ERROR' || (!autoRestore && !waClients[userId])) {
     if (waClients[userId]) {
       try { await waClients[userId].destroy(); } catch (e) {}
       delete waClients[userId];
@@ -902,8 +924,9 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     delete waPairingCodes[userId];
     delete waNumbers[userId];
     delete waErrors[userId];
-    if (hasExistingSession) {
+    if (hasExistingSession && (restart || waStatuses[userId] === 'ERROR')) {
       try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+      hasExistingSession = false;
     }
   }
 
@@ -917,12 +940,12 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     try { delete process.env.DISPLAY; } catch(e) {}
   }
 
-  // 3. Statut initial (si session existante sur disque, maintien du statut connecté/reconnexion sans paniquer l'interface)
-  waStatuses[userId] = hasExistingSession ? 'RECONNECTING' : 'STARTING';
+  // 3. Statut initial (si session existante sur disque et autoRestore demandé)
+  waStatuses[userId] = (hasExistingSession && autoRestore) ? 'RECONNECTING' : 'STARTING';
   if (cleanPhone) waNumbers[userId] = cleanPhone;
 
   const chromiumPath = getChromiumExecutablePath();
-  console.log(`[WA] Lancement client haute résilience pour ${userId} (sessionExistante=${hasExistingSession}, pairPhone=${cleanPhone || 'non'}, storage=${AUTH_BASE_DIR})...`);
+  console.log(`[WA] Lancement client haute résilience pour ${userId} (sessionExistante=${hasExistingSession}, autoRestore=${autoRestore}, pairPhone=${cleanPhone || 'non'}, storage=${AUTH_BASE_DIR})...`);
 
   // Stratégie d'authentification robuste avec dataPath pointant sur le volume persistant
   const authStrategy = new LocalAuth({ 
@@ -930,33 +953,31 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
     dataPath: AUTH_BASE_DIR 
   });
 
-  // Flags Puppeteer ultra-optimisés pour conteneur Docker Linux (Railway)
+  // Flags Puppeteer fiables et stables pour conteneur Docker Linux (Railway)
   const clientOptions = {
     authStrategy,
     takeoverOnConflict: true,
     takeoverTimeoutMs: 5000,
+    webVersionCache: {
+      type: 'none'
+    },
     puppeteer: {
       headless: true,
       args: [
-        '--headless=new',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
-        '--no-zygote',
         '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--js-flags=--max-old-space-size=512',
+        '--disable-extensions',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
         '--disable-breakpad',
         '--disable-component-update',
         '--disable-default-apps',
-        '--disable-extensions',
         '--disable-ipc-flooding-protection',
-        '--enable-features=NetworkService,NetworkServiceInProcess',
         '--force-color-profile=srgb',
         '--metrics-recording-only',
         '--mute-audio',
@@ -964,7 +985,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
   };
 
   if (cleanPhone && cleanPhone.length >= 8 && !hasExistingSession) {
@@ -978,6 +999,7 @@ async function createOrGetWhatsAppClient(userId, options = {}) {
 
   const client = new Client(clientOptions);
   waClients[userId] = client;
+
 
   // Gestion des événements QR Code & Code d'association
   client.on('qr', async (qr) => {
@@ -1366,8 +1388,8 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   const hasExistingSession = fs.existsSync(authDir);
 
   // Si pas de client actif en mémoire mais session existante sur disque, auto-restaurer
-  // UNIQUEMENT si le statut n'est pas déjà 'DISCONNECTED'
-  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING' && waStatuses[userId] !== 'DISCONNECTED') {
+  // UNIQUEMENT si le statut n'est pas déjà 'DISCONNECTED' ou 'ERROR'
+  if (!client && hasExistingSession && waStatuses[userId] !== 'STARTING' && waStatuses[userId] !== 'DISCONNECTED' && waStatuses[userId] !== 'ERROR') {
     createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(() => {});
     waStatuses[userId] = 'STARTING';
   }

@@ -4085,17 +4085,18 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
       const modal = document.getElementById('qr-modal');
       if (modal) modal.classList.add('active');
-      if (typeof window.startWhatsApp === 'function') {
-        window.startWhatsApp();
-      }
     };
 
     // Déclencheur automatique dès que #qr-modal reçoit la classe 'active'
     document.addEventListener('DOMContentLoaded', function() {
       const qm = document.getElementById('qr-modal');
       if (qm) {
+        let isOpening = false;
         const obs = new MutationObserver(function() {
           if (qm.classList.contains('active')) {
+            if (isOpening) return;
+            isOpening = true;
+            setTimeout(function() { isOpening = false; }, 1200);
             if (typeof window.prefillWaPairingInput === 'function') {
               window.prefillWaPairingInput();
             }

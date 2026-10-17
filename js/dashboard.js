@@ -5831,7 +5831,10 @@ function setupBillingAndAffiliate() {
         } catch (error) {}
     }
 
+    let isStartingWhatsApp = false;
     async function startWhatsApp(forceRestart = false) {
+        if (isStartingWhatsApp && !forceRestart) return;
+        isStartingWhatsApp = true;
         if (statusInterval) clearInterval(statusInterval);
         pollAttempts = 0;
 
@@ -5918,6 +5921,8 @@ function setupBillingAndAffiliate() {
                     </div>
                 `;
             }
+        } finally {
+            setTimeout(() => { isStartingWhatsApp = false; }, 1500);
         }
     }
 
