@@ -957,12 +957,15 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
   const clientOptions = {
     authStrategy,
     takeoverOnConflict: true,
-    takeoverTimeoutMs: 5000,
+    takeoverTimeoutMs: 10000,
+    authTimeoutMs: 120000, // 2 minutes : permet aux bundles WhatsApp Web de se charger sereinement
+    bypassCSP: true,       // Contourne les restrictions CSP bloquant l'injection des modules
     webVersionCache: {
       type: 'none'
     },
     puppeteer: {
       headless: true,
+      protocolTimeout: 120000,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -1211,14 +1214,15 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
   client.on('message_create', handleAnyMessageEvent);
 
   client.initialize().catch(async (err) => {
-    console.error(`[WA] Erreur initialize client ${userId}:`, err.message);
+    const errMsg = (err && typeof err === 'object') ? (err.message || String(err)) : String(err || 'Erreur inconnue');
+    console.error(`[WA] Erreur initialize client ${userId}:`, errMsg);
     waStatuses[userId] = 'ERROR';
-    waErrors[userId] = err.message;
+    waErrors[userId] = errMsg;
     delete waSessionsQR[userId];
     delete waClients[userId];
 
-    if (err.message && (err.message.includes('Singleton') || err.message.includes('locked the profile') || err.message.includes('Code: 21'))) {
-      console.log(`[WA] Verrou résiduel Chromium détecté pour ${userId}. Purge complète du dossier de session...`);
+    if (errMsg && (errMsg.includes('Singleton') || errMsg.includes('locked the profile') || errMsg.includes('Code: 21') || errMsg.includes('auth timeout'))) {
+      console.log(`[WA] Verrou ou incident d'initialisation détecté pour ${userId}. Purge complète du dossier de session...`);
       cleanupChromiumLocks(authDir);
       try {
         if (fs.existsSync(authDir)) fs.rmSync(authDir, { recursive: true, force: true });
