@@ -960,15 +960,23 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
     takeoverTimeoutMs: 10000,
     authTimeoutMs: 120000, // 2 minutes : permet aux bundles WhatsApp Web de se charger sereinement
     bypassCSP: true,       // Contourne les restrictions CSP bloquant l'injection des modules
+    webVersion: '2.3000.1050642531-alpha',
+    webVersionCache: {
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
+      strict: false
+    },
     puppeteer: {
       headless: true,
       protocolTimeout: 120000,
+      defaultViewport: { width: 1280, height: 800 },
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-first-run',
+        '--window-size=1280,800',
         '--js-flags=--max-old-space-size=200'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
@@ -3261,13 +3269,13 @@ const server = app.listen(PORT, '0.0.0.0', () => {
             const userId = entry.replace('session-', '');
             if (!userId || waClients[userId]) continue;
 
-            // Vérifier si l'utilisateur a un compte actif avec numéro WhatsApp
-            let shouldRestore = true;
+            // Restaurer UNIQUEMENT si l'utilisateur a un numéro WhatsApp actif enregistré
+            let shouldRestore = false;
             if (supabase) {
               try {
                 const { data: p } = await supabase.from('profiles').select('whatsapp_number, credits').eq('id', userId).maybeSingle();
-                if (p && p.whatsapp_number === null) {
-                  shouldRestore = false; // Utilisateur explicitement déconnecté
+                if (p && p.whatsapp_number && String(p.whatsapp_number).trim().length >= 8) {
+                  shouldRestore = true;
                 }
               } catch(e) {}
             }
@@ -3278,6 +3286,13 @@ const server = app.listen(PORT, '0.0.0.0', () => {
               createOrGetWhatsAppClient(userId, { autoRestore: true }).catch(err => {
                 console.warn(`[WA/STARTUP] Notice auto-restauration ${userId}:`, err.message);
               });
+            } else {
+              // Nettoyer immédiatement les sessions orphelines pour libérer la RAM et le disque
+              const staleDir = path.join(AUTH_BASE_DIR, entry);
+              try {
+                fs.rmSync(staleDir, { recursive: true, force: true });
+                console.log(`🧹 [WA/STARTUP] Dossier de session orphelin ou inactif purgé : ${entry}`);
+              } catch (e) {}
             }
           }
         }
