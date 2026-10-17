@@ -236,6 +236,11 @@ app.get('/api/diag', (req, res, next) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/admin.html', (req, res) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
 
 // === 1. CONNEXION BDD ===
 let supabase;
@@ -3238,6 +3243,505 @@ app.post('/api/payouts/request', authMiddleware, async (req, res) => {
 
 // Route par dfaut (Frontend)
 
+
+// ============================================================================
+// === 8. TABLEAU DE BORD ADMINISTRATEUR (API réservée au(x) compte(s) ADMIN_EMAILS) ===
+// ============================================================================
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gnitessowedeou@gmail.com')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const adminLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 240, message: 'Trop de requetes admin. Patientez un instant.' });
+
+const adminMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  if (!token) return res.status(401).json({ error: 'Authentification requise.' });
+  if (!supabase) return res.status(500).json({ error: 'Service indisponible.' });
+
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: 'Session invalide ou expirée.' });
+
+    const email = String(user.email || '').toLowerCase();
+    const isAdmin = ADMIN_EMAILS.includes(email) && !!user.email_confirmed_at;
+    if (!isAdmin) {
+      console.warn(`[ADMIN] Accès refusé pour ${email || user.id}`);
+      return res.status(403).json({ error: 'Accès réservé aux administrateurs.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Échec de validation du jeton.' });
+  }
+};
+
+const adminGuard = [adminLimiter, adminMiddleware];
+
+function adminRequireUuid(req, res, next) {
+  if (!UUID_RE.test(String(req.params.userId || ''))) {
+    return res.status(400).json({ error: 'Identifiant utilisateur invalide.' });
+  }
+  next();
+}
+
+async function adminLoadAuthUsers() {
+  const all = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const users = (data && data.users) || [];
+    all.push(...users);
+    if (users.length < 1000) break;
+  }
+  return all;
+}
+
+function adminComputePlan(authUser, profile) {
+  const appMeta = (authUser && authUser.app_metadata) || {};
+  const rawPlan = appMeta.plan || (profile && profile.plan);
+  const paidPlan = (rawPlan && !['trial', 'free', 'expired'].includes(rawPlan)) ? rawPlan : null;
+  const rawStatus = appMeta.plan_status || (profile && profile.plan_status) || 'active';
+  const createdAt = (authUser && authUser.created_at) || (profile && profile.created_at) || new Date().toISOString();
+  const now = Date.now();
+
+  if (paidPlan && rawStatus === 'active') {
+    const activated = appMeta.plan_activated_at || (profile && profile.plan_activated_at) || createdAt;
+    const cycle = parseCycleDuration(appMeta.plan_cycle || (profile && profile.plan_cycle) || 'monthly');
+    const expiresAt = appMeta.plan_expires_at || (profile && profile.plan_expires_at) || new Date(new Date(activated).getTime() + cycle.ms).toISOString();
+    const msLeft = new Date(expiresAt).getTime() - now;
+    return {
+      plan: msLeft <= 0 ? 'expired' : paidPlan,
+      isPaid: true,
+      isExpired: msLeft <= 0,
+      expiresAt,
+      daysLeft: Math.max(0, Math.ceil(msLeft / 86400000))
+    };
+  }
+
+  const expiresAt = new Date(new Date(createdAt).getTime() + 7 * 86400000).toISOString();
+  const msLeft = new Date(expiresAt).getTime() - now;
+  return {
+    plan: msLeft <= 0 ? 'expired' : 'trial',
+    isPaid: false,
+    isExpired: msLeft <= 0,
+    expiresAt,
+    daysLeft: Math.max(0, Math.ceil(msLeft / 86400000))
+  };
+}
+
+function adminDiskSessionIds() {
+  try {
+    if (!fs.existsSync(AUTH_BASE_DIR)) return [];
+    return fs.readdirSync(AUTH_BASE_DIR)
+      .filter(e => e.startsWith('session-'))
+      .map(e => e.replace('session-', ''))
+      .filter(Boolean);
+  } catch (e) { return []; }
+}
+
+function adminBuildSessionRow(userId, userInfo) {
+  const client = waClients[userId];
+  const dir = getSessionDir(userId);
+  const hasDir = fs.existsSync(dir);
+  let dirModified = null;
+  if (hasDir) { try { dirModified = fs.statSync(dir).mtime.toISOString(); } catch (e) {} }
+
+  let pageAlive = false;
+  let browserPid = null;
+  try { pageAlive = !!(client && client.pupPage && !client.pupPage.isClosed()); } catch (e) {}
+  try { browserPid = client && client.pupBrowser && client.pupBrowser.process() ? client.pupBrowser.process().pid : null; } catch (e) {}
+
+  const status = waStatuses[userId] || (hasDir ? 'ON_DISK' : 'DISCONNECTED');
+  return {
+    userId,
+    email: (userInfo && userInfo.email) || null,
+    name: (userInfo && userInfo.name) || null,
+    profilePhone: (userInfo && userInfo.whatsapp_number) || null,
+    status,
+    phone: waNumbers[userId] ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
+    hasClient: !!client,
+    pageAlive,
+    browserPid,
+    hasQR: !!waSessionsQR[userId],
+    hasPairingCode: !!waPairingCodes[userId],
+    error: waErrors[userId] || null,
+    hasSessionDir: hasDir,
+    dirModified
+  };
+}
+
+async function adminTeardownSession(userId, { wipe = false } = {}) {
+  const client = waClients[userId];
+  if (client) {
+    try {
+      await Promise.race([
+        client.destroy(),
+        new Promise(resolve => setTimeout(resolve, 8000))
+      ]);
+    } catch (e) {}
+    delete waClients[userId];
+  }
+  if (waHeartbeats[userId]) {
+    clearInterval(waHeartbeats[userId]);
+    delete waHeartbeats[userId];
+  }
+  delete waSessionsQR[userId];
+  delete waPairingCodes[userId];
+  delete waErrors[userId];
+  waStatuses[userId] = 'DISCONNECTED';
+
+  if (wipe) {
+    delete waNumbers[userId];
+    const dir = getSessionDir(userId);
+    try { if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+    if (supabase) {
+      try { await supabase.from('profiles').update({ whatsapp_number: null }).eq('id', userId); } catch (e) {}
+    }
+  }
+}
+
+app.get('/api/admin/me', adminGuard, (req, res) => {
+  res.json({ success: true, email: req.user.email, id: req.user.id });
+});
+
+app.get('/api/admin/overview', adminGuard, async (req, res) => {
+  try {
+    const [authUsers, profilesRes] = await Promise.all([
+      adminLoadAuthUsers(),
+      supabase.from('profiles').select('*')
+    ]);
+    const profiles = new Map(((profilesRes && profilesRes.data) || []).map(p => [p.id, p]));
+
+    let paid = 0, trial = 0, expired = 0, totalCredits = 0, banned = 0;
+    const now = Date.now();
+    let newLast7 = 0;
+    for (const u of authUsers) {
+      const p = profiles.get(u.id);
+      const info = adminComputePlan(u, p);
+      if (info.isPaid && !info.isExpired) paid++;
+      else if (info.plan === 'trial') trial++;
+      else expired++;
+      totalCredits += (p && typeof p.credits === 'number') ? p.credits : 0;
+      if (u.banned_until && new Date(u.banned_until).getTime() > now) banned++;
+      if (u.created_at && now - new Date(u.created_at).getTime() < 7 * 86400000) newLast7++;
+    }
+
+    const ids = new Set([...Object.keys(waClients), ...Object.keys(waStatuses), ...adminDiskSessionIds()]);
+    const counts = { connected: 0, qrReady: 0, starting: 0, error: 0, onDisk: 0, disconnected: 0, chromium: Object.keys(waClients).length };
+    for (const id of ids) {
+      const st = waStatuses[id] || (fs.existsSync(getSessionDir(id)) ? 'ON_DISK' : 'DISCONNECTED');
+      if (st === 'CONNECTED') counts.connected++;
+      else if (st === 'QR_READY' || st === 'CODE_READY') counts.qrReady++;
+      else if (st === 'STARTING' || st === 'RECONNECTING' || st === 'AUTHENTICATED') counts.starting++;
+      else if (st === 'ERROR') counts.error++;
+      else if (st === 'ON_DISK') counts.onDisk++;
+      else counts.disconnected++;
+    }
+
+    let pendingPayouts = 0, pendingPayoutsAmount = 0;
+    try {
+      const { data: po } = await supabase.from('payouts').select('amount, status').eq('status', 'PENDING');
+      pendingPayouts = (po || []).length;
+      pendingPayoutsAmount = (po || []).reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    } catch (e) {}
+
+    const mem = process.memoryUsage();
+    res.json({
+      success: true,
+      users: { total: authUsers.length, paid, trial, expired, banned, newLast7 },
+      credits: { total: totalCredits },
+      sessions: counts,
+      payouts: { pending: pendingPayouts, pendingAmount: pendingPayoutsAmount },
+      server: {
+        uptimeSeconds: Math.floor(process.uptime()),
+        rssMb: Math.round(mem.rss / 1048576),
+        heapUsedMb: Math.round(mem.heapUsed / 1048576),
+        node: process.version
+      },
+      serverTime: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[ADMIN] overview:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/users', adminGuard, async (req, res) => {
+  try {
+    const [authUsers, profilesRes] = await Promise.all([
+      adminLoadAuthUsers(),
+      supabase.from('profiles').select('*')
+    ]);
+    const profiles = new Map(((profilesRes && profilesRes.data) || []).map(p => [p.id, p]));
+    const now = Date.now();
+
+    const users = authUsers.map(u => {
+      const p = profiles.get(u.id) || {};
+      const meta = u.user_metadata || {};
+      const planInfo = adminComputePlan(u, p);
+      const name = `${p.first_name || meta.first_name || ''} ${p.last_name || meta.last_name || ''}`.trim() || meta.full_name || meta.name || null;
+      return {
+        id: u.id,
+        email: u.email,
+        name,
+        createdAt: u.created_at,
+        lastSignInAt: u.last_sign_in_at || null,
+        emailConfirmed: !!u.email_confirmed_at,
+        banned: !!(u.banned_until && new Date(u.banned_until).getTime() > now),
+        provider: (u.app_metadata && u.app_metadata.provider) || null,
+        plan: planInfo.plan,
+        isPaid: planInfo.isPaid,
+        expiresAt: planInfo.expiresAt,
+        daysLeft: planInfo.daysLeft,
+        credits: typeof p.credits === 'number' ? p.credits : null,
+        whatsappNumber: p.whatsapp_number || null,
+        company: p.company || null,
+        affiliateCode: p.affiliate_code || null,
+        affiliateBalance: Number(p.affiliate_balance) || 0,
+        referredBy: p.referred_by || null,
+        wa: adminBuildSessionRow(u.id, { email: u.email, name, whatsapp_number: p.whatsapp_number })
+      };
+    });
+
+    users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json({ success: true, count: users.length, users });
+  } catch (err) {
+    console.error('[ADMIN] users:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/sessions', adminGuard, async (req, res) => {
+  try {
+    const [authUsers, profilesRes] = await Promise.all([
+      adminLoadAuthUsers(),
+      supabase.from('profiles').select('id, first_name, last_name, whatsapp_number')
+    ]);
+    const profiles = new Map(((profilesRes && profilesRes.data) || []).map(p => [p.id, p]));
+    const infoById = new Map();
+    for (const u of authUsers) {
+      const p = profiles.get(u.id) || {};
+      const meta = u.user_metadata || {};
+      const name = `${p.first_name || meta.first_name || ''} ${p.last_name || meta.last_name || ''}`.trim() || meta.full_name || null;
+      infoById.set(u.id, { email: u.email, name, whatsapp_number: p.whatsapp_number });
+    }
+
+    const ids = new Set([...Object.keys(waClients), ...Object.keys(waStatuses), ...adminDiskSessionIds()]);
+    const sessions = [...ids].map(id => adminBuildSessionRow(id, infoById.get(id)));
+    const rank = { CONNECTED: 0, QR_READY: 1, CODE_READY: 1, STARTING: 2, RECONNECTING: 2, AUTHENTICATED: 2, ERROR: 3, ON_DISK: 4, DISCONNECTED: 5 };
+    sessions.sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9));
+
+    res.json({ success: true, count: sessions.length, sessions });
+  } catch (err) {
+    console.error('[ADMIN] sessions:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Arrêter Chromium (libère la RAM) sans supprimer la liaison WhatsApp du disque
+app.post('/api/admin/sessions/:userId/stop', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    await adminTeardownSession(req.params.userId, { wipe: false });
+    console.log(`[ADMIN] ${req.user.email} a arrêté la session ${req.params.userId}`);
+    res.json({ success: true, message: 'Session arrêtée (liaison conservée sur le disque).' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Redémarrer à partir de la liaison existante (reconnexion sans nouveau QR)
+app.post('/api/admin/sessions/:userId/restart', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    await adminTeardownSession(userId, { wipe: false });
+    await createOrGetWhatsAppClient(userId, { autoRestore: true });
+    console.log(`[ADMIN] ${req.user.email} a redémarré la session ${userId}`);
+    res.json({ success: true, message: 'Redémarrage lancé.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Réinitialisation totale : supprime la liaison, l'utilisateur devra rescanner un QR
+app.post('/api/admin/sessions/:userId/reset', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    await adminTeardownSession(req.params.userId, { wipe: true });
+    console.log(`[ADMIN] ${req.user.email} a réinitialisé la session ${req.params.userId}`);
+    res.json({ success: true, message: 'Session réinitialisée et supprimée.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Purge des dossiers de session orphelins (utilisateur sans numéro lié et sans client actif)
+app.post('/api/admin/sessions/purge-orphans', adminGuard, async (req, res) => {
+  try {
+    const { data: profs } = await supabase.from('profiles').select('id, whatsapp_number');
+    const linked = new Set((profs || [])
+      .filter(p => p.whatsapp_number && String(p.whatsapp_number).trim().length >= 8)
+      .map(p => p.id));
+
+    const purged = [];
+    for (const id of adminDiskSessionIds()) {
+      if (waClients[id] || linked.has(id)) continue;
+      if (!UUID_RE.test(id)) continue;
+      try {
+        fs.rmSync(getSessionDir(id), { recursive: true, force: true });
+        delete waStatuses[id];
+        purged.push(id);
+      } catch (e) {}
+    }
+    console.log(`[ADMIN] ${req.user.email} a purgé ${purged.length} session(s) orpheline(s)`);
+    res.json({ success: true, purged: purged.length, ids: purged });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/users/:userId/credits', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    const { mode, amount } = req.body || {};
+    const value = Number(amount);
+    if (!Number.isFinite(value) || !['add', 'set'].includes(mode)) {
+      return res.status(400).json({ error: 'Paramètres invalides (mode: add|set, amount: nombre).' });
+    }
+    const { data: p, error: pErr } = await supabase.from('profiles').select('credits').eq('id', req.params.userId).maybeSingle();
+    if (pErr || !p) return res.status(404).json({ error: 'Profil introuvable.' });
+
+    const current = typeof p.credits === 'number' ? p.credits : 0;
+    const next = Math.max(0, Math.round(mode === 'add' ? current + value : value));
+    const { error } = await supabase.from('profiles').update({ credits: next }).eq('id', req.params.userId);
+    if (error) return res.status(500).json({ error: error.message });
+
+    console.log(`[ADMIN] ${req.user.email} crédits ${req.params.userId}: ${current} -> ${next}`);
+    res.json({ success: true, credits: next });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/users/:userId/plan', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { plan, days } = req.body || {};
+    const allowed = ['basic', 'pro', 'business', 'free'];
+    if (!allowed.includes(plan)) return res.status(400).json({ error: 'Plan invalide (basic, pro, business, free).' });
+
+    const { data: uData, error: uErr } = await supabase.auth.admin.getUserById(userId);
+    if (uErr || !uData || !uData.user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    const existingMeta = uData.user.app_metadata || {};
+
+    let updates;
+    if (plan === 'free') {
+      updates = { plan: 'free', plan_status: 'expired', plan_expires_at: new Date().toISOString() };
+    } else {
+      const nDays = Math.min(3650, Math.max(1, parseInt(days, 10) || 30));
+      const activatedAt = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + nDays * 86400000).toISOString();
+      updates = {
+        plan,
+        plan_status: 'active',
+        plan_cycle: 'monthly',
+        plan_activated_at: activatedAt,
+        plan_expires_at: expiresAt
+      };
+    }
+
+    const { error: mErr } = await supabase.auth.admin.updateUserById(userId, {
+      app_metadata: { ...existingMeta, ...updates }
+    });
+    if (mErr) return res.status(500).json({ error: mErr.message });
+
+    try { await supabase.from('profiles').update(updates).eq('id', userId); } catch (e) {}
+
+    console.log(`[ADMIN] ${req.user.email} plan ${userId} -> ${plan}`);
+    res.json({ success: true, plan, expiresAt: updates.plan_expires_at });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/users/:userId/ban', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const banned = !!(req.body && req.body.banned);
+    if (userId === req.user.id) return res.status(400).json({ error: 'Vous ne pouvez pas suspendre votre propre compte.' });
+
+    const { error } = await supabase.auth.admin.updateUserById(userId, { ban_duration: banned ? '876000h' : 'none' });
+    if (error) return res.status(500).json({ error: error.message });
+
+    if (banned) await adminTeardownSession(userId, { wipe: false });
+    console.log(`[ADMIN] ${req.user.email} ${banned ? 'suspend' : 'réactive'} ${userId}`);
+    res.json({ success: true, banned });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/payouts', adminGuard, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('payouts').select('*').order('created_at', { ascending: false }).limit(200);
+    if (error) return res.json({ success: true, payouts: [], note: error.message });
+
+    const authUsers = await adminLoadAuthUsers();
+    const emailById = new Map(authUsers.map(u => [u.id, u.email]));
+    res.json({
+      success: true,
+      payouts: (data || []).map(r => ({ ...r, email: emailById.get(r.user_id) || null }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/payouts/:id/status', adminGuard, async (req, res) => {
+  try {
+    const { status } = req.body || {};
+    if (!['PAID', 'REJECTED'].includes(status)) return res.status(400).json({ error: 'Statut invalide (PAID | REJECTED).' });
+
+    const { data: row, error } = await supabase.from('payouts').select('*').eq('id', req.params.id).maybeSingle();
+    if (error || !row) return res.status(404).json({ error: 'Demande introuvable.' });
+    if (row.status !== 'PENDING') return res.status(409).json({ error: 'Cette demande a déjà été traitée.' });
+
+    const { error: upErr } = await supabase.from('payouts').update({ status }).eq('id', row.id).eq('status', 'PENDING');
+    if (upErr) return res.status(500).json({ error: upErr.message });
+
+    // Remboursement du solde d'affiliation en cas de rejet
+    if (status === 'REJECTED') {
+      const { data: prof } = await supabase.from('profiles').select('affiliate_balance').eq('id', row.user_id).maybeSingle();
+      const bal = Number(prof && prof.affiliate_balance) || 0;
+      await supabase.from('profiles').update({ affiliate_balance: bal + (Number(row.amount) || 0) }).eq('id', row.user_id);
+    }
+
+    console.log(`[ADMIN] ${req.user.email} retrait ${row.id} -> ${status}`);
+    res.json({ success: true, status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/commissions', adminGuard, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('commissions').select('*').order('created_at', { ascending: false }).limit(200);
+    if (error) return res.json({ success: true, commissions: [], note: error.message });
+
+    const authUsers = await adminLoadAuthUsers();
+    const emailById = new Map(authUsers.map(u => [u.id, u.email]));
+    res.json({
+      success: true,
+      commissions: (data || []).map(r => ({
+        ...r,
+        referrerEmail: emailById.get(r.referrer_id) || null,
+        referredEmail: emailById.get(r.referred_user_id) || null
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api')) return res.sendFile(path.join(__dirname, 'index.html'));

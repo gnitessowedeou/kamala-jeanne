@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Administration — VANDIAS AI</title>
+  <meta name="description" content="Console d'administration privée VANDIAS AI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060a13;
+      --bg-2: #0b1220;
+      --panel: rgba(255,255,255,.035);
+      --panel-2: rgba(255,255,255,.06);
+      --border: rgba(255,255,255,.08);
+      --text: #e8edf6;
+      --muted: #8a97ad;
+      --green: #25d366;
+      --green-soft: rgba(37,211,102,.14);
+      --blue: #4aa8ff;
+      --amber: #f5b53d;
+      --red: #ff5d73;
+      --violet: #9b7bff;
+      --radius: 14px;
+      --font: 'Inter', system-ui, sans-serif;
+      --font-h: 'Outfit', 'Inter', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font); color: var(--text); background: var(--bg);
+      background-image:
+        radial-gradient(900px 500px at 85% -10%, rgba(37,211,102,.10), transparent 60%),
+        radial-gradient(700px 500px at -10% 110%, rgba(155,123,255,.09), transparent 60%);
+      background-attachment: fixed;
+      font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    input, select { font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /* ---------- Login ---------- */
+    #login-screen { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-card {
+      width: 100%; max-width: 410px; padding: 34px 30px; border-radius: 20px;
+      background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+      border: 1px solid var(--border); backdrop-filter: blur(18px);
+      box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(37,211,102,.05) inset;
+      animation: rise .5s ease both;
+    }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; }
+    .brand-logo {
+      width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--green), #129b4d); color: #04210f; font: 800 20px var(--font-h);
+      box-shadow: 0 8px 24px rgba(37,211,102,.35);
+    }
+    .brand-name { font: 700 19px var(--font-h); letter-spacing: .2px; }
+    .brand-name small { display: block; font: 500 11px var(--font); color: var(--muted); letter-spacing: 1.4px; text-transform: uppercase; }
+    .login-card h1 { font: 700 24px var(--font-h); margin-bottom: 6px; }
+    .login-card p.sub { color: var(--muted); margin-bottom: 22px; font-size: 13.5px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .input {
+      width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--border);
+      background: rgba(0,0,0,.28); color: var(--text); font-size: 14px; outline: none; transition: .2s;
+    }
+    .input:focus { border-color: rgba(37,211,102,.6); box-shadow: 0 0 0 3px rgba(37,211,102,.14); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 9px 15px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--panel-2); color: var(--text); font-weight: 600; font-size: 13px; transition: .18s;
+    }
+    .btn:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn.primary { background: linear-gradient(135deg, var(--green), #17a850); color: #04210f; border-color: transparent; box-shadow: 0 8px 22px rgba(37,211,102,.25); }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .btn.danger { background: rgba(255,93,115,.12); color: #ff8da0; border-color: rgba(255,93,115,.3); }
+    .btn.danger:hover { background: rgba(255,93,115,.22); }
+    .btn.warn { background: rgba(245,181,61,.12); color: #ffd27a; border-color: rgba(245,181,61,.3); }
+    .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+    .btn.block { width: 100%; padding: 12px; }
+    .form-error { color: #ff8da0; font-size: 12.5px; margin: 4px 0 12px; min-height: 18px; }
+
+    /* ---------- Shell ---------- */
+    #app { display: flex; min-height: 100vh; }
+    aside {
+      width: 244px; flex-shrink: 0; padding: 22px 14px; border-right: 1px solid var(--border);
+      background: rgba(6,10,19,.7); backdrop-filter: blur(14px); position: sticky; top: 0; height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    aside .brand { padding: 0 8px; }
+    nav { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; border: 0;
+      background: transparent; color: var(--muted); font-weight: 500; font-size: 13.5px; text-align: left; transition: .18s; white-space: nowrap;
+    }
+    .nav-item:hover { background: var(--panel); color: var(--text); }
+    .nav-item.active { background: var(--green-soft); color: var(--green); box-shadow: inset 3px 0 0 var(--green); }
+    .nav-item .ico { width: 18px; text-align: center; font-size: 15px; }
+    .nav-item .count { margin-left: auto; font-size: 11px; background: var(--panel-2); padding: 1px 7px; border-radius: 99px; color: var(--muted); }
+    .nav-item .count.alert { background: rgba(245,181,61,.18); color: var(--amber); }
+    .aside-foot { margin-top: auto; padding: 12px 8px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+    .aside-foot b { display: block; color: var(--text); font-weight: 600; word-break: break-all; margin-bottom: 8px; font-size: 12.5px; }
+
+    main { flex: 1; min-width: 0; padding: 26px 30px 60px; }
+    .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+    .topbar h2 { font: 700 26px var(--font-h); }
+    .topbar .spacer { flex: 1; }
+    .live { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(37,211,102,.6); animation: pulse 2s infinite; }
+    .dot.off { background: #55607a; animation: none; }
+    @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(37,211,102,0); } 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); } }
+
+    .grid { display: grid; gap: 14px; }
+    .grid.stats { grid-template-columns: repeat(3, 1fr); margin-bottom: 18px; }
+    @media (max-width: 1100px) { .grid.stats { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .grid.stats { grid-template-columns: 1fr; } }
+    .grid.two { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px; backdrop-filter: blur(10px); transition: border-color .2s, transform .2s;
+    }
+    .stat:hover { border-color: rgba(37,211,102,.35); transform: translateY(-2px); }
+    .stat .label { color: var(--muted); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .8px; }
+    .stat .value { font: 700 30px var(--font-h); margin-top: 6px; }
+    .stat .hint { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .card h3 { font: 600 15px var(--font-h); margin-bottom: 14px; }
+    .bar { height: 9px; border-radius: 99px; background: rgba(255,255,255,.07); overflow: hidden; }
+    .bar > i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--green), #8be8b0); transition: width .6s ease; }
+    .bar > i.mid { background: linear-gradient(90deg, var(--amber), #ffe19b); }
+    .bar > i.high { background: linear-gradient(90deg, var(--red), #ff9cab); }
+    .kv { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+    .kv:last-child { border-bottom: 0; }
+    .kv span:first-child { color: var(--muted); }
+
+    /* ---------- Tables ---------- */
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .toolbar .input { max-width: 320px; }
+    .toolbar select.input { max-width: 190px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; background: rgba(255,255,255,.02); }
+    td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; }
+    tbody tr { transition: background .15s; }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .u-name { font-weight: 600; }
+    .u-mail { color: var(--muted); font-size: 12px; word-break: break-all; }
+    .mono { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    .muted { color: var(--muted); }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .empty { text-align: center; padding: 44px 10px; color: var(--muted); }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .b-green { color: var(--green); background: var(--green-soft); border-color: rgba(37,211,102,.25); }
+    .b-blue { color: var(--blue); background: rgba(74,168,255,.12); border-color: rgba(74,168,255,.25); }
+    .b-amber { color: var(--amber); background: rgba(245,181,61,.12); border-color: rgba(245,181,61,.25); }
+    .b-red { color: var(--red); background: rgba(255,93,115,.12); border-color: rgba(255,93,115,.25); }
+    .b-violet { color: var(--violet); background: rgba(155,123,255,.12); border-color: rgba(155,123,255,.25); }
+    .b-gray { color: #9aa6bd; background: rgba(255,255,255,.06); border-color: var(--border); }
+
+    /* ---------- Modal / toast ---------- */
+    .overlay { position: fixed; inset: 0; background: rgba(2,5,12,.72); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; animation: fade .18s ease; }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    .modal { width: 100%; max-width: 620px; max-height: 92vh; overflow-y: auto; background: var(--bg-2); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: 0 40px 100px rgba(0,0,0,.6); animation: rise .25s ease both; }
+    .modal.small { max-width: 430px; }
+    .modal h3 { font: 700 19px var(--font-h); margin-bottom: 4px; }
+    .modal .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; word-break: break-all; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+    .section { padding: 14px 0; border-top: 1px solid var(--border); }
+    .section h4 { font: 600 13px var(--font-h); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row .input { max-width: 150px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
+    .info-grid div { font-size: 13px; }
+    .info-grid div > span:first-child { display: block; color: var(--muted); font-size: 11.5px; }
+    #toasts { position: fixed; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 9px; z-index: 99; }
+    .toast { padding: 11px 16px; border-radius: 11px; background: #101a2e; border: 1px solid var(--border); font-size: 13px; box-shadow: 0 14px 40px rgba(0,0,0,.5); animation: rise .25s ease both; max-width: 340px; }
+    .toast.ok { border-left: 3px solid var(--green); }
+    .toast.err { border-left: 3px solid var(--red); }
+    .spinner { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--green); animation: spin .7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading { padding: 50px; text-align: center; color: var(--muted); }
+
+    @media (max-width: 860px) {
+      #app { flex-direction: column; }
+      aside { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; overflow-x: auto; padding: 10px; gap: 6px; }
+      aside .brand, .aside-foot { display: none; }
+      nav { flex-direction: row; margin: 0; }
+      .nav-item { white-space: nowrap; }
+      main { padding: 18px 14px 50px; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Connexion ===== -->
+  <section id="login-screen" class="hidden">
+    <form class="login-card" id="login-form" autocomplete="on">
+      <div class="brand">
+        <div class="brand-logo">V</div>
+        <div class="brand-name">VANDIAS AI<small>Console Admin</small></div>
+      </div>
+      <h1>Accès administrateur</h1>
+      <p class="sub">Connectez-vous avec votre compte administrateur pour piloter la plateforme.</p>
+      <div class="field">
+        <label for="login-email">Adresse e-mail</label>
+        <input class="input" id="login-email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Mot de passe</label>
+        <input class="input" id="login-password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="form-error" id="login-error"></div>
+      <button class="btn primary block" id="login-btn" type="submit">Se connecter</button>
+    </form>
+  </section>
+
+  <!-- ===== Application ===== -->
+  <div id="app" class="hidden">
+    <aside>
+      <div class="brand">
+        <div class="brand-logo">V</div>
+        <div class="brand-name">VANDIAS AI<small>Console Admin</small></div>
+      </div>
+      <nav id="nav">
+        <button class="nav-item active" data-view="overview"><span class="ico">◧</span>Vue d'ensemble</button>
+        <button class="nav-item" data-view="users"><span class="ico">👥</span>Utilisateurs<span class="count" id="c-users">–</span></button>
+        <button class="nav-item" data-view="sessions"><span class="ico">📱</span>Sessions WhatsApp<span class="count" id="c-sessions">–</span></button>
+        <button class="nav-item" data-view="payouts"><span class="ico">💸</span>Retraits<span class="count" id="c-payouts">–</span></button>
+        <button class="nav-item" data-view="commissions"><span class="ico">🤝</span>Commissions</button>
+      </nav>
+      <div class="aside-foot">
+        <b id="admin-email">—</b>
+        <button class="btn sm" id="logout-btn">Se déconnecter</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <h2 id="view-title">Vue d'ensemble</h2>
+        <div class="spacer"></div>
+        <span class="live"><span class="dot" id="live-dot"></span><span id="live-label">Actualisation auto</span></span>
+        <button class="btn sm" id="auto-btn">Pause</button>
+        <button class="btn sm primary" id="refresh-btn">↻ Actualiser</button>
+      </div>
+      <div id="content"><div class="loading"><span class="spinner"></span> Chargement…</div></div>
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toasts"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= Configuration ================= */
+  var SUPABASE_URL = 'https://rcnaebfqtkwwmqdbgkpq.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_76HCqO2mjcqMQIOo0Yx9Bg_dUJmCixv'; // clé publique (côté navigateur)
+  var RAM_LIMIT_MB = 512;
+
+  function resolveApi() {
+    try {
+      var custom = localStorage.getItem('vandia_api_url') || localStorage.getItem('vandia_backend_url');
+      if (custom) return custom.replace(/\/$/, '');
+    } catch (e) {}
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || /railway\.app$/.test(h)) return location.origin;
+    return 'https://kamala-jeanne-production.up.railway.app';
+  }
+  var API = resolveApi();
+
+  /* ================= État ================= */
+  var S = {
+    token: null, refresh: null, email: '', view: 'overview', auto: true, timer: null, busy: false,
+    overview: null, users: [], sessions: [], payouts: [], commissions: [],
+    q: '', planFilter: 'all', sessFilter: 'all'
+  };
+
+  /* ================= Utilitaires ================= */
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    var x = new Date(d); if (isNaN(x)) return '—';
+    return x.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+           x.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+  function ago(d) {
+    if (!d) return '—';
+    var s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (isNaN(s)) return '—';
+    if (s < 60) return 'à l\'instant';
+    if (s < 3600) return 'il y a ' + Math.floor(s / 60) + ' min';
+    if (s < 86400) return 'il y a ' + Math.floor(s / 3600) + ' h';
+    return 'il y a ' + Math.floor(s / 86400) + ' j';
+  }
+  function fmtUptime(sec) {
+    var d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+    return (d ? d + ' j ' : '') + h + ' h ' + m + ' min';
+  }
+  function num(n) { return Number(n || 0).toLocaleString('fr-FR'); }
+
+  function toast(msg, type) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + (type === 'err' ? 'err' : 'ok');
+    el.textContent = msg;
+    $('#toasts').appendChild(el);
+    setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, 3600);
+    setTimeout(function () { el.remove(); }, 4000);
+  }
+
+  var STATUS = {
+    CONNECTED: ['Connecté', 'b-green'], QR_READY: ['QR prêt', 'b-blue'], CODE_READY: ['Code prêt', 'b-blue'],
+    STARTING: ['Démarrage', 'b-amber'], RECONNECTING: ['Reconnexion', 'b-amber'], AUTHENTICATED: ['Synchronisation', 'b-amber'],
+    ERROR: ['Erreur', 'b-red'], ON_DISK: ['Sur disque (inactive)', 'b-gray'], DISCONNECTED: ['Déconnecté', 'b-gray']
+  };
+  function statusBadge(st) {
+    var m = STATUS[st] || [st || '—', 'b-gray'];
+    return '<span class="badge ' + m[1] + '">' + esc(m[0]) + '</span>';
+  }
+  var PLAN = { trial: ['Essai', 'b-blue'], basic: ['Basic', 'b-violet'], pro: ['Pro', 'b-green'], business: ['Business', 'b-amber'], expired: ['Expiré', 'b-red'], free: ['Gratuit', 'b-gray'] };
+  function planBadge(p) {
+    var m = PLAN[p] || [p || '—', 'b-gray'];
+    return '<span class="badge ' + m[1] + '">' + esc(m[0]) + '</span>';
+  }
+
+  /* ================= Authentification ================= */
+  function saveTokens(access, refresh) {
+    S.token = access; S.refresh = refresh || S.refresh;
+    try {
+      sessionStorage.setItem('vandia_admin_token', access || '');
+      if (refresh) sessionStorage.setItem('vandia_admin_refresh', refresh);
+    } catch (e) {}
+  }
+  function clearTokens() {
+    S.token = null; S.refresh = null;
+    try { sessionStorage.removeItem('vandia_admin_token'); sessionStorage.removeItem('vandia_admin_refresh'); } catch (e) {}
+  }
+  function candidateTokens() {
+    var list = [];
+    try {
+      list.push(sessionStorage.getItem('vandia_admin_token'));
+      list.push(localStorage.getItem('vendia_supabase_token'));
+      list.push(localStorage.getItem('vandia_access_token'));
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('sb-') === 0 && /-auth-token$/.test(k)) {
+          try { var p = JSON.parse(localStorage.getItem(k) || '{}'); if (p && p.access_token) list.push(p.access_token); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+    return list.filter(function (t, i) { return t && list.indexOf(t) === i; });
+  }
+  async function supaAuth(grant, body) {
+    var r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=' + grant, {
+      method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(j.error_description || j.msg || j.message || 'Identifiants invalides');
+    return j;
+  }
+  async function tryRefresh() {
+    var rt = S.refresh || (function () { try { return sessionStorage.getItem('vandia_admin_refresh'); } catch (e) { return null; } })();
+    if (!rt) return false;
+    try {
+      var j = await supaAuth('refresh_token', { refresh_token: rt });
+      saveTokens(j.access_token, j.refresh_token);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ================= Appels API ================= */
+  async function api(path, opts, retried) {
+    opts = opts || {};
+    var res = await fetch(API + path, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S.token },
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    if (res.status === 401 && !retried) {
+      if (await tryRefresh()) return api(path, opts, true);
+      showLogin('Session expirée, reconnectez-vous.');
+      throw new Error('Session expirée');
+    }
+    var data = await res.json().catch(function () { return {}; });
+    if (res.status === 403) {
+      clearTokens();
+      showLogin('Ce compte n\'a pas les droits administrateur.');
+      throw new Error('Accès refusé');
+    }
+    if (!res.ok) throw new Error(data.error || ('Erreur ' + res.status));
+    return data;
+  }
+
+  /* ================= Écrans ================= */
+  function showLogin(msg) {
+    stopTimer();
+    $('#app').classList.add('hidden');
+    $('#login-screen').classList.remove('hidden');
+    $('#login-error').textContent = msg || '';
+  }
+  function showApp() {
+    $('#login-screen').classList.add('hidden');
+    $('#app').classList.remove('hidden');
+    $('#admin-email').textContent = S.email || '—';
+    startTimer();
+    loadView(true);
+  }
+
+  async function boot() {
+    var cands = candidateTokens();
+    for (var i = 0; i < cands.length; i++) {
+      S.token = cands[i];
+      try {
+        var r = await fetch(API + '/api/admin/me', { headers: { Authorization: 'Bearer ' + S.token } });
+        if (r.ok) {
+          var j = await r.json();
+          S.email = j.email;
+          try { sessionStorage.setItem('vandia_admin_token', S.token); } catch (e) {}
+          return showApp();
+        }
+      } catch (e) {}
+    }
+    S.token = null;
+    showLogin('');
+  }
+
+  $('#login-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = $('#login-btn'); btn.disabled = true; btn.textContent = 'Connexion…';
+    $('#login-error').textContent = '';
+    try {
+      var j = await supaAuth('password', { email: $('#login-email').value.trim(), password: $('#login-password').value });
+      saveTokens(j.access_token, j.refresh_token);
+      var r = await fetch(API + '/api/admin/me', { headers: { Authorization: 'Bearer ' + S.token } });
+      if (r.status === 403) { clearTokens(); throw new Error('Ce compte n\'a pas les droits administrateur.'); }
+      if (!r.ok) throw new Error('Serveur injoignable (' + r.status + ').');
+      var me = await r.json();
+      S.email = me.email;
+      $('#login-password').value = '';
+      showApp();
+    } catch (err) {
+      $('#login-error').textContent = err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Se connecter';
+    }
+  });
+
+  $('#logout-btn').addEventListener('click', function () {
+    clearTokens(); S.email = '';
+    showLogin('Vous êtes déconnecté.');
+  });
+
+  /* ================= Navigation & rafraîchissement ================= */
+  var TITLES = { overview: 'Vue d\'ensemble', users: 'Utilisateurs', sessions: 'Sessions WhatsApp', payouts: 'Demandes de retrait', commissions: 'Commissions d\'affiliation' };
+
+  $('#nav').addEventListener('click', function (e) {
+    var b = e.target.closest('.nav-item'); if (!b) return;
+    S.view = b.getAttribute('data-view');
+    document.querySelectorAll('.nav-item').forEach(function (n) { n.classList.toggle('active', n === b); });
+    $('#view-title').textContent = TITLES[S.view];
+    loadView(true);
+  });
+  $('#refresh-btn').addEventListener('click', function () { loadView(true); });
+  $('#auto-btn').addEventListener('click', function () {
+    S.auto = !S.auto;
+    this.textContent = S.auto ? 'Pause' : 'Reprendre';
+    $('#live-dot').classList.toggle('off', !S.auto);
+    $('#live-label').textContent = S.auto ? 'Actualisation auto' : 'En pause';
+  });
+  function startTimer() {
+    stopTimer();
+    S.timer = setInterval(function () { if (S.auto && !document.hidden && !document.querySelector('.overlay')) loadView(false); }, 20000);
+  }
+  function stopTimer() { if (S.timer) { clearInterval(S.timer); S.timer = null; } }
+
+  async function loadView(showSpinner) {
+    if (S.busy) return;
+    S.busy = true;
+    var content = $('#content');
+    if (showSpinner) content.innerHTML = '<div class="loading"><span class="spinner"></span> Chargement…</div>';
+    try {
+      if (S.view === 'overview') {
+        S.overview = await api('/api/admin/overview');
+      } else if (S.view === 'users') {
+        S.users = (await api('/api/admin/users')).users;
+      } else if (S.view === 'sessions') {
+        S.sessions = (await api('/api/admin/sessions')).sessions;
+      } else if (S.view === 'payouts') {
+        S.payouts = (await api('/api/admin/payouts')).payouts;
+      } else if (S.view === 'commissions') {
+        S.commissions = (await api('/api/admin/commissions')).commissions;
+      }
+      render();
+      updateCounters();
+    } catch (err) {
+      if (showSpinner || !content.querySelector('table, .grid')) {
+        content.innerHTML = '<div class="empty">⚠️ ' + esc(err.message) + '<br><br><button class="btn" id="retry-btn">Réessayer</button></div>';
+        var rb = $('#retry-btn'); if (rb) rb.onclick = function () { loadView(true); };
+      }
+    } finally {
+      S.busy = false;
+    }
+  }
+
+  function updateCounters() {
+    if (S.overview) {
+      $('#c-users').textContent = S.overview.users.total;
+      $('#c-sessions').textContent = S.overview.sessions.connected + ' / ' + S.overview.sessions.chromium;
+      var pc = $('#c-payouts'); pc.textContent = S.overview.payouts.pending;
+      pc.classList.toggle('alert', S.overview.payouts.pending > 0);
+    }
+    if (S.view === 'users' && S.users.length) $('#c-users').textContent = S.users.length;
+  }
+
+  function render() {
+    var fn = { overview: renderOverview, users: renderUsers, sessions: renderSessions, payouts: renderPayouts, commissions: renderCommissions }[S.view];
+    fn();
+  }
+
+  /* ================= Vue d'ensemble ================= */
+  function stat(label, value, hint) {
+    return '<div class="card stat"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div><div class="hint">' + (hint || '&nbsp;') + '</div></div>';
+  }
+  function renderOverview() {
+    var o = S.overview; if (!o) return;
+    var ramPct = Math.min(100, Math.round(o.server.rssMb / RAM_LIMIT_MB * 100));
+    var ramCls = ramPct > 85 ? 'high' : ramPct > 65 ? 'mid' : '';
+    $('#content').innerHTML =
+      '<div class="grid stats">' +
+        stat('Utilisateurs', num(o.users.total), '+' + o.users.newLast7 + ' ces 7 derniers jours') +
+        stat('Abonnés actifs', num(o.users.paid), 'Plans payants en cours') +
+        stat('En essai', num(o.users.trial), num(o.users.expired) + ' expirés') +
+        stat('WhatsApp connectés', o.sessions.connected + ' / ' + o.sessions.chromium, 'Navigateurs actifs en mémoire') +
+        stat('Crédits en circulation', num(o.credits.total), o.users.banned + ' compte(s) suspendu(s)') +
+        stat('Retraits en attente', num(o.payouts.pending), num(o.payouts.pendingAmount) + ' FCFA') +
+      '</div>' +
+      '<div class="grid two">' +
+        '<div class="card"><h3>Santé du serveur (Railway)</h3>' +
+          '<div class="kv"><span>Mémoire utilisée</span><span><b>' + o.server.rssMb + ' Mo</b> / ' + RAM_LIMIT_MB + ' Mo</span></div>' +
+          '<div class="bar" style="margin:8px 0 12px"><i class="' + ramCls + '" style="width:' + ramPct + '%"></i></div>' +
+          '<div class="kv"><span>Disponibilité</span><span>' + esc(fmtUptime(o.server.uptimeSeconds)) + '</span></div>' +
+          '<div class="kv"><span>Version Node</span><span class="mono">' + esc(o.server.node) + '</span></div>' +
+          '<div class="kv"><span>Dernière mesure</span><span>' + esc(fmtDate(o.serverTime)) + '</span></div>' +
+        '</div>' +
+        '<div class="card"><h3>Sessions WhatsApp</h3>' +
+          '<div class="kv"><span>' + statusBadge('CONNECTED') + '</span><b>' + o.sessions.connected + '</b></div>' +
+          '<div class="kv"><span>' + statusBadge('QR_READY') + '</span><b>' + o.sessions.qrReady + '</b></div>' +
+          '<div class="kv"><span>' + statusBadge('STARTING') + '</span><b>' + o.sessions.starting + '</b></div>' +
+          '<div class="kv"><span>' + statusBadge('ERROR') + '</span><b>' + o.sessions.error + '</b></div>' +
+          '<div class="kv"><span>' + statusBadge('ON_DISK') + '</span><b>' + o.sessions.onDisk + '</b></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  /* ================= Utilisateurs ================= */
+  function filteredUsers() {
+    var q = S.q.toLowerCase();
+    return S.users.filter(function (u) {
+      if (S.planFilter === 'paid' && !(u.isPaid && u.plan !== 'expired')) return false;
+      if (S.planFilter === 'trial' && u.plan !== 'trial') return false;
+      if (S.planFilter === 'expired' && u.plan !== 'expired') return false;
+      if (S.planFilter === 'banned' && !u.banned) return false;
+      if (S.planFilter === 'wa' && u.wa.status !== 'CONNECTED') return false;
+      if (!q) return true;
+      return [u.email, u.name, u.whatsappNumber, u.id, u.affiliateCode].join(' ').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  function renderUsers() {
+    var list = filteredUsers();
+    var rows = list.map(function (u) {
+      return '<tr>' +
+        '<td><div class="u-name">' + esc(u.name || '—') + (u.banned ? ' <span class="badge b-red">Suspendu</span>' : '') + '</div><div class="u-mail">' + esc(u.email) + '</div></td>' +
+        '<td>' + planBadge(u.plan) + '<div class="muted" style="font-size:11.5px;margin-top:3px">' + (u.plan === 'expired' ? 'terminé' : u.daysLeft + ' j restants') + '</div></td>' +
+        '<td><b>' + (u.credits === null ? '—' : num(u.credits)) + '</b></td>' +
+        '<td>' + statusBadge(u.wa.status) + '<div class="muted mono" style="margin-top:3px">' + esc(u.wa.phone || u.whatsappNumber || '') + '</div></td>' +
+        '<td class="muted">' + esc(fmtDate(u.createdAt)) + '<div style="font-size:11.5px">connexion : ' + esc(ago(u.lastSignInAt)) + '</div></td>' +
+        '<td><button class="btn sm" data-act="user" data-id="' + esc(u.id) + '">Gérer</button></td>' +
+      '</tr>';
+    }).join('');
+
+    $('#content').innerHTML =
+      '<div class="toolbar">' +
+        '<input class="input" id="user-q" placeholder="Rechercher (nom, e-mail, numéro, code…)" value="' + esc(S.q) + '">' +
+        '<select class="input" id="user-f">' +
+          [['all', 'Tous les comptes'], ['paid', 'Abonnés actifs'], ['trial', 'En essai'], ['expired', 'Expirés'], ['wa', 'WhatsApp connecté'], ['banned', 'Suspendus']]
+            .map(function (o) { return '<option value="' + o[0] + '"' + (S.planFilter === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+        '</select>' +
+        '<span class="muted">' + list.length + ' / ' + S.users.length + ' compte(s)</span>' +
+        '<div style="flex:1"></div><button class="btn sm" id="csv-btn">⬇ Exporter CSV</button>' +
+      '</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Abonnement</th><th>Crédits</th><th>WhatsApp</th><th>Inscription</th><th></th></tr></thead><tbody>' +
+        (rows || '<tr><td colspan="6" class="empty">Aucun utilisateur trouvé.</td></tr>') + '</tbody></table></div>';
+
+    var q = $('#user-q');
+    q.addEventListener('input', function () {
+      S.q = q.value;
+      var pos = q.selectionStart; renderUsers();
+      var nq = $('#user-q'); nq.focus(); nq.setSelectionRange(pos, pos);
+    });
+    $('#user-f').addEventListener('change', function () { S.planFilter = this.value; renderUsers(); });
+    $('#csv-btn').addEventListener('click', exportCsv);
+  }
+  function exportCsv() {
+    var head = ['email', 'nom', 'plan', 'jours_restants', 'credits', 'whatsapp', 'statut_wa', 'inscription', 'derniere_connexion'];
+    var lines = [head.join(',')].concat(filteredUsers().map(function (u) {
+      return [u.email, u.name, u.plan, u.daysLeft, u.credits, u.wa.phone || u.whatsappNumber, u.wa.status, u.createdAt, u.lastSignInAt]
+        .map(function (v) { var s = String(v === null || v === undefined ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }).join(',');
+    }));
+    var blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vandias-utilisateurs.csv'; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ================= Sessions ================= */
+  function renderSessions() {
+    var f = S.sessFilter;
+    var list = S.sessions.filter(function (s) {
+      if (f === 'all') return true;
+      if (f === 'active') return s.hasClient;
+      if (f === 'connected') return s.status === 'CONNECTED';
+      if (f === 'problem') return s.status === 'ERROR' || (s.hasClient && !s.pageAlive);
+      if (f === 'idle') return !s.hasClient;
+      return true;
+    });
+    var rows = list.map(function (s) {
+      var who = s.email ? '<div class="u-name">' + esc(s.name || s.email) + '</div><div class="u-mail">' + esc(s.email) + '</div>'
+                        : '<div class="u-name muted">Compte inconnu</div><div class="u-mail mono">' + esc(s.userId) + '</div>';
+      var chrome = s.hasClient
+        ? '<span class="badge ' + (s.pageAlive ? 'b-green' : 'b-red') + '">' + (s.pageAlive ? 'Actif' : 'Page morte') + '</span>' + (s.browserPid ? '<div class="muted mono" style="margin-top:3px">PID ' + esc(s.browserPid) + '</div>' : '')
+        : '<span class="muted">Arrêté</span>';
+      return '<tr>' +
+        '<td>' + who + '</td>' +
+        '<td>' + statusBadge(s.status) + (s.error ? '<div style="color:#ff8da0;font-size:11.5px;margin-top:3px;max-width:230px">' + esc(s.error.slice(0, 110)) + '</div>' : '') + '</td>' +
+        '<td class="mono">' + esc(s.phone || s.profilePhone || '—') + '</td>' +
+        '<td>' + chrome + '</td>' +
+        '<td class="muted">' + (s.hasSessionDir ? esc(ago(s.dirModified)) : 'aucun') + '</td>' +
+        '<td><div class="actions">' +
+          (s.hasClient ? '<button class="btn sm warn" data-act="s-stop" data-id="' + esc(s.userId) + '">Arrêter</button>' : '') +
+          '<button class="btn sm" data-act="s-restart" data-id="' + esc(s.userId) + '">Redémarrer</button>' +
+          '<button class="btn sm danger" data-act="s-reset" data-id="' + esc(s.userId) + '">Réinitialiser</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+
+    $('#content').innerHTML =
+      '<div class="toolbar">' +
+        '<select class="input" id="sess-f">' +
+          [['all', 'Toutes les sessions'], ['active', 'Chromium actif'], ['connected', 'Connectées'], ['problem', 'Avec problème'], ['idle', 'Inactives (disque)']]
+            .map(function (o) { return '<option value="' + o[0] + '"' + (f === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+        '</select>' +
+        '<span class="muted">' + list.length + ' session(s)</span><div style="flex:1"></div>' +
+        '<button class="btn sm danger" id="purge-btn">🧹 Purger les sessions orphelines</button>' +
+      '</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Statut</th><th>Numéro</th><th>Navigateur</th><th>Disque</th><th>Actions</th></tr></thead><tbody>' +
+        (rows || '<tr><td colspan="6" class="empty">Aucune session.</td></tr>') + '</tbody></table></div>' +
+      '<p class="muted" style="margin-top:12px;font-size:12.5px"><b>Arrêter</b> libère la mémoire en gardant la liaison · <b>Redémarrer</b> reconnecte sans nouveau QR · <b>Réinitialiser</b> supprime la liaison (nouveau QR requis).</p>';
+
+    $('#sess-f').addEventListener('change', function () { S.sessFilter = this.value; renderSessions(); });
+    $('#purge-btn').addEventListener('click', async function () {
+      if (!(await confirmBox('Purger les sessions orphelines ?', 'Supprime les dossiers de session des utilisateurs sans numéro WhatsApp lié et sans navigateur actif. Les sessions connectées ne sont pas touchées.', true))) return;
+      try { var r = await api('/api/admin/sessions/purge-orphans', { method: 'POST' }); toast(r.purged + ' session(s) orpheline(s) supprimée(s)'); loadView(false); }
+      catch (e) { toast(e.message, 'err'); }
+    });
+  }
+
+  async function sessionAction(kind, id) {
+    var cfg = {
+      stop: ['Arrêter cette session ?', 'Le navigateur Chromium sera fermé pour libérer la mémoire. La liaison WhatsApp reste enregistrée.', false],
+      restart: ['Redémarrer cette session ?', 'Le navigateur sera relancé à partir de la liaison existante (sans nouveau QR si elle est valide).', false],
+      reset: ['Réinitialiser cette session ?', 'La liaison WhatsApp sera SUPPRIMÉE. L\'utilisateur devra rescanner un QR code ou utiliser un code de jumelage.', true]
+    }[kind];
+    if (!(await confirmBox(cfg[0], cfg[1], cfg[2]))) return;
+    try {
+      var r = await api('/api/admin/sessions/' + encodeURIComponent(id) + '/' + kind, { method: 'POST' });
+      toast(r.message || 'Action effectuée');
+      closeModal();
+      setTimeout(function () { loadView(false); }, 600);
+    } catch (e) { toast(e.message, 'err'); }
+  }
+
+  /* ================= Retraits & commissions ================= */
+  function renderPayouts() {
+    var rows = S.payouts.map(function (p) {
+      var st = p.status === 'PAID' ? '<span class="badge b-green">Payé</span>' : p.status === 'REJECTED' ? '<span class="badge b-red">Rejeté</span>' : '<span class="badge b-amber">En attente</span>';
+      return '<tr><td><div class="u-name">' + esc(p.email || '—') + '</div><div class="u-mail mono">' + esc(p.user_id) + '</div></td>' +
+        '<td><b>' + num(p.amount) + ' FCFA</b></td>' +
+        '<td>' + esc(p.payout_method || '—') + '<div class="muted mono">' + esc(p.payout_number || '') + '</div></td>' +
+        '<td>' + st + '</td><td class="muted">' + esc(fmtDate(p.created_at)) + '</td>' +
+        '<td>' + (p.status === 'PENDING'
+          ? '<div class="actions"><button class="btn sm primary" data-act="po-paid" data-id="' + esc(p.id) + '">Marquer payé</button><button class="btn sm danger" data-act="po-rej" data-id="' + esc(p.id) + '">Rejeter</button></div>' : '') + '</td></tr>';
+    }).join('');
+    $('#content').innerHTML = '<div class="table-wrap"><table><thead><tr><th>Affilié</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Demandé</th><th></th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="6" class="empty">Aucune demande de retrait.</td></tr>') + '</tbody></table></div>' +
+      '<p class="muted" style="margin-top:12px;font-size:12.5px">« Marquer payé » ne déclenche aucun virement : effectuez d\'abord le paiement manuellement. « Rejeter » recrédite le solde d\'affiliation de l\'utilisateur.</p>';
+  }
+  function renderCommissions() {
+    var rows = S.commissions.map(function (c) {
+      var st = c.status === 'REVERSED' ? 'b-red' : c.status === 'PENDING' ? 'b-amber' : 'b-green';
+      return '<tr><td><div class="u-name">' + esc(c.referrerEmail || '—') + '</div><div class="u-mail">filleul : ' + esc(c.referredEmail || '—') + '</div></td>' +
+        '<td>' + num(c.payment_amount) + ' FCFA</td><td><b>' + num(c.commission_amount) + ' FCFA</b><div class="muted">' + Math.round((c.commission_rate || 0) * 100) + ' %</div></td>' +
+        '<td><span class="badge ' + st + '">' + esc(c.status) + '</span></td><td>' + esc(c.plan_tier || '—') + '</td><td class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
+    }).join('');
+    $('#content').innerHTML = '<div class="table-wrap"><table><thead><tr><th>Parrain</th><th>Paiement</th><th>Commission</th><th>Statut</th><th>Plan</th><th>Date</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="6" class="empty">Aucune commission.</td></tr>') + '</tbody></table></div>';
+  }
+
+  /* ================= Modales ================= */
+  function closeModal() { $('#modal-root').innerHTML = ''; }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  function confirmBox(title, text, danger) {
+    return new Promise(function (resolve) {
+      var root = document.createElement('div');
+      root.className = 'overlay'; root.style.zIndex = 80;
+      root.innerHTML = '<div class="modal small"><h3>' + esc(title) + '</h3><p class="sub" style="margin-top:8px;word-break:normal">' + esc(text) + '</p>' +
+        '<div class="modal-actions"><button class="btn" data-r="0">Annuler</button><button class="btn ' + (danger ? 'danger' : 'primary') + '" data-r="1">Confirmer</button></div></div>';
+      document.body.appendChild(root);
+      root.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-r]');
+        if (b || e.target === root) { root.remove(); resolve(!!b && b.getAttribute('data-r') === '1'); }
+      });
+    });
+  }
+
+  function openUser(id) {
+    var u = S.users.filter(function (x) { return x.id === id; })[0]; if (!u) return;
+    var isSelf = u.email && S.email && u.email.toLowerCase() === S.email.toLowerCase();
+    $('#modal-root').innerHTML =
+      '<div class="overlay" data-close="1"><div class="modal">' +
+        '<h3>' + esc(u.name || u.email) + (u.banned ? ' <span class="badge b-red">Suspendu</span>' : '') + '</h3>' +
+        '<div class="sub">' + esc(u.email) + ' · <span class="mono">' + esc(u.id) + '</span></div>' +
+        '<div class="info-grid">' +
+          '<div><span>Inscription</span>' + esc(fmtDate(u.createdAt)) + '</div>' +
+          '<div><span>Dernière connexion</span>' + esc(fmtDate(u.lastSignInAt)) + '</div>' +
+          '<div><span>Abonnement</span>' + planBadge(u.plan) + ' · expire ' + esc(fmtDate(u.expiresAt)) + '</div>' +
+          '<div><span>Crédits</span><b>' + (u.credits === null ? '—' : num(u.credits)) + '</b></div>' +
+          '<div><span>Numéro WhatsApp (profil)</span>' + esc(u.whatsappNumber || '—') + '</div>' +
+          '<div><span>Entreprise</span>' + esc(u.company || '—') + '</div>' +
+          '<div><span>Code affilié</span><span class="mono" style="display:inline">' + esc(u.affiliateCode || '—') + '</span></div>' +
+          '<div><span>Solde affilié</span>' + num(u.affiliateBalance) + ' FCFA</div>' +
+        '</div>' +
+
+        '<div class="section"><h4>Session WhatsApp</h4>' +
+          '<div class="row" style="margin-bottom:10px">' + statusBadge(u.wa.status) + '<span class="mono muted">' + esc(u.wa.phone || '') + '</span></div>' +
+          '<div class="row">' +
+            (u.wa.hasClient ? '<button class="btn sm warn" data-act="s-stop" data-id="' + esc(u.id) + '">Arrêter</button>' : '') +
+            '<button class="btn sm" data-act="s-restart" data-id="' + esc(u.id) + '">Redémarrer</button>' +
+            '<button class="btn sm danger" data-act="s-reset" data-id="' + esc(u.id) + '">Réinitialiser</button>' +
+          '</div></div>' +
+
+        '<div class="section"><h4>Crédits</h4><div class="row">' +
+          '<input class="input" id="m-credits" type="number" step="1" placeholder="Montant">' +
+          '<button class="btn sm primary" data-act="cr-add" data-id="' + esc(u.id) + '">Ajouter / retirer (±)</button>' +
+          '<button class="btn sm" data-act="cr-set" data-id="' + esc(u.id) + '">Définir à</button>' +
+        '</div></div>' +
+
+        '<div class="section"><h4>Abonnement</h4><div class="row">' +
+          '<select class="input" id="m-plan"><option value="basic">Basic</option><option value="pro" selected>Pro</option><option value="business">Business</option><option value="free">Révoquer (gratuit)</option></select>' +
+          '<input class="input" id="m-days" type="number" min="1" max="3650" value="30" title="Durée en jours">' +
+          '<span class="muted">jours</span>' +
+          '<button class="btn sm primary" data-act="plan" data-id="' + esc(u.id) + '">Appliquer</button>' +
+        '</div></div>' +
+
+        '<div class="section"><h4>Accès au compte</h4><div class="row">' +
+          (isSelf ? '<span class="muted">Votre propre compte ne peut pas être suspendu.</span>'
+                  : '<button class="btn sm ' + (u.banned ? 'primary' : 'danger') + '" data-act="ban" data-banned="' + (u.banned ? '0' : '1') + '" data-id="' + esc(u.id) + '">' + (u.banned ? 'Réactiver le compte' : 'Suspendre le compte') + '</button>') +
+        '</div></div>' +
+
+        '<div class="modal-actions"><button class="btn" data-close="1">Fermer</button></div>' +
+      '</div></div>';
+  }
+
+  /* ================= Délégation d'événements ================= */
+  document.addEventListener('click', async function (e) {
+    var close = e.target.closest('[data-close]');
+    if (close && (close.classList.contains('overlay') ? e.target === close : true)) { closeModal(); return; }
+
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
+
+    try {
+      if (act === 'user') return openUser(id);
+      if (act === 's-stop') return sessionAction('stop', id);
+      if (act === 's-restart') return sessionAction('restart', id);
+      if (act === 's-reset') return sessionAction('reset', id);
+
+      if (act === 'cr-add' || act === 'cr-set') {
+        var v = parseFloat($('#m-credits').value);
+        if (!isFinite(v)) return toast('Saisissez un montant valide.', 'err');
+        var r = await api('/api/admin/users/' + encodeURIComponent(id) + '/credits', { method: 'POST', body: { mode: act === 'cr-add' ? 'add' : 'set', amount: v } });
+        toast('Crédits mis à jour : ' + num(r.credits));
+        closeModal(); return loadView(false);
+      }
+      if (act === 'plan') {
+        var plan = $('#m-plan').value, days = parseInt($('#m-days').value, 10) || 30;
+        if (plan === 'free' && !(await confirmBox('Révoquer l\'abonnement ?', 'L\'utilisateur perdra son plan payant immédiatement.', true))) return;
+        await api('/api/admin/users/' + encodeURIComponent(id) + '/plan', { method: 'POST', body: { plan: plan, days: days } });
+        toast('Abonnement mis à jour');
+        closeModal(); return loadView(false);
+      }
+      if (act === 'ban') {
+        var ban = b.getAttribute('data-banned') === '1';
+        if (!(await confirmBox(ban ? 'Suspendre ce compte ?' : 'Réactiver ce compte ?', ban ? 'L\'utilisateur ne pourra plus se connecter et sa session WhatsApp sera arrêtée.' : 'L\'utilisateur pourra de nouveau se connecter.', ban))) return;
+        await api('/api/admin/users/' + encodeURIComponent(id) + '/ban', { method: 'POST', body: { banned: ban } });
+        toast(ban ? 'Compte suspendu' : 'Compte réactivé');
+        closeModal(); return loadView(false);
+      }
+      if (act === 'po-paid' || act === 'po-rej') {
+        var paid = act === 'po-paid';
+        if (!(await confirmBox(paid ? 'Marquer comme payé ?' : 'Rejeter cette demande ?', paid ? 'Confirmez uniquement si le virement a bien été effectué.' : 'Le montant sera recrédité sur le solde d\'affiliation.', !paid))) return;
+        await api('/api/admin/payouts/' + encodeURIComponent(id) + '/status', { method: 'POST', body: { status: paid ? 'PAID' : 'REJECTED' } });
+        toast(paid ? 'Retrait marqué payé' : 'Retrait rejeté');
+        return loadView(false);
+      }
+    } catch (err) { toast(err.message, 'err'); }
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
