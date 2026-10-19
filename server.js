@@ -771,6 +771,13 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
 
     const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (cleanPhone || 'Inconnu');
 
+    // Garde-fou Mode Rapide : Enregistrement de l'initiateur
+    if (typeof whatsappManager !== 'undefined' && whatsappManager.quickLinkProvider) {
+      whatsappManager.quickLinkProvider.recordInboundInitiator(userId, rawSender);
+      if (cleanPhone) whatsappManager.quickLinkProvider.recordInboundInitiator(userId, cleanPhone);
+      if (msg.from) whatsappManager.quickLinkProvider.recordInboundInitiator(userId, msg.from);
+    }
+
     // Prompt configuré spécifiquement par cet utilisateur
     const basePrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10) 
       ? profile.ai_prompt 
@@ -906,6 +913,17 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
       } catch (crErr) {
         console.error(`❌ [WA/CREDITS] Exception déduction crédit:`, crErr.message);
       }
+    }
+
+    // Suivi des coûts et catégorisation des messages sortants
+    if (delivered && typeof whatsappManager !== 'undefined') {
+      whatsappManager.logMessageUsage(userId, {
+        recipient: rawSender,
+        category: 'free_form',
+        mode: 'rapide',
+        messageId: `msg_${Date.now()}`,
+        creditsDeducted: 1
+      }).catch(() => {});
     }
   } catch (err) {
     console.error("[WA/IA] Erreur globale traitement message :", err);
@@ -1273,73 +1291,210 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
   return client;
 }
 
+// =============================================================================
+// COUCHE D'ABSTRACTION MULTI-PILOTES WHATSAPP (VANDIAS AI)
+// Supporte : Mode Rapide (WhatsApp Web émulé) & Mode Officiel (Meta Cloud API v21.0)
+// =============================================================================
+const { WhatsAppManager } = require('./services/whatsapp/WhatsAppManager');
+const { WHATSAPP_STATUS, MESSAGE_CATEGORIES, PROVIDER_MODES } = require('./services/whatsapp/WhatsAppProvider');
+const { AIPipeline } = require('./services/ai/AIPipeline');
+
+const aiPipeline = new AIPipeline({
+  openai,
+  supabase,
+  chatHistories: waChatHistories,
+  maxHistory: 12
+});
+
+const whatsappManager = new WhatsAppManager({
+  quickLinkDeps: {
+    waClients,
+    waStatuses,
+    waSessionsQR,
+    waPairingCodes,
+    waNumbers,
+    waErrors,
+    createOrGetClient: createOrGetWhatsAppClient
+  },
+  metaConfig: {
+    graphApiVersion: process.env.META_GRAPH_API_VERSION || 'v21.0',
+    appId: process.env.META_APP_ID,
+    appSecret: process.env.META_APP_SECRET,
+    systemUserToken: process.env.META_SYSTEM_USER_TOKEN,
+    loginConfigId: process.env.META_EMBEDDED_SIGNUP_CONFIG_ID,
+    webhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN || 'vandias_secure_webhook_token',
+    // Le pilote officiel reste désactivé par défaut sans accord exprès de l'utilisateur
+    isPilotAuthorized: process.env.ENABLE_OFFICIAL_WHATSAPP_PILOT === 'true'
+  },
+  supabase,
+  aiPipeline
+});
+
+// Endpoint : Obtenir le mode actif et les détails des garde-fous
+app.get('/api/whatsapp/mode/:userId', authMiddleware, async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const status = await whatsappManager.getStatus(userId);
+    const riskAccepted = await whatsappManager.quickLinkProvider.hasAcceptedRisk(userId);
+    res.json({
+      mode: status.currentMode,
+      status: status.status,
+      riskAccepted,
+      modesInfo: status.modesInfo,
+      guardrails: status.guardrails
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint : Changer de mode ('rapide' | 'officiel')
+app.post('/api/whatsapp/mode', authMiddleware, async (req, res) => {
+  const { userId, mode } = req.body;
+  if (!userId || !mode) return res.status(400).json({ error: "userId et mode requis" });
+  if (mode !== 'rapide' && mode !== 'officiel') {
+    return res.status(400).json({ error: "Mode invalide. Choisissez 'rapide' ou 'officiel'." });
+  }
+  try {
+    const result = await whatsappManager.setUserMode(userId, mode);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint : Acceptation expresse du risque (obligatoire pour activer le Mode Rapide)
+app.post('/api/whatsapp/accept-risk', authMiddleware, async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId manquant" });
+  try {
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+    const clientIp = String(rawIp).split(',')[0].trim();
+    const record = await whatsappManager.recordRiskAcceptance(userId, clientIp);
+    res.json({ success: true, ...record });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint : Suivi des coûts et ventilation d'utilisation
+app.get('/api/whatsapp/usage/:userId', authMiddleware, async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const usage = whatsappManager.getUsageBreakdown(userId);
+    res.json({ usage });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint : Webhooks Meta Cloud API (GET vérification + POST réception événements)
+app.get('/api/whatsapp/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  const expectedToken = process.env.META_WEBHOOK_VERIFY_TOKEN || 'vandias_secure_webhook_token';
+
+  if (mode === 'subscribe' && token === expectedToken) {
+    console.log('✅ [WA/WEBHOOK] Handshake Meta Cloud API validé.');
+    return res.status(200).send(challenge);
+  }
+  return res.sendStatus(403);
+});
+
+app.post('/api/whatsapp/webhook', async (req, res) => {
+  try {
+    await whatsappManager.officialMetaProvider.handleWebhookPayload(req.body);
+    return res.status(200).send('EVENT_RECEIVED');
+  } catch (err) {
+    console.error('[WA/WEBHOOK] Erreur traitement notification:', err);
+    return res.sendStatus(500);
+  }
+});
+
+// Endpoint : Démarrer la connexion WhatsApp (gère le mode rapide et le mode officiel)
 app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
-  const { userId, restart, phoneNumber } = req.body;
+  const { userId, restart, phoneNumber, mode } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
   const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
 
-  if (waStatuses[userId] === 'CONNECTED' && !restart && waClients[userId]) {
-    return res.json({ status: 'CONNECTED', message: "Bot déjà actif", phone: waNumbers[userId] || null });
-  }
-
   try {
     delete waErrors[userId];
-    await createOrGetWhatsAppClient(userId, { restart: !!restart, phoneNumber: cleanPhone });
+    const targetMode = mode || await whatsappManager.getUserMode(userId);
 
-    for (let i = 0; i < 45; i++) {
-      if (waStatuses[userId] === 'CONNECTED') {
-        return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null });
+    // Garde-fou Mode Rapide : vérifier l'acceptation expresse du risque
+    if (targetMode === 'rapide') {
+      const riskAccepted = await whatsappManager.quickLinkProvider.hasAcceptedRisk(userId);
+      if (!riskAccepted) {
+        return res.status(403).json({
+          status: 'AWAITING_RISK_ACCEPTANCE',
+          requiresRiskAcceptance: true,
+          message: "L'activation du mode rapide nécessite l'acceptation expresse des risques de suspension du numéro."
+        });
       }
-      if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')) {
-        return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
-      }
-      if (waStatuses[userId] === 'CODE_READY' && waPairingCodes[userId]) {
-        return res.json({ status: 'CODE_READY', code: waPairingCodes[userId] });
-      }
-      if (waStatuses[userId] === 'ERROR') {
-        return res.json({ status: 'ERROR', error: waErrors[userId] || 'Erreur d\'initialisation Chromium' });
-      }
-      await new Promise(r => setTimeout(r, 600));
     }
 
-    if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')) {
-      return res.json({ status: 'QR_READY', qr: waSessionsQR[userId] });
-    }
-    return res.json({ 
-      status: waStatuses[userId] || 'STARTING',
-      error: waErrors[userId] || null
+    const connectRes = await whatsappManager.connect(userId, {
+      mode: targetMode,
+      phone: cleanPhone,
+      restart: !!restart
     });
+
+    // Si mode rapide, attendre l'apparition du QR ou du code d'association
+    if (targetMode === 'rapide') {
+      for (let i = 0; i < 45; i++) {
+        if (waStatuses[userId] === 'CONNECTED') {
+          return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null, mode: targetMode });
+        }
+        if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')) {
+          return res.json({ status: 'QR_READY', qr: waSessionsQR[userId], mode: targetMode });
+        }
+        if (waStatuses[userId] === 'CODE_READY' && waPairingCodes[userId]) {
+          return res.json({ status: 'CODE_READY', code: waPairingCodes[userId], mode: targetMode });
+        }
+        if (waStatuses[userId] === 'ERROR') {
+          return res.json({ status: 'ERROR', error: waErrors[userId] || 'Erreur d\'initialisation Chromium', mode: targetMode });
+        }
+        await new Promise(r => setTimeout(r, 600));
+      }
+
+      if (waStatuses[userId] === 'QR_READY' && waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')) {
+        return res.json({ status: 'QR_READY', qr: waSessionsQR[userId], mode: targetMode });
+      }
+    }
+
+    const statusObj = await whatsappManager.getStatus(userId);
+    return res.json(statusObj);
   } catch (err) {
     console.error("[WA] Erreur start:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
+// Endpoint : Déconnexion unifiée
 app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
-  if (waClients[userId]) {
-    try { await waClients[userId].destroy(); } catch (e) {}
-    delete waClients[userId];
+
+  try {
+    const result = await whatsappManager.disconnect(userId);
+    if (waHeartbeats[userId]) {
+      clearInterval(waHeartbeats[userId]);
+      delete waHeartbeats[userId];
+    }
+    const authDir = getSessionDir(userId);
+    if (fs.existsSync(authDir)) {
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+    }
+    if (supabase) {
+      try {
+        await supabase.from('profiles').update({ whatsapp_number: null }).eq('id', userId);
+      } catch (e) {}
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  if (waHeartbeats[userId]) {
-    clearInterval(waHeartbeats[userId]);
-    delete waHeartbeats[userId];
-  }
-  waStatuses[userId] = 'DISCONNECTED';
-  delete waSessionsQR[userId];
-  delete waPairingCodes[userId];
-  delete waNumbers[userId];
-  const authDir = getSessionDir(userId);
-  if (fs.existsSync(authDir)) {
-    try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
-  }
-  if (supabase) {
-    try {
-      await supabase.from('profiles').update({ whatsapp_number: null }).eq('id', userId);
-    } catch (e) {}
-  }
-  res.json({ success: true, message: "Session WhatsApp déconnectée et réinitialisée avec succès." });
 });
 
 // Diagnostic en direct de l'état Puppeteer (Sécurisé par authMiddleware)
@@ -1515,16 +1670,23 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
     } catch(e) {}
   }
 
-  const validQr = (waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/'))
-    ? waSessionsQR[userId]
+  const statusObj = await whatsappManager.getStatus(userId);
+
+  const validQr = (statusObj.qrCode || (waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')))
+    ? (statusObj.qrCode || waSessionsQR[userId])
     : null;
 
   res.json({
-    status: st,
+    mode: statusObj.currentMode,
+    status: statusObj.status,
+    rawStatus: st,
     qr: validQr,
-    pairingCode: waPairingCodes[userId] || null,
-    phone: (st === 'CONNECTED' && waNumbers[userId]) ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : null,
-    error: (st === 'ERROR' || waErrors[userId]) ? (waErrors[userId] || 'Erreur d\'initialisation WhatsApp') : null
+    pairingCode: statusObj.pairingCode || waPairingCodes[userId] || null,
+    phone: (statusObj.status === 'CONNECTED' && waNumbers[userId]) ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : statusObj.phone,
+    riskAccepted: statusObj.riskAccepted,
+    guardrails: statusObj.guardrails,
+    usage: statusObj.usage,
+    error: (statusObj.status === 'ERROR' || waErrors[userId]) ? (waErrors[userId] || 'Erreur d\'initialisation WhatsApp') : null
   });
 });
 
@@ -1591,26 +1753,22 @@ app.get('/api/whatsapp/messages/:userId/:chatId', authMiddleware, async (req, re
 });
 
 app.post('/api/whatsapp/send', authMiddleware, async (req, res) => {
-  const { userId, to, message } = req.body;
+  const { userId, to, message, category, isBroadcast } = req.body;
   if (!userId || !to || !message) {
     return res.status(400).json({ error: "Paramètres requis manquants (userId, to, message)" });
   }
-  const client = waClients[userId];
-  if (!client || waStatuses[userId] !== 'CONNECTED') {
-    return res.status(503).json({ error: "Bot WhatsApp non connecté" });
-  }
+
   try {
-    let target = to.trim();
-    if (!target.includes('@')) {
-      const cleanNum = target.replace(/[^0-9]/g, '');
-      target = `${cleanNum}@c.us`;
-    }
-    await client.sendMessage(target, message);
-    console.log(`[WA] Message Dashboard envoyé à ${target}: "${message}"`);
-    res.json({ success: true, message: "Message envoyé avec succès" });
+    const result = await whatsappManager.sendMessage(userId, to, message, {
+      category: category || (isBroadcast ? 'marketing' : 'free_form'),
+      isBroadcast: Boolean(isBroadcast)
+    });
+    console.log(`[WA] Message Dashboard envoyé à ${to} via mode ${result.mode}: "${String(message).substring(0, 50)}..."`);
+    res.json({ success: true, ...result });
   } catch (err) {
-    console.error(`[WA] Erreur envoi message :`, err);
-    res.status(500).json({ error: err.message || "Erreur lors de l'envoi du message" });
+    console.warn(`[WA/SEND] Refus ou incident d'envoi pour ${userId}: ${err.message}`);
+    const statusCode = err.message.includes('GARDE-FOU') ? 403 : (err.message.includes('Plafond') ? 429 : 500);
+    res.status(statusCode).json({ error: err.message });
   }
 });
 

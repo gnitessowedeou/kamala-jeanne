@@ -5654,8 +5654,52 @@ function setupBillingAndAffiliate() {
         }
 
         // Mise à jour dynamique des spécifications techniques de la carte
+        const specMode = document.getElementById("wa-spec-mode");
         const specConn = document.getElementById("wa-spec-connection");
+        const specGuard = document.getElementById("wa-spec-guardrails");
+        const specQuota = document.getElementById("wa-spec-quota");
         const specMsg = document.getElementById("wa-spec-status-msg");
+        const broadcastBanner = document.getElementById("broadcast-guardrail-banner");
+
+        const currentMode = (extraData && extraData.mode) || window.currentWhatsAppMode || 'rapide';
+        window.currentWhatsAppMode = currentMode;
+
+        if (specMode) {
+            if (currentMode === 'officiel') {
+                specMode.textContent = "Officiel (Meta Cloud API)";
+                specMode.style.color = "var(--whatsapp-green)";
+            } else {
+                specMode.textContent = "Lien Rapide (WhatsApp Web)";
+                specMode.style.color = "#fbbf24";
+            }
+        }
+
+        if (specGuard) {
+            if (currentMode === 'officiel') {
+                specGuard.textContent = "Désactivés (100% Conforme Meta)";
+                specGuard.style.color = "var(--whatsapp-green)";
+            } else {
+                specGuard.textContent = "Actifs (Inbound Only • Diffusions OFF)";
+                specGuard.style.color = "#fbbf24";
+            }
+        }
+
+        if (specQuota) {
+            const hourlySent = (extraData && extraData.guardrails && extraData.guardrails.hourlySent) || 0;
+            const hourlyMax = (extraData && extraData.guardrails && extraData.guardrails.hourlyMax) || 30;
+            if (currentMode === 'officiel') {
+                specQuota.textContent = "Illimité (Selon forfait Meta)";
+                specQuota.style.color = "var(--whatsapp-green)";
+            } else {
+                specQuota.textContent = `${hourlySent} / ${hourlyMax} messages cette heure`;
+                specQuota.style.color = hourlySent >= hourlyMax ? "#ef4444" : "var(--cyan)";
+            }
+        }
+
+        if (broadcastBanner) {
+            broadcastBanner.style.display = (currentMode === 'rapide') ? "flex" : "none";
+        }
+
         if (specConn) {
             if (isConnected) {
                 specConn.textContent = "Connecté (Session Active)";
@@ -5666,6 +5710,12 @@ function setupBillingAndAffiliate() {
             } else if (status === 'CODE_READY') {
                 specConn.textContent = "Code d'association prêt";
                 specConn.style.color = "#60a5fa";
+            } else if (status === 'AWAITING_RISK_ACCEPTANCE') {
+                specConn.textContent = "En attente acceptation risque";
+                specConn.style.color = "#fbbf24";
+            } else if (status === 'RATE_LIMITED') {
+                specConn.textContent = "Plafond horaire atteint (Pause anti-ban)";
+                specConn.style.color = "#f97316";
             } else if (status === 'STARTING' || status === 'RECONNECTING') {
                 specConn.textContent = "Initialisation en cours";
                 specConn.style.color = "#fbbf24";
@@ -5687,6 +5737,12 @@ function setupBillingAndAffiliate() {
             } else if (status === 'CODE_READY') {
                 specMsg.textContent = "Entrez le code à 8 chiffres dans WhatsApp";
                 specMsg.style.color = "#60a5fa";
+            } else if (status === 'AWAITING_RISK_ACCEPTANCE') {
+                specMsg.textContent = "Veuillez accepter les risques pour continuer";
+                specMsg.style.color = "#fbbf24";
+            } else if (status === 'RATE_LIMITED') {
+                specMsg.textContent = (extraData && extraData.guardrails && extraData.guardrails.rateLimitReason) || "Plafond horaire de sécurité atteint";
+                specMsg.style.color = "#f97316";
             } else if (status === 'ERROR') {
                 specMsg.textContent = window.lastWhatsAppError || "Erreur de communication serveur";
                 specMsg.style.color = "#f87171";
@@ -6091,6 +6147,133 @@ function setupBillingAndAffiliate() {
         }
     }
 
+    // ==============================================================================
+    // GESTION DUAL MODE WHATSAPP (Lien Rapide vs Officiel Meta Cloud API)
+    // ==============================================================================
+    window.currentWhatsAppMode = 'rapide';
+    window.currentRiskAccepted = false;
+
+    window.selectWaConnectionMode = async function(mode) {
+        window.currentWhatsAppMode = mode;
+        const btnRapide = document.getElementById('btn-mode-rapide');
+        const btnOfficiel = document.getElementById('btn-mode-officiel');
+        const riskBox = document.getElementById('wa-risk-acceptance-box');
+        const quickContent = document.getElementById('wa-quick-connect-content');
+        const officialBox = document.getElementById('wa-official-mode-box');
+
+        if (btnRapide && btnOfficiel) {
+            if (mode === 'rapide') {
+                btnRapide.style.border = '2px solid var(--whatsapp-green)';
+                btnRapide.style.background = 'rgba(15, 23, 42, 0.6)';
+                btnOfficiel.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                btnOfficiel.style.background = 'rgba(15, 23, 42, 0.35)';
+            } else {
+                btnOfficiel.style.border = '2px solid var(--whatsapp-green)';
+                btnOfficiel.style.background = 'rgba(15, 23, 42, 0.6)';
+                btnRapide.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                btnRapide.style.background = 'rgba(15, 23, 42, 0.35)';
+            }
+        }
+
+        // Persistance du mode auprès du backend
+        const targetUserId = getAppUserId();
+        if (targetUserId) {
+            try {
+                await fetch(API_URL + '/api/whatsapp/mode', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ userId: targetUserId, mode })
+                });
+            } catch (e) {}
+        }
+
+        if (mode === 'officiel') {
+            if (riskBox) riskBox.style.display = 'none';
+            if (quickContent) quickContent.style.display = 'none';
+            if (officialBox) officialBox.style.display = 'block';
+            window.applyWhatsAppState(window.currentWhatsAppStatus || 'NOT_INITIALIZED', window.currentWhatsAppPhone, { mode: 'officiel' });
+        } else {
+            if (officialBox) officialBox.style.display = 'none';
+            if (!window.currentRiskAccepted) {
+                if (riskBox) riskBox.style.display = 'block';
+                if (quickContent) quickContent.style.display = 'none';
+            } else {
+                if (riskBox) riskBox.style.display = 'none';
+                if (quickContent) quickContent.style.display = 'block';
+                window.startWhatsApp(false);
+            }
+            window.applyWhatsAppState(window.currentWhatsAppStatus || 'NOT_INITIALIZED', window.currentWhatsAppPhone, { mode: 'rapide' });
+        }
+    };
+
+    window.toggleRiskSubmitBtn = function() {
+        const check = document.getElementById('check-accept-wa-risk');
+        const btn = document.getElementById('btn-submit-risk-acceptance');
+        if (check && btn) {
+            btn.disabled = !check.checked;
+            btn.style.opacity = check.checked ? '1' : '0.6';
+        }
+    };
+
+    window.submitWaRiskAcceptance = async function() {
+        const btn = document.getElementById('btn-submit-risk-acceptance');
+        const targetUserId = getAppUserId();
+        if (!targetUserId) return;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement de votre accord...';
+        }
+
+        try {
+            const res = await fetch(API_URL + '/api/whatsapp/accept-risk', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ userId: targetUserId })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                window.currentRiskAccepted = true;
+                const riskBox = document.getElementById('wa-risk-acceptance-box');
+                const quickContent = document.getElementById('wa-quick-connect-content');
+                if (riskBox) riskBox.style.display = 'none';
+                if (quickContent) quickContent.style.display = 'block';
+                if (typeof showToast === 'function') {
+                    showToast("✅ Risque accepté et garde-fous anti-ban activés. Génération du QR Code...", "success");
+                }
+                window.startWhatsApp(false);
+            } else {
+                throw new Error(data.error || "Erreur d'enregistrement");
+            }
+        } catch (err) {
+            alert("Erreur lors de l'enregistrement de l'acceptation : " + err.message);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-shield-check"></i> Accepter le Risque &amp; Débloquer la Connexion';
+            }
+        }
+    };
+
+    window.requestOfficialPilotActivation = function() {
+        alert("🛡️ Demande d'activation du Mode Officiel Meta Cloud API bien enregistrée.\n\nNotre équipe prendra contact avec vous afin de finaliser le raccordement avec vos identifiants Meta Business Manager sans interrompre votre activité commerciale.");
+    };
+
+    window.initWaDualModeUI = async function() {
+        const targetUserId = getAppUserId();
+        if (!targetUserId) return;
+        try {
+            const res = await fetch(API_URL + '/api/whatsapp/mode/' + targetUserId, { headers: getAuthHeaders() });
+            const data = await res.json();
+            if (res.ok && data) {
+                window.currentWhatsAppMode = data.mode || 'rapide';
+                window.currentRiskAccepted = Boolean(data.riskAccepted);
+                window.selectWaConnectionMode(window.currentWhatsAppMode);
+            }
+        } catch (e) {
+            window.selectWaConnectionMode('rapide');
+        }
+    };
+
     // Exportation globale immédiate (disponible sans délai sur window)
     window.startWhatsApp = startWhatsApp;
     window._realStartWhatsApp = startWhatsApp;
@@ -6110,7 +6293,7 @@ function setupBillingAndAffiliate() {
                 if (typeof window.prefillWaPairingInput === 'function') {
                     window.prefillWaPairingInput();
                 }
-                startWhatsApp();
+                window.initWaDualModeUI();
             }
             if (e.target.closest('[data-close-modal="qr-modal"]')) {
                 if (statusInterval) clearInterval(statusInterval);

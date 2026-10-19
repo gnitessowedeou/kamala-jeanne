@@ -1160,16 +1160,20 @@
 
               <div class="device-specs-list" style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); margin: 16px 0;">
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
-                  <span>Protocole :</span>
-                  <strong id="wa-spec-protocol">WhatsApp Web Multi-Appareils</strong>
+                  <span>Mode de connexion :</span>
+                  <strong id="wa-spec-mode" style="color: #fbbf24;">Liaison Rapide (WhatsApp Web)</strong>
                 </div>
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>État de la session :</span>
                   <strong id="wa-spec-connection" style="color: var(--text-muted);">Non connecté</strong>
                 </div>
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
-                  <span>Service Cloud Railway :</span>
-                  <strong id="wa-spec-service" style="color: var(--cyan);">Opérationnel</strong>
+                  <span>Garde-fous Anti-Ban :</span>
+                  <strong id="wa-spec-guardrails" style="color: var(--whatsapp-green);">Actifs (Inbound Only • 30/h)</strong>
+                </div>
+                <div class="device-spec-item" style="display: flex; justify-content: space-between;">
+                  <span>Quota horaire :</span>
+                  <strong id="wa-spec-quota" style="color: var(--cyan);">0 / 30 messages cette heure</strong>
                 </div>
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>Diagnostic liaison :</span>
@@ -2615,6 +2619,15 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
       <form id="broadcast-form">
         <div class="modal-body">
+          <!-- Bannière de garde-fou si en Mode Rapide -->
+          <div id="broadcast-guardrail-banner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); padding: 12px 14px; border-radius: var(--radius-sm); font-size: 12.5px; color: #fca5a5; margin-bottom: 16px; display: flex; gap: 10px; align-items: center;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 22px; color: #ef4444; flex-shrink: 0;"></i>
+            <div>
+              <strong style="color: #ef4444; display: block; margin-bottom: 2px;">Diffusions de masse désactivées en Mode Rapide</strong>
+              <span>Pour protéger votre numéro contre les blocages Meta, les diffusions marketing sont réservées au <strong>Mode Officiel (Meta Cloud API)</strong>.</span>
+            </div>
+          </div>
+
           <div class="form-group">
             <label class="form-label" for="broadcast-name">Nom de la Campagne</label>
             <input type="text" class="form-control" id="broadcast-name" placeholder="Ex: Offre Flash Fin de Semaine" required>
@@ -2687,17 +2700,85 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           </button>
         </div>
 
-        <!-- Dual Connection Mode Tabs -->
-        <div class="wa-conn-tabs">
-          <button type="button" class="wa-conn-tab active" id="tab-btn-qr" onclick="switchWaConnectMode('qr')">
-            <i class="fa-solid fa-qrcode"></i>
-            <span>1. Scanner le QR Code</span>
+        <!-- Dual Connection Mode Switcher (Rapide vs Officiel) -->
+        <div class="wa-mode-selector-wrap" style="display: flex; gap: 10px; margin-bottom: 16px;">
+          <button type="button" class="wa-mode-card active" id="btn-mode-rapide" onclick="window.selectWaConnectionMode('rapide')" style="flex: 1; padding: 12px; background: rgba(15, 23, 42, 0.6); border: 2px solid var(--whatsapp-green); border-radius: 12px; cursor: pointer; text-align: left; transition: all 0.2s;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-weight: 700; color: #fff; font-size: 13px;"><i class="fa-solid fa-bolt" style="color: #fbbf24; margin-right: 6px;"></i>Lien Rapide</span>
+              <span class="badge badge-amber" style="font-size: 9.5px; padding: 2px 7px;">Non Officiel</span>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; line-height: 1.35;">Connexion instantanée sans démarche. Risque de suspension Meta (Garde-fous actifs).</div>
           </button>
-          <button type="button" class="wa-conn-tab" id="tab-btn-pairing" onclick="switchWaConnectMode('pairing')">
-            <i class="fa-solid fa-mobile-screen-button"></i>
-            <span>2. Lier par Numéro (Sans Caméra)</span>
+          <button type="button" class="wa-mode-card" id="btn-mode-officiel" onclick="window.selectWaConnectionMode('officiel')" style="flex: 1; padding: 12px; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; cursor: pointer; text-align: left; transition: all 0.2s;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-weight: 700; color: #fff; font-size: 13px;"><i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green); margin-right: 6px;"></i>Mode Officiel</span>
+              <span class="badge badge-green" style="font-size: 9.5px; padding: 2px 7px;">100% Meta</span>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; line-height: 1.35;">WhatsApp Cloud API + Coexistence. Zéro risque de ban, diffusions illimitées.</div>
           </button>
         </div>
+
+        <!-- Box A: Acceptation obligatoire du risque (Mode Rapide) -->
+        <div id="wa-risk-acceptance-box" style="display: none; padding: 16px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; color: #fbbf24; font-weight: 700; font-size: 13.5px; margin-bottom: 8px;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Consentement éclairé requis — Mode Rapide</span>
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.45; margin-bottom: 10px;">
+            Le <strong>Mode Rapide</strong> utilise une bibliothèque d'émulation non officielle de WhatsApp Web. Meta interdit les automatisations non officielles et peut restreindre ou bloquer votre numéro en cas d'activité anormale ou de signalements.
+          </p>
+          <div style="background: rgba(0, 0, 0, 0.25); border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 11.5px; color: #94a3b8;">
+            <strong style="color: #e2e8f0; display: block; margin-bottom: 5px;">🛡️ Garde-fous automatiques appliqués par VANDIAS AI :</strong>
+            <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px;">
+              <li>Réponses <strong>uniquement</strong> aux clients qui vous ont écrit en premier (zéro prospection sauvage).</li>
+              <li>Diffusions de masse et relances sortantes strictement désactivées.</li>
+              <li>Délai aléatoire de frappe humaine (1.5s à 4s) avant chaque réponse.</li>
+              <li>Plafonds stricts : 30 messages/heure et 200 messages/jour.</li>
+              <li>Filtrage complet des groupes et des statuts.</li>
+            </ul>
+          </div>
+          <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 12px; color: #f1f5f9; margin-bottom: 14px;">
+            <input type="checkbox" id="check-accept-wa-risk" onchange="window.toggleRiskSubmitBtn()" style="margin-top: 2px; accent-color: var(--whatsapp-green); width: 17px; height: 17px;">
+            <span>Je comprends que le mode rapide comporte un risque de blocage par WhatsApp et j'accepte ce risque en m'engageant à respecter les garde-fous.</span>
+          </label>
+          <button type="button" class="btn-primary-glow" id="btn-submit-risk-acceptance" disabled onclick="window.submitWaRiskAcceptance()" style="width: 100%; justify-content: center; opacity: 0.6;">
+            <i class="fa-solid fa-shield-check"></i>
+            <span>Accepter le Risque &amp; Débloquer la Connexion</span>
+          </button>
+        </div>
+
+        <!-- Box B: Présentation du Mode Officiel Meta Cloud API -->
+        <div id="wa-official-mode-box" style="display: none; padding: 20px; background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.25); border-radius: 12px; margin-bottom: 16px; text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: var(--whatsapp-green); font-size: 22px;">
+            <i class="fa-solid fa-certificate"></i>
+          </div>
+          <h4 style="font-size: 15px; color: #fff; margin-bottom: 8px;">Mode Officiel WhatsApp Cloud API (Meta)</h4>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.45; margin-bottom: 14px; max-width: 420px; margin-left: auto; margin-right: auto;">
+            Intégration certifiée Meta avec <strong>Embedded Signup v4</strong> et Coexistence totale avec votre application mobile WhatsApp Business. Zéro risque de blocage, modèles vérifiés et diffusions marketing débloquées.
+          </p>
+          <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; font-size: 12px; color: #94a3b8; margin-bottom: 14px; text-align: left;">
+            <div style="color: var(--whatsapp-green); font-weight: 700; margin-bottom: 4px;"><i class="fa-solid fa-lock" style="margin-right: 6px;"></i>Pilote officiel en phase de pré-lancement :</div>
+            <span>Conformément aux directives de sécurité, le pilote officiel est prêt mais ne sera pas déployé sur votre numéro sans votre accord formel préalable.</span>
+          </div>
+          <button type="button" class="btn-primary-glow" onclick="window.requestOfficialPilotActivation()" style="justify-content: center; margin: 0 auto;">
+            <i class="fa-solid fa-envelope-circle-check"></i>
+            <span>Demander l'activation du Mode Officiel</span>
+          </button>
+        </div>
+
+        <!-- Contenu de liaison rapide (Tabs QR / Pairing) -->
+        <div id="wa-quick-connect-content">
+          <!-- Dual Connection Mode Tabs -->
+          <div class="wa-conn-tabs">
+            <button type="button" class="wa-conn-tab active" id="tab-btn-qr" onclick="switchWaConnectMode('qr')">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>1. Scanner le QR Code</span>
+            </button>
+            <button type="button" class="wa-conn-tab" id="tab-btn-pairing" onclick="switchWaConnectMode('pairing')">
+              <i class="fa-solid fa-mobile-screen-button"></i>
+              <span>2. Lier par Numéro (Sans Caméra)</span>
+            </button>
+          </div>
 
         <!-- Pane A: QR Code Mode -->
         <div id="pane-conn-qr" class="conn-pane active">
@@ -2777,6 +2858,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
               <div><strong>5.</strong> Tapez ce code à 8 chiffres. La liaison s'effectue en 3 secondes !</div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
