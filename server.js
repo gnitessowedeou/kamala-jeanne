@@ -2189,10 +2189,14 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
     const nowTime = Date.now();
 
     const appMeta = authUser?.app_metadata || {};
-    const rawPlan = appMeta.plan || profile?.plan;
-    const paidPlan = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired') ? rawPlan : null;
-    const rawStatus = appMeta.plan_status || profile?.plan_status || 'active';
-    const isPaidActive = !!paidPlan && (rawStatus === 'active');
+    let rawPlan = (appMeta.plan || profile?.plan || '').toLowerCase();
+    if (rawPlan === 'starter') rawPlan = 'basic';
+    const rawStatus = (appMeta.plan_status || profile?.plan_status || '').toLowerCase();
+    const hasPaidCredits = (typeof profile?.credits === 'number' && profile.credits > 100);
+    const paidPlan = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired') 
+      ? rawPlan 
+      : (hasPaidCredits ? 'basic' : null);
+    const isPaidActive = !!paidPlan && (rawStatus === 'active' || rawStatus === 'trial' || hasPaidCredits) && rawStatus !== 'expired';
 
     let isExpired = false;
     let daysLeft = 0;
@@ -2200,7 +2204,7 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
     let days = 0, hours = 0, minutes = 0, seconds = 0;
     let activatedAtStr = null;
     let expiresAtStr = null;
-    let cycleInfo = { ms: 7 * 24 * 60 * 60 * 1000, label: '7 jours', days: 7 };
+    let cycleInfo = { ms: 30 * 24 * 60 * 60 * 1000, label: '30 jours', days: 30 };
 
     if (isPaidActive) {
       // Abonnements payants : durée réelle (15 jours, 1 mois, 3 mois, etc.) et décompte automatique
@@ -2251,15 +2255,18 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
     }
 
     const credits = typeof profile?.credits === 'number' ? profile.credits : 100;
+    const planCreditsMap = { basic: 1000, starter: 1000, pro: 3000, business: 10000 };
+    const basePlanMax = planCreditsMap[paidPlan] || 1000;
+    const tokensMax = isPaidActive ? Math.max(basePlanMax, credits) : 100;
 
     res.json({
       success: true,
       userId,
       isPaid: isPaidActive,
-      plan: isPaidActive ? (isExpired ? 'expired' : paidPlan) : (isExpired ? 'expired' : 'trial'),
+      plan: isPaidActive ? (isExpired ? 'expired' : (paidPlan || 'basic')) : (isExpired ? 'expired' : 'trial'),
       planStatus: isExpired ? 'expired' : 'active',
       planCycle: isPaidActive ? (appMeta.plan_cycle || profile?.plan_cycle || 'monthly') : 'trial',
-      planCycleLabel: cycleInfo.label,
+      planCycleLabel: isPaidActive ? (cycleInfo.label || '30 jours') : '7 jours',
       createdAt: createdAtStr,
       activatedAt: activatedAtStr,
       expiresAt: expiresAtStr,
@@ -2273,6 +2280,7 @@ app.get('/api/user/subscription/:userId', authMiddleware, async (req, res) => {
         seconds
       },
       credits,
+      tokensMax,
       whatsappNumber: profile?.whatsapp_number || "",
       serverTime: new Date().toISOString()
     });
@@ -3935,7 +3943,12 @@ app.post('/api/admin/users/:userId/credits', adminGuard, adminRequireUuid, async
 
     const current = typeof p.credits === 'number' ? p.credits : 0;
     const next = Math.max(0, Math.round(mode === 'add' ? current + value : value));
-    const { error } = await supabase.from('profiles').update({ credits: next }).eq('id', req.params.userId);
+    const profileUpdates = { credits: next };
+    if (next > 100 && (!p.plan || p.plan === 'free' || p.plan === 'starter' || p.plan === 'trial')) {
+      profileUpdates.plan = 'basic';
+      profileUpdates.plan_status = 'active';
+    }
+    const { error } = await supabase.from('profiles').update(profileUpdates).eq('id', req.params.userId);
     if (error) return res.status(500).json({ error: error.message });
 
     console.log(`[ADMIN] ${req.user.email} crédits ${req.params.userId}: ${current} -> ${next}`);
@@ -3968,7 +3981,6 @@ app.post('/api/admin/users/:userId/plan', adminGuard, adminRequireUuid, async (r
         plan_expires_at: new Date().toISOString() 
       };
     } else {
-      newCredits = planCreditsMap[plan] || 1000;
       const nDays = Math.min(3650, Math.max(1, parseInt(days, 10) || 30));
       const activatedAt = new Date().toISOString();
       const expiresAt = new Date(Date.now() + nDays * 86400000).toISOString();
@@ -3979,6 +3991,13 @@ app.post('/api/admin/users/:userId/plan', adminGuard, adminRequireUuid, async (r
         plan_activated_at: activatedAt,
         plan_expires_at: expiresAt
       };
+      const defaultCredits = planCreditsMap[plan] || 1000;
+      const { data: curP } = await supabase.from('profiles').select('credits').eq('id', userId).maybeSingle();
+      if (!curP || typeof curP.credits !== 'number' || curP.credits < defaultCredits) {
+        newCredits = defaultCredits;
+      } else {
+        newCredits = curP.credits;
+      }
     }
 
     const { error: mErr } = await supabase.auth.admin.updateUserById(userId, {

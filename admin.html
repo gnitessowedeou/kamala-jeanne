@@ -329,7 +329,7 @@
     var m = STATUS[st] || [st || '—', 'b-gray'];
     return '<span class="badge ' + m[1] + '">' + esc(m[0]) + '</span>';
   }
-  var PLAN = { trial: ['Essai', 'b-blue'], basic: ['Basic', 'b-violet'], pro: ['Pro', 'b-green'], business: ['Business', 'b-amber'], expired: ['Expiré', 'b-red'], free: ['Gratuit', 'b-gray'] };
+  var PLAN = { trial: ['Essai', 'b-blue'], starter: ['Basic', 'b-violet'], basic: ['Basic', 'b-violet'], pro: ['Pro', 'b-green'], business: ['Business', 'b-amber'], expired: ['Expiré', 'b-red'], free: ['Gratuit', 'b-gray'] };
   function planBadge(p) {
     var m = PLAN[p] || [p || '—', 'b-gray'];
     return '<span class="badge ' + m[1] + '">' + esc(m[0]) + '</span>';

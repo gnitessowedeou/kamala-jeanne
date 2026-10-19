@@ -1276,15 +1276,21 @@ window.getStoredReferralCode = getStoredReferralCode;
       if (subCreditsLabel) subCreditsLabel.textContent = "Solde Crédits IA";
 
       if (user.plan) {
-        if (planNameEl) planNameEl.textContent = user.plan.name || "Essai Gratuit 7j 🚀";
-        const max = user.plan.tokensMax || 100;
-        const credits = (typeof user.credits === 'number') 
-          ? user.credits 
-          : (max - (user.plan.tokensUsed || 0));
+        const rawPlan = (user.plan.type || user.plan.name || '').toLowerCase();
+        const hasPaidCr = (typeof user.credits === 'number' && user.credits > 100);
+        const isPaid = ((rawPlan.includes('basic') || rawPlan.includes('starter') || rawPlan.includes('pro') || rawPlan.includes('business')) && user.plan.status !== 'expired') || hasPaidCr;
+        const planDisplayName = isPaid 
+          ? (rawPlan.includes('pro') ? 'Formule PRO (30 jours) 👑' : rawPlan.includes('business') ? 'Formule BUSINESS (30 jours) 👑' : 'Formule BASIC (30 jours) 👑')
+          : "Essai Gratuit 7j 🚀";
+
+        if (planNameEl) planNameEl.textContent = planDisplayName;
+        const credits = (typeof user.credits === 'number') ? user.credits : 100;
+        const baseDefault = (rawPlan.includes('pro') ? 3000 : rawPlan.includes('business') ? 10000 : 1000);
+        const max = isPaid ? Math.max(baseDefault, user.plan.tokensMax || 0, credits) : 100;
         const remainingPct = max > 0 ? Math.min(100, Math.max(0, (credits / max) * 100)).toFixed(0) : 100;
 
         if (planTokensMaxEl) planTokensMaxEl.textContent = `sur ${max.toLocaleString("fr-FR")} inclus`;
-        if (planTokensUsedEl) planTokensUsedEl.textContent = `${credits} crédit${credits > 1 ? 's' : ''} disponible${credits > 1 ? 's' : ''}`;
+        if (planTokensUsedEl) planTokensUsedEl.textContent = `${credits.toLocaleString("fr-FR")} crédit${credits > 1 ? 's' : ''} disponible${credits > 1 ? 's' : ''}`;
         if (planPctEl) planPctEl.textContent = `${remainingPct}% restants`;
         if (planFillEl) {
           planFillEl.style.width = `${remainingPct}%`;
@@ -1293,7 +1299,7 @@ window.getStoredReferralCode = getStoredReferralCode;
 
         const billingCreditsDisplay = document.getElementById("billing-credits-display");
         if (billingCreditsDisplay) {
-          billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} disponibles sur ${max} inclus</strong>`;
+          billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits.toLocaleString("fr-FR")} disponibles sur ${max.toLocaleString("fr-FR")} inclus</strong>`;
         }
       }
 
@@ -1325,10 +1331,14 @@ window.getStoredReferralCode = getStoredReferralCode;
       try {
         const profile = await SupabaseRest.getProfile(user.id);
         if (profile) {
-          const profilePlan = profile.plan || user.plan?.type;
-          const isPaid = (profilePlan && profilePlan !== 'trial' && profilePlan !== 'free' && profilePlan !== 'expired' && (profile.plan_status === 'active' || user.plan?.status === 'active'));
-          const maxTokens = (profilePlan === 'basic' ? 1000 : profilePlan === 'pro' ? 3000 : profilePlan === 'business' ? 10000 : 100);
-          const usedTokens = Math.max(0, maxTokens - (profile.credits ?? maxTokens));
+          let profilePlan = (profile.plan || user.plan?.type || '').toLowerCase();
+          if (profilePlan === 'starter') profilePlan = 'basic';
+          const hasPaidCredits = (typeof profile.credits === 'number' && profile.credits > 100);
+          const isPaid = ((profilePlan && profilePlan !== 'trial' && profilePlan !== 'free' && profilePlan !== 'expired') || hasPaidCredits);
+          const actualCredits = (typeof profile.credits === 'number') ? profile.credits : 100;
+          const defaultMax = (profilePlan === 'pro' ? 3000 : profilePlan === 'business' ? 10000 : 1000);
+          const maxTokens = isPaid ? Math.max(defaultMax, actualCredits) : 100;
+          const usedTokens = Math.max(0, maxTokens - actualCredits);
           const persistentCreatedAt = user.createdAt || profile.created_at || localStorage.getItem('vendia_user_registered_' + user.id);
 
           // Récupération stricte du numéro personnel depuis Supabase
@@ -1340,6 +1350,7 @@ window.getStoredReferralCode = getStoredReferralCode;
 
           const syncedUser = {
             ...user,
+            credits: actualCredits,
             createdAt: persistentCreatedAt || user.createdAt,
             firstName: profile.first_name || user.firstName,
             lastName: profile.last_name || user.lastName,
@@ -1351,12 +1362,12 @@ window.getStoredReferralCode = getStoredReferralCode;
             affiliateCode: profile.affiliate_code || user.affiliateCode,
             plan: {
               ...(user.plan || {}),
-              type: profilePlan || user.plan?.type || 'trial',
-              status: profile.plan_status || user.plan?.status || 'active',
+              type: profilePlan || (isPaid ? 'basic' : 'trial'),
+              status: isPaid ? 'active' : (profile.plan_status || 'active'),
               cycle: profile.plan_cycle || user.plan?.cycle || 'monthly',
               activatedAt: profile.plan_activated_at || user.plan?.activatedAt || null,
               expiresAt: profile.plan_expires_at || user.plan?.expiresAt || null,
-              name: isPaid ? `Formule ${(profilePlan || 'pro').toUpperCase()}` : "Essai Gratuit 7j 🦾",
+              name: isPaid ? `Formule ${(profilePlan || 'basic').toUpperCase()} (30 jours) 👑` : "Essai Gratuit 7j 🦾",
               tokensMax: maxTokens,
               tokensUsed: usedTokens
             }

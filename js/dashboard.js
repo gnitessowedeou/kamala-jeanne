@@ -567,8 +567,10 @@ function getStoredUserCreatedAt() {
 }
 
 function updateTrialAndSubscriptionUI() {
-  const rawPlan = currentSubscriptionState.plan;
-  const isPaid = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired' && currentSubscriptionState.planStatus === 'active');
+  let rawPlan = (currentSubscriptionState.plan || '').toLowerCase();
+  if (rawPlan === 'starter') rawPlan = 'basic';
+  const hasPaidCredits = (typeof currentSubscriptionState.credits === 'number' && currentSubscriptionState.credits > 100);
+  const isPaid = (rawPlan && rawPlan !== 'trial' && rawPlan !== 'free' && rawPlan !== 'expired' && (currentSubscriptionState.planStatus === 'active' || hasPaidCredits)) || hasPaidCredits;
   const now = Date.now();
   const pad = (n) => String(n).padStart(2, '0');
 
@@ -591,9 +593,9 @@ function updateTrialAndSubscriptionUI() {
     // CAS 1 : ABONNEMENT PAYANT (Durée réelle : 15 jours, 1 mois, 3 mois, etc.)
     // =========================================================================
     const cycleInfo = parseDashboardCycleDuration(currentSubscriptionState.planCycle);
-    const durationLabel = currentSubscriptionState.planCycleLabel || cycleInfo.label;
-    const planUpper = String(rawPlan).toUpperCase();
-    const planDisplay = (planUpper === 'PRO' ? 'Pro' : planUpper === 'BUSINESS' ? 'Business' : planUpper === 'BASIC' ? 'Basic' : planUpper);
+    const durationLabel = currentSubscriptionState.planCycleLabel || cycleInfo.label || '30 jours';
+    const planUpper = String(rawPlan || 'basic').toUpperCase();
+    const planDisplay = (planUpper === 'PRO' ? 'Pro' : planUpper === 'BUSINESS' ? 'Business' : 'Basic');
 
     const activatedTime = new Date(currentSubscriptionState.planActivatedAt || currentSubscriptionState.createdAt || getStoredUserCreatedAt()).getTime();
     const expiresTime = currentSubscriptionState.planExpiresAt 
@@ -836,8 +838,9 @@ function updateTrialAndSubscriptionUI() {
 
   // Crédits dans la sidebar
   const credits = (typeof currentSubscriptionState.credits === 'number') ? currentSubscriptionState.credits : 100;
+  const baseDefault = (rawPlan === 'pro' ? 3000 : rawPlan === 'business' ? 10000 : 1000);
   const maxCredits = isPaid 
-    ? (rawPlan === 'basic' ? 1000 : rawPlan === 'pro' ? 3000 : 10000) 
+    ? Math.max(baseDefault, credits) 
     : 100;
   const remainingPct = maxCredits > 0 ? Math.min(100, Math.max(0, (credits / maxCredits) * 100)).toFixed(0) : "100";
 
@@ -853,11 +856,11 @@ function updateTrialAndSubscriptionUI() {
     subTokenFill.style.width = `${remainingPct}%`;
     subTokenFill.style.background = remainingPct > 20 ? "linear-gradient(90deg, #25D366, #10b981)" : "linear-gradient(90deg, #f59e0b, #ef4444)";
   }
-  if (subTokensUsed) subTokensUsed.textContent = `${credits} crédit${credits > 1 ? 's' : ''} disponible${credits > 1 ? 's' : ''}`;
+  if (subTokensUsed) subTokensUsed.textContent = `${credits.toLocaleString('fr-FR')} crédit${credits > 1 ? 's' : ''} disponible${credits > 1 ? 's' : ''}`;
   if (subTokensMax) subTokensMax.textContent = `sur ${maxCredits.toLocaleString('fr-FR')} inclus`;
 
   if (billingCreditsDisplay) {
-    billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits} disponibles sur ${maxCredits} inclus</strong>`;
+    billingCreditsDisplay.innerHTML = `Crédits IA : <strong>${credits.toLocaleString('fr-FR')} disponibles sur ${maxCredits.toLocaleString('fr-FR')} inclus</strong>`;
   }
 }
 
@@ -901,13 +904,16 @@ async function syncSubscriptionStatusFromServer() {
           currentSubscriptionState.createdAt = profile.created_at;
           try { localStorage.setItem('vendia_user_registered_' + userId, profile.created_at); } catch(e) {}
         }
-        if (profile.plan && profile.plan !== 'trial' && profile.plan !== 'free') {
-          currentSubscriptionState.plan = profile.plan;
-          currentSubscriptionState.planStatus = profile.plan_status || 'active';
+        let pPlan = (profile.plan || '').toLowerCase();
+        if (pPlan === 'starter') pPlan = 'basic';
+        const hasPaidCr = (typeof profile.credits === 'number' && profile.credits > 100);
+        if (hasPaidCr || (pPlan && pPlan !== 'trial' && pPlan !== 'free')) {
+          currentSubscriptionState.plan = pPlan || 'basic';
+          currentSubscriptionState.planStatus = 'active';
           if (profile.plan_cycle) currentSubscriptionState.planCycle = profile.plan_cycle;
           if (profile.plan_activated_at) currentSubscriptionState.planActivatedAt = profile.plan_activated_at;
           if (profile.plan_expires_at) currentSubscriptionState.planExpiresAt = profile.plan_expires_at;
-        } else if (profile.plan === 'free' || profile.plan_status === 'expired') {
+        } else if (pPlan === 'free' || profile.plan_status === 'expired') {
           currentSubscriptionState.plan = 'free';
           currentSubscriptionState.planStatus = 'expired';
         }
@@ -979,22 +985,24 @@ async function syncSubscriptionStatusFromServer() {
         try {
           const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
           u.createdAt = data.createdAt;
+          if (typeof data.credits === 'number') u.credits = data.credits;
+          const planKey = (data.plan === 'starter' || data.plan === 'basic') ? 'basic' : (data.plan || 'basic');
+          const maxCreds = Math.max((planKey === 'pro' ? 3000 : planKey === 'business' ? 10000 : 1000), data.tokensMax || 0, data.credits || 0);
           u.plan = {
             ...(u.plan || {}),
-            type: data.plan,
+            type: planKey,
             status: data.planStatus,
             cycle: data.planCycle,
             activatedAt: data.activatedAt,
             expiresAt: data.expiresAt,
-            name: data.isPaid ? `Formule ${data.plan.toUpperCase()}` : 'Essai Gratuit 7j 🦾',
+            name: data.isPaid ? `Formule ${planKey.toUpperCase()} (30 jours) 👑` : 'Essai Gratuit 7j 🦾',
             daysLeft: data.daysLeft,
-            tokensMax: (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100),
-            tokensUsed: Math.max(0, (data.plan === 'basic' ? 1000 : data.plan === 'pro' ? 3000 : data.plan === 'business' ? 10000 : 100) - data.credits)
+            tokensMax: maxCreds,
+            tokensUsed: Math.max(0, maxCreds - data.credits)
           };
 
           if (data.whatsappNumber !== undefined) {
             let apiPhone = (data.whatsappNumber || '').toString().trim();
-            if (apiPhone === '+229 62639593' || apiPhone === '22962639593') apiPhone = '';
             const phoneToUse = apiPhone || (u?.id ? localStorage.getItem('vendia_connected_phone_' + u.id) : null) || u.whatsapp_number || u.fullPhone || '';
             const split = parseAppPhone(phoneToUse, u.phoneCountry || '+225');
             if (split.full) {
