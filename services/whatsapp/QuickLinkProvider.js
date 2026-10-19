@@ -221,14 +221,16 @@ class QuickLinkProvider extends WhatsAppProvider {
       effectiveStatus = WHATSAPP_STATUS.RATE_LIMITED;
     }
 
+    const isLive = effectiveStatus === WHATSAPP_STATUS.CONNECTED || rawStatus === 'AUTHENTICATED' || rawStatus === 'CONNECTED';
+
     return {
       mode: this.name,
-      status: effectiveStatus,
+      status: isLive ? WHATSAPP_STATUS.CONNECTED : effectiveStatus,
       rawStatus,
       phone: this.waNumbers[userId] || null,
       riskAccepted: isRiskAccepted,
-      qrCode: this.waSessionsQR[userId] || null,
-      pairingCode: this.waPairingCodes[userId] || null,
+      qrCode: isLive ? null : (this.waSessionsQR[userId] || null),
+      pairingCode: isLive ? null : (this.waPairingCodes[userId] || null),
       error: this.waErrors[userId] || null,
       guardrails: {
         inboundOnly: true,

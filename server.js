@@ -229,7 +229,7 @@ app.use((req, res, next) => {
 
 // Protection stricte : Emp�cher l'acc�s direct aux fichiers sensibles
 app.use((req, res, next) => {
-  const forbiddenPatterns = [/.env/i, /server.js/i, /package.*.json/i, /.git/i, /.log/i];
+  const forbiddenPatterns = [/\.env($|\?)/i, /server\.js($|\?)/i, /package.*\.json($|\?)/i, /\.git($|\/)/i, /\.log($|\?)/i];
   const reqUrl = req.url.toLowerCase();
   for (const pattern of forbiddenPatterns) {
     if (pattern.test(reqUrl)) {
@@ -1138,7 +1138,7 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
 
   client.on('authenticated', () => {
     console.log(`🎉 [WA] Client ${userId} AUTHENTIFIÉ (Session validée) !`);
-    waStatuses[userId] = 'AUTHENTICATED';
+    waStatuses[userId] = 'CONNECTED';
     delete waSessionsQR[userId];
     delete waPairingCodes[userId];
     const detectedPhone = getClientPhone(client, userId) || cleanPhone;
@@ -1147,7 +1147,7 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
 
   client.on('loading_screen', (percent, message) => {
     console.log(`[WA] Client ${userId} synchronisation: ${percent}% - ${message}`);
-    waStatuses[userId] = 'AUTHENTICATED';
+    waStatuses[userId] = 'CONNECTED';
     const detectedPhone = getClientPhone(client, userId);
     if (detectedPhone) waNumbers[userId] = detectedPhone;
   });
@@ -1742,18 +1742,22 @@ app.get('/api/whatsapp/status/:userId', authMiddleware, async (req, res) => {
   }
 
   const statusObj = await whatsappManager.getStatus(userId);
+  const isAuthOrConnected = waStatuses[userId] === 'CONNECTED' || waStatuses[userId] === 'AUTHENTICATED' || statusObj.status === 'CONNECTED' || statusObj.status === 'AUTHENTICATED';
+  const effectiveStatus = isAuthOrConnected ? 'CONNECTED' : statusObj.status;
 
-  const validQr = (statusObj.qrCode || (waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/')))
+  const validQr = (!isAuthOrConnected && (statusObj.qrCode || (waSessionsQR[userId] && typeof waSessionsQR[userId] === 'string' && waSessionsQR[userId].startsWith('data:image/'))))
     ? (statusObj.qrCode || waSessionsQR[userId])
     : null;
 
+  const resolvedPhone = waNumbers[userId] || statusObj.phone || cleanPhone || null;
+
   res.json({
     mode: statusObj.currentMode,
-    status: statusObj.status,
+    status: effectiveStatus,
     rawStatus: st,
     qr: validQr,
-    pairingCode: statusObj.pairingCode || waPairingCodes[userId] || null,
-    phone: (statusObj.status === 'CONNECTED' && waNumbers[userId]) ? ('+' + String(waNumbers[userId]).replace(/^\+/, '')) : statusObj.phone,
+    pairingCode: isAuthOrConnected ? null : (statusObj.pairingCode || waPairingCodes[userId] || null),
+    phone: resolvedPhone ? ('+' + String(resolvedPhone).replace(/^\+/, '')) : null,
     riskAccepted: statusObj.riskAccepted,
     guardrails: statusObj.guardrails,
     usage: statusObj.usage,

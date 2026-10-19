@@ -5508,7 +5508,7 @@ function setupBillingAndAffiliate() {
             try { localStorage.removeItem('vendia_connected_phone'); } catch(e) {}
         }
 
-        const isConnected = (status === 'CONNECTED');
+        const isConnected = (status === 'CONNECTED' || status === 'AUTHENTICATED');
         let user = {};
         try { user = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
 
@@ -5901,27 +5901,27 @@ function setupBillingAndAffiliate() {
 
             window.applyWhatsAppState(data.status, data.phone);
 
-            if (data.status === 'CONNECTED') {
-                if (data.phone) {
-                    const cleanPhone = '+' + String(data.phone).replace(/^\+/, '').trim();
+            if (data.status === 'CONNECTED' || data.status === 'AUTHENTICATED') {
+                if (statusInterval) clearInterval(statusInterval);
+                if (window._waPairingInterval) {
+                    clearInterval(window._waPairingInterval);
+                    window._waPairingInterval = null;
+                }
+                const cleanPhone = data.phone ? ('+' + String(data.phone).replace(/^\+/, '').trim()) : (window.currentWhatsAppPhone || '');
+                if (cleanPhone) {
                     window.currentWhatsAppPhone = cleanPhone;
                     try { 
                         localStorage.setItem('vendia_connected_phone', cleanPhone);
                         if (targetUserId) localStorage.setItem('vendia_connected_phone_' + targetUserId, cleanPhone);
                     } catch(e) {}
-                    try {
-                        let u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
-                        u.fullPhone = cleanPhone;
-                        u.whatsapp_number = cleanPhone;
-                        localStorage.setItem('vendia_current_user', JSON.stringify(u));
-                    } catch(e) {}
-                    window.applyWhatsAppState('CONNECTED', cleanPhone);
-                    if (targetUserId && window.SupabaseRest) {
-                        try { window.SupabaseRest.updateProfile(targetUserId, { whatsapp_number: cleanPhone }); } catch(e) {}
-                    }
-                } else {
-                    setTimeout(() => syncWhatsAppStatus(), 1500);
                 }
+                window.applyWhatsAppState('CONNECTED', cleanPhone);
+                const wasActive = qrModal && qrModal.classList.contains('active');
+                if (qrModal) qrModal.classList.remove('active');
+                if (wasActive && typeof showToast === 'function') {
+                    showToast("🎉 WhatsApp connecté avec succès !" + (cleanPhone ? " Numéro : " + cleanPhone : ""), "success");
+                }
+                return;
             }
 
             if (data.pairingCode && typeof window.renderPairingCode === 'function') {
@@ -5931,18 +5931,6 @@ function setupBillingAndAffiliate() {
             if (data.qr && typeof data.qr === 'string' && data.qr.startsWith('data:image/')) {
                 pollAttempts = 0;
                 renderQrImage(data.qr);
-            } 
-            else if (data.status === 'CONNECTED') {
-                if (statusInterval) clearInterval(statusInterval);
-                if (window._waPairingInterval) {
-                    clearInterval(window._waPairingInterval);
-                    window._waPairingInterval = null;
-                }
-                const wasActive = qrModal && qrModal.classList.contains('active');
-                if (qrModal) qrModal.classList.remove('active');
-                if (wasActive && typeof showToast === 'function') {
-                    showToast("🎉 WhatsApp connecté avec succès ! Numéro : " + (data.phone ? '+' + data.phone : ''), "success");
-                }
             }
             else if (data.status === 'ERROR') {
                 if (statusInterval) clearInterval(statusInterval);
@@ -6015,7 +6003,7 @@ function setupBillingAndAffiliate() {
                     window.applyWhatsAppState(quickData.status || 'QR_READY', null);
                     statusInterval = setInterval(checkStatus, 2000);
                     return;
-                } else if (quickData.status === 'CONNECTED') {
+                } else if (quickData.status === 'CONNECTED' || quickData.status === 'AUTHENTICATED') {
                     if (qrBox) qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
                     const activeP = quickData.phone || window.currentWhatsAppPhone || localStorage.getItem('vendia_connected_phone');
                     window.applyWhatsAppState('CONNECTED', activeP);
@@ -6044,7 +6032,7 @@ function setupBillingAndAffiliate() {
                 window.applyWhatsAppState(data.status || 'QR_READY', null);
                 statusInterval = setInterval(checkStatus, 2000);
                 return;
-            } else if (data.status === 'CONNECTED') {
+            } else if (data.status === 'CONNECTED' || data.status === 'AUTHENTICATED') {
                 if (qrBox) qrBox.innerHTML = '<div style="text-align:center; padding:20px; color:#22c55e; font-weight:bold;">✅ Bot WhatsApp déjà connecté !</div>';
                 const activeP = data.phone || window.currentWhatsAppPhone || localStorage.getItem('vendia_connected_phone');
                 window.applyWhatsAppState('CONNECTED', activeP);
