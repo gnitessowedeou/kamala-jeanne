@@ -869,6 +869,9 @@ async function syncSubscriptionStatusFromServer() {
             currentSubscriptionState.planCycle = appMeta.plan_cycle || 'monthly';
             currentSubscriptionState.planActivatedAt = appMeta.plan_activated_at || null;
             currentSubscriptionState.planExpiresAt = appMeta.plan_expires_at || null;
+          } else if (appMeta.plan === 'free' || appMeta.plan_status === 'expired') {
+            currentSubscriptionState.plan = 'free';
+            currentSubscriptionState.planStatus = 'expired';
           }
           break;
         }
@@ -891,6 +894,9 @@ async function syncSubscriptionStatusFromServer() {
           if (profile.plan_cycle) currentSubscriptionState.planCycle = profile.plan_cycle;
           if (profile.plan_activated_at) currentSubscriptionState.planActivatedAt = profile.plan_activated_at;
           if (profile.plan_expires_at) currentSubscriptionState.planExpiresAt = profile.plan_expires_at;
+        } else if (profile.plan === 'free' || profile.plan_status === 'expired') {
+          currentSubscriptionState.plan = 'free';
+          currentSubscriptionState.planStatus = 'expired';
         }
         if (typeof profile.credits === 'number') {
           currentSubscriptionState.credits = profile.credits;
@@ -1015,7 +1021,15 @@ function initTrialCountdownEngine() {
 
   setInterval(() => {
     if (!document.hidden) syncSubscriptionStatusFromServer();
-  }, 30000);
+  }, 12000);
+
+  // Synchronisation instantanée dès que l'utilisateur revient sur son tableau de bord
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) syncSubscriptionStatusFromServer();
+  });
+  window.addEventListener('focus', () => {
+    syncSubscriptionStatusFromServer();
+  });
 
   handlePaymentReturnCallback();
 }
@@ -5780,6 +5794,7 @@ function setupBillingAndAffiliate() {
             }
 
             if (data.status === 'QR_READY' && data.qr) {
+                pollAttempts = 0;
                 renderQrImage(data.qr);
             } 
             else if (data.status === 'CONNECTED') {
@@ -5811,21 +5826,30 @@ function setupBillingAndAffiliate() {
                     `;
                 }
             }
-            else if (pollAttempts > 45) {
+            else if (pollAttempts > 70) {
                 if (statusInterval) clearInterval(statusInterval);
                 if (qrBox) {
                     qrBox.innerHTML = `
                         <div style="padding: 14px; text-align: center;">
                             <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">⏳ Initialisation prolongée</p>
                             <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                                Le navigateur Cloud redémarre sa session WhatsApp Web.<br>
-                                Cliquez ci-dessous pour afficher le QR Code.
+                                Le navigateur Cloud a mis plus de temps que prévu à charger WhatsApp Web.<br>
+                                Cliquez ci-dessous pour relancer l'affichage :
                             </p>
                             <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 6px 14px; font-size: 12px;">
                                 <i class="fa-solid fa-rotate-right"></i> Forcer la régénération du QR Code
                             </button>
                         </div>
                     `;
+                }
+            } else {
+                const subEl = document.getElementById('qr-loading-sub');
+                if (subEl) {
+                    if (pollAttempts > 15) {
+                        subEl.textContent = "Finalisation de la passerelle WhatsApp Web (encore quelques secondes)...";
+                    } else if (pollAttempts > 6) {
+                        subEl.textContent = "Chargement des modules officiels WhatsApp...";
+                    }
                 }
             }
         } catch (error) {}
@@ -7414,6 +7438,11 @@ window.renderPairingCode = function(rawCode) {
 
     var displayEl = document.getElementById("pairing-code-display");
     var resultWrap = document.getElementById("pairing-code-result-wrap");
+    var btn = document.getElementById("btn-submit-pairing");
+    var btnText = document.getElementById("btn-pairing-text");
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-rotate"></i> <span>Regénérer un code</span>';
+
     if (!displayEl) return;
 
     var clean = window.currentWaPairingCode.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -7427,6 +7456,27 @@ window.renderPairingCode = function(rawCode) {
 
     displayEl.innerHTML = html;
     if (resultWrap) resultWrap.style.display = "block";
+
+    // Compte à rebours dynamique de validité du code (3 minutes)
+    if (window._pairingCountdown) clearInterval(window._pairingCountdown);
+    var secondsLeft = 180;
+    var timerBadge = resultWrap ? resultWrap.querySelector('.code-card-header span:last-child') : null;
+    if (timerBadge) {
+        timerBadge.textContent = "Expire dans 3:00";
+        timerBadge.style.color = "#94a3b8";
+        window._pairingCountdown = setInterval(function() {
+            secondsLeft--;
+            if (secondsLeft <= 0) {
+                clearInterval(window._pairingCountdown);
+                timerBadge.textContent = "Expiré - Cliquez sur Regénérer";
+                timerBadge.style.color = "#f43f5e";
+            } else {
+                var m = Math.floor(secondsLeft / 60);
+                var s = secondsLeft % 60;
+                timerBadge.textContent = "Expire dans " + m + ":" + (s < 10 ? "0" : "") + s;
+            }
+        }, 1000);
+    }
 
     window.switchWaConnectMode("pairing");
 };
@@ -7461,7 +7511,7 @@ window.submitWhatsAppPairingCode = async function() {
     } catch(e) {}
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Génération...';
+    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Initialisation WhatsApp...';
 
     var targetUserId = (typeof getAppUserId === "function") ? getAppUserId() : null;
     if (!targetUserId) {
@@ -7471,6 +7521,15 @@ window.submitWhatsAppPairingCode = async function() {
         return;
     }
 
+    // Affichage immédiat de l'indicateur de chargement dans la zone du code
+    var resultWrap = document.getElementById("pairing-code-result-wrap");
+    var displayEl = document.getElementById("pairing-code-display");
+    if (resultWrap) resultWrap.style.display = "block";
+    if (displayEl) {
+        displayEl.innerHTML = '<div style="font-size:13px; color:#fbbf24; font-weight:600; padding:12px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Génération du code officiel WhatsApp en cours...</div>';
+    }
+
+    let isStarting = false;
     try {
         var res = await fetch(API_URL + "/api/whatsapp/pairing-code", {
             method: "POST",
@@ -7485,25 +7544,45 @@ window.submitWhatsAppPairingCode = async function() {
                 showToast("🔑 Code d'association généré ! Saisissez-le dans WhatsApp sur votre smartphone.", "success");
             }
         } else if (data.status === "STARTING") {
+            isStarting = true;
+            if (btn) btn.disabled = true;
+            if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connexion au serveur...';
             if (typeof showToast === "function") {
-                showToast("Initialisation WhatsApp en cours... Le code arrive dans quelques secondes.", "info");
+                showToast("Serveur WhatsApp en préparation. Votre code arrive dans quelques secondes...", "info");
             }
         } else if (data.error) {
             if (typeof showToast === "function") showToast(data.error, "error");
+            if (displayEl && !window.currentWaPairingCode) {
+                displayEl.innerHTML = '<span style="font-size:12px; color:#f87171;">' + (data.error || 'Erreur lors de la génération') + '</span>';
+            }
         }
 
         if (window._waPairingInterval) clearInterval(window._waPairingInterval);
-        if (typeof window.checkWhatsAppStatus === "function") {
-            window._waPairingInterval = setInterval(window.checkWhatsAppStatus, 2000);
-        } else if (typeof checkStatus === "function") {
-            window._waPairingInterval = setInterval(checkStatus, 2000);
-        }
+        var pollCount = 0;
+        window._waPairingInterval = setInterval(async function() {
+            pollCount++;
+            if (typeof window.checkWhatsAppStatus === "function") {
+                await window.checkWhatsAppStatus();
+            } else if (typeof checkStatus === "function") {
+                await checkStatus();
+            }
+            if (window.currentWaPairingCode || pollCount > 45) {
+                clearInterval(window._waPairingInterval);
+                window._waPairingInterval = null;
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.innerHTML = '<i class="fa-solid fa-rotate"></i> <span>' + (window.currentWaPairingCode ? 'Regénérer un code' : 'Réessayer') + '</span>';
+            }
+        }, 2000);
     } catch (err) {
         console.error("Erreur pairing code:", err);
         if (typeof showToast === "function") showToast("Erreur lors de la demande du code : " + err.message, "error");
     } finally {
-        if (btn) btn.disabled = false;
-        if (btnText) btnText.innerHTML = '<i class="fa-solid fa-key"></i> <span id="btn-pairing-text">Générer mon Code</span>';
+        if (!isStarting) {
+            if (btn) btn.disabled = false;
+            if (btnText && !window.currentWaPairingCode) {
+                btnText.innerHTML = '<i class="fa-solid fa-key"></i> <span id="btn-pairing-text">Générer mon Code</span>';
+            }
+        }
     }
 };
 

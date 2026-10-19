@@ -988,7 +988,11 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
     }
   };
 
-  if (cleanPhone && cleanPhone.length >= 8 && !hasExistingSession) {
+  if (cleanPhone && cleanPhone.length >= 8) {
+    if (fs.existsSync(authDir) && (!waClients[userId] || restart)) {
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch (e) {}
+      hasExistingSession = false;
+    }
     clientOptions.pairWithPhoneNumber = {
       phoneNumber: cleanPhone,
       showNotification: true,
@@ -1243,7 +1247,7 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     delete waErrors[userId];
     await createOrGetWhatsAppClient(userId, { restart: !!restart, phoneNumber: cleanPhone });
 
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 45; i++) {
       if (waStatuses[userId] === 'CONNECTED') {
         return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null });
       }
@@ -1351,31 +1355,80 @@ app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: "Numéro de téléphone invalide (incluez l'indicatif pays, ex: 2250701020304)." });
   }
 
+  if (waStatuses[userId] === 'CONNECTED' && waClients[userId]) {
+    return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null });
+  }
+
+  // Si un code valide est déjà en mémoire pour ce numéro, le renvoyer instantanément
+  if (waPairingCodes[userId] && waNumbers[userId] === cleanPhone && waStatuses[userId] === 'CODE_READY') {
+    return res.json({ status: 'CODE_READY', code: waPairingCodes[userId] });
+  }
+
   try {
+    delete waErrors[userId];
     const existingClient = waClients[userId];
-    if (existingClient && typeof existingClient.requestPairingCode === 'function' && waStatuses[userId] !== 'CONNECTED') {
+    const currentStatus = waStatuses[userId];
+
+    // Cas 1 : Client déjà actif sur le QR Screen -> basculer immédiatement en Pairing Code
+    if (existingClient && currentStatus === 'QR_READY' && typeof existingClient.requestPairingCode === 'function') {
       try {
-        console.log(`[WA] Demande de Pairing Code dynamique pour ${userId} sur +${cleanPhone}...`);
+        console.log(`[WA] Demande directe de Pairing Code pour ${userId} sur +${cleanPhone}...`);
         const code = await existingClient.requestPairingCode(cleanPhone);
-        waPairingCodes[userId] = code;
-        waNumbers[userId] = cleanPhone;
-        waStatuses[userId] = 'CODE_READY';
-        return res.json({ status: 'CODE_READY', code });
+        if (code) {
+          waPairingCodes[userId] = code;
+          waNumbers[userId] = cleanPhone;
+          waStatuses[userId] = 'CODE_READY';
+          return res.json({ status: 'CODE_READY', code });
+        }
       } catch (err) {
-        console.warn(`[WA] Échec requestPairingCode direct: ${err.message}. Relance du client...`);
+        console.warn(`[WA] Notice requestPairingCode sur client actif: ${err.message}.`);
       }
     }
 
-    await createOrGetWhatsAppClient(userId, { restart: true, phoneNumber: cleanPhone });
+    // Cas 2 : Si aucun client n'existe ou si le client est déconnecté/en erreur, relancer avec le numéro
+    if (!existingClient || currentStatus === 'DISCONNECTED' || currentStatus === 'ERROR') {
+      console.log(`[WA] Lancement d'un nouveau client avec association par numéro pour ${userId}...`);
+      await createOrGetWhatsAppClient(userId, { restart: true, phoneNumber: cleanPhone });
+    }
 
-    for (let i = 0; i < 16; i++) {
+    // Cas 3 : Attente active (jusqu'à 35 secondes pour laisser le temps à Chromium d'arriver au linking)
+    let requestedDynamically = false;
+    for (let i = 0; i < 70; i++) {
       await new Promise(r => setTimeout(r, 500));
+
       if (waPairingCodes[userId]) {
         return res.json({ status: 'CODE_READY', code: waPairingCodes[userId] });
       }
+
+      if (waStatuses[userId] === 'CONNECTED') {
+        return res.json({ status: 'CONNECTED', message: "Bot déjà connecté", phone: waNumbers[userId] || null });
+      }
+
+      if (waStatuses[userId] === 'ERROR') {
+        return res.json({ status: 'ERROR', error: waErrors[userId] || "Erreur d'initialisation Chromium" });
+      }
+
+      // Si le client vient d'atteindre QR_READY pendant l'attente, déclencher requestPairingCode
+      const clientNow = waClients[userId];
+      if (clientNow && waStatuses[userId] === 'QR_READY' && !requestedDynamically && typeof clientNow.requestPairingCode === 'function') {
+        requestedDynamically = true;
+        clientNow.requestPairingCode(cleanPhone).then(code => {
+          if (code) {
+            waPairingCodes[userId] = code;
+            waNumbers[userId] = cleanPhone;
+            waStatuses[userId] = 'CODE_READY';
+          }
+        }).catch(err => {
+          console.warn(`[WA/PAIR] Tentative requestPairingCode async: ${err.message}`);
+        });
+      }
     }
 
-    return res.json({ status: 'STARTING', message: "Génération du code en cours..." });
+    // Si pas encore prêt après 35s, notifier que c'est en cours (le polling client prendra le relais)
+    return res.json({ 
+      status: waStatuses[userId] || 'STARTING', 
+      message: "Génération du code WhatsApp en cours... Le code apparaîtra d'ici quelques secondes." 
+    });
   } catch (error) {
     console.error("[WA] Erreur endpoint pairing-code:", error);
     res.status(500).json({ error: error.message });
@@ -2289,17 +2342,15 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
         const activatedAt = session.paid_at || new Date().toISOString();
         const expiresAt = new Date(new Date(activatedAt).getTime() + cycleInfo.ms).toISOString();
 
-        // 2. Recharger les crédits et persister l'abonnement dans profiles
-        try {
-          await supabase.from('profiles').update({
-            credits,
-            plan: planTier,
-            plan_status: 'active',
-            plan_cycle: cycle,
-            plan_activated_at: activatedAt,
-            plan_expires_at: expiresAt
-          }).eq('id', targetUserId);
-        } catch (pUpdateErr) {
+        // 2. Recharger les crédits et persister l'abonnement dans profiles (colonnes existantes garanties)
+        const profileUpdates = {
+          credits: credits,
+          plan: planTier,
+          plan_status: 'active'
+        };
+        const { error: pUpdateErr } = await supabase.from('profiles').update(profileUpdates).eq('id', targetUserId);
+        if (pUpdateErr) {
+          console.warn('[VERIFY SESSION] Notice update profiles:', pUpdateErr.message);
           await supabase.from('profiles').update({ credits }).eq('id', targetUserId);
         }
 
@@ -2499,24 +2550,19 @@ app.post('/api/payments/webhook', async (req, res) => {
                     const activatedAt = sessionData.paid_at || new Date().toISOString();
                     const expiresAt = new Date(new Date(activatedAt).getTime() + cycleInfo.ms).toISOString();
 
-                    // Mettre à jour les crédits et l'abonnement sur le profil
-                    try {
-                        await supabase
-                            .from('profiles')
-                            .update({
-                                credits: credits,
-                                plan: planTier,
-                                plan_status: 'active',
-                                plan_cycle: cycle,
-                                plan_activated_at: activatedAt,
-                                plan_expires_at: expiresAt
-                            })
-                            .eq('id', userId);
-                    } catch (pErr) {
-                        await supabase
-                            .from('profiles')
-                            .update({ credits: credits })
-                            .eq('id', userId);
+                    // Mettre à jour les crédits et l'abonnement sur le profil (colonnes existantes garanties)
+                    const profileUpdates = {
+                        credits: credits,
+                        plan: planTier,
+                        plan_status: 'active'
+                    };
+                    const { error: pErr } = await supabase
+                        .from('profiles')
+                        .update(profileUpdates)
+                        .eq('id', userId);
+                    if (pErr) {
+                        console.warn('[WEBHOOK] Notice update profiles:', pErr.message);
+                        await supabase.from('profiles').update({ credits: credits }).eq('id', userId);
                     }
 
                     // Activer officiellement le forfait payant dans Supabase Auth (sécurisé)
@@ -2691,8 +2737,8 @@ app.post('/api/affiliate/attribute', async (req, res) => {
   try {
     const { userId, referralCode, sponsorCode, firstName, lastName, email, whatsappNumber } = req.body || {};
     const effectiveCode = referralCode || sponsorCode;
-    if (!userId) {
-      return res.status(400).json({ success: false, error: "userId requis." });
+    if (!userId || !UUID_RE.test(String(userId))) {
+      return res.status(400).json({ success: false, error: "userId invalide (UUID requis)." });
     }
     if (!supabase) {
       return res.status(500).json({ success: false, error: "Base de données non disponible." });
@@ -2701,6 +2747,10 @@ app.post('/api/affiliate/attribute', async (req, res) => {
     // 1. S'assurer que le profil de l'utilisateur existe dans public.profiles (contourne le blocage RLS client)
     let { data: userProfile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (!userProfile) {
+      const { data: authUserCheck } = await supabase.auth.admin.getUserById(userId);
+      if (!authUserCheck || !authUserCheck.user) {
+        return res.status(404).json({ success: false, error: "Compte utilisateur introuvable." });
+      }
       const cleanNum = String(userId).replace(/\D/g, '').substring(0, 4) || String(Math.floor(1000 + Math.random() * 9000));
       const userAffCode = `VD-${cleanNum}99`;
       const newProfile = {
@@ -3634,10 +3684,19 @@ app.post('/api/admin/users/:userId/plan', adminGuard, adminRequireUuid, async (r
     if (uErr || !uData || !uData.user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
     const existingMeta = uData.user.app_metadata || {};
 
+    const planCreditsMap = { basic: 1000, pro: 3000, business: 10000 };
     let updates;
+    let newCredits = null;
+
     if (plan === 'free') {
-      updates = { plan: 'free', plan_status: 'expired', plan_expires_at: new Date().toISOString() };
+      updates = { 
+        plan: 'free', 
+        plan_status: 'expired', 
+        plan_cycle: 'trial',
+        plan_expires_at: new Date().toISOString() 
+      };
     } else {
+      newCredits = planCreditsMap[plan] || 1000;
       const nDays = Math.min(3650, Math.max(1, parseInt(days, 10) || 30));
       const activatedAt = new Date().toISOString();
       const expiresAt = new Date(Date.now() + nDays * 86400000).toISOString();
@@ -3655,10 +3714,19 @@ app.post('/api/admin/users/:userId/plan', adminGuard, adminRequireUuid, async (r
     });
     if (mErr) return res.status(500).json({ error: mErr.message });
 
-    try { await supabase.from('profiles').update(updates).eq('id', userId); } catch (e) {}
+    // Mise à jour ciblée sur profiles (uniquement les colonnes existantes dans profiles : plan, plan_status, et credits si plan payant)
+    const profileUpdates = {
+      plan: updates.plan,
+      plan_status: updates.plan_status
+    };
+    if (newCredits !== null) {
+      profileUpdates.credits = newCredits;
+    }
+    const { error: pErr } = await supabase.from('profiles').update(profileUpdates).eq('id', userId);
+    if (pErr) console.warn('[ADMIN/PLAN] Notice update profiles:', pErr.message);
 
-    console.log(`[ADMIN] ${req.user.email} plan ${userId} -> ${plan}`);
-    res.json({ success: true, plan, expiresAt: updates.plan_expires_at });
+    console.log(`[ADMIN] ${req.user.email} plan ${userId} -> ${plan} (credits=${newCredits})`);
+    res.json({ success: true, plan, credits: newCredits, expiresAt: updates.plan_expires_at });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

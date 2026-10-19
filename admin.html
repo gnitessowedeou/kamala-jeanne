@@ -805,9 +805,8 @@
       }
       if (act === 'plan') {
         var plan = $('#m-plan').value, days = parseInt($('#m-days').value, 10) || 30;
-        if (plan === 'free' && !(await confirmBox('Révoquer l\'abonnement ?', 'L\'utilisateur perdra son plan payant immédiatement.', true))) return;
-        await api('/api/admin/users/' + encodeURIComponent(id) + '/plan', { method: 'POST', body: { plan: plan, days: days } });
-        toast('Abonnement mis à jour');
+        var r = await api('/api/admin/users/' + encodeURIComponent(id) + '/plan', { method: 'POST', body: { plan: plan, days: days } });
+        toast(plan === 'free' ? 'Abonnement révoqué avec succès.' : 'Abonnement ' + plan.toUpperCase() + ' appliqué (' + (r && r.credits ? num(r.credits) : '1 000') + ' crédits).');
         closeModal(); return loadView(false);
       }
       if (act === 'ban') {
