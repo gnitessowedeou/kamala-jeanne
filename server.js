@@ -825,24 +825,39 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     // DÉLIVRANCE MULTI-NIVEAUX GARANTIE À 100% (Gère nativement @c.us et @lid)
     let delivered = false;
 
-    // Niveau 1 : Envoi via l'objet Chat (recommandé et officiel whatsapp-web.js)
+    // Niveau 1 : msg.reply direct (Le plus fiable pour répondre instantanément à un message entrant)
     try {
-      const chat = await Promise.race([
-        msg.getChat(),
-        new Promise((_, r) => setTimeout(() => r(null), 3000))
-      ]);
-      if (chat && typeof chat.sendMessage === 'function') {
-        try { await chat.sendStateTyping(); } catch(e) {}
-        await new Promise(r => setTimeout(r, 600));
-        const sent = await chat.sendMessage(aiResponse);
-        if (sent) delivered = true;
-        console.log(`[WA/DELIVERED] Réponse IA délivrée avec succès via chat.sendMessage à ${chat.id ? chat.id._serialized : msg.from}`);
+      if (typeof msg.reply === 'function') {
+        const sent = await msg.reply(aiResponse);
+        if (sent) {
+          delivered = true;
+          console.log(`[WA/DELIVERED] Réponse IA délivrée instantanément via msg.reply vers ${msg.from}`);
+        }
       }
-    } catch (chatSendErr) {
-      console.warn(`[WA/DELIVERY] chat.sendMessage a échoué: ${chatSendErr.message}`);
+    } catch (replyErr) {
+      console.warn(`[WA/DELIVERY] msg.reply direct a échoué: ${replyErr.message}`);
     }
 
-    // Niveau 2 : client.sendMessage avec cibles candidates (@c.us et @lid)
+    // Niveau 2 : Envoi via l'objet Chat (recommandé et officiel whatsapp-web.js)
+    if (!delivered) {
+      try {
+        const chat = await Promise.race([
+          msg.getChat(),
+          new Promise((_, r) => setTimeout(() => r(null), 10000))
+        ]);
+        if (chat && typeof chat.sendMessage === 'function') {
+          try { await chat.sendStateTyping(); } catch(e) {}
+          await new Promise(r => setTimeout(r, 500));
+          const sent = await chat.sendMessage(aiResponse);
+          if (sent) delivered = true;
+          console.log(`[WA/DELIVERED] Réponse IA délivrée avec succès via chat.sendMessage à ${chat.id ? chat.id._serialized : msg.from}`);
+        }
+      } catch (chatSendErr) {
+        console.warn(`[WA/DELIVERY] chat.sendMessage a échoué: ${chatSendErr.message}`);
+      }
+    }
+
+    // Niveau 3 : client.sendMessage avec cibles candidates (@c.us et @lid)
     if (!delivered) {
       const candidates = [];
       if (isSelfTest) {
@@ -851,8 +866,11 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
         if (myP) candidates.push(`${myP}@c.us`);
         if (msg.from) candidates.push(msg.from);
       } else {
+        if (cleanPhone && cleanPhone.length >= 8 && !cleanPhone.startsWith('3900')) {
+          candidates.push(`${cleanPhone}@c.us`);
+        }
         if (msg.from) candidates.push(msg.from);
-        if (cleanPhone && cleanPhone.length >= 8) candidates.push(`${cleanPhone}@c.us`);
+        if (msg.author) candidates.push(msg.author);
       }
 
       for (const target of candidates) {

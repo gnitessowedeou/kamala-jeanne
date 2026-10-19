@@ -268,7 +268,8 @@ class QuickLinkProvider extends WhatsAppProvider {
     }
 
     const client = this.waClients[userId];
-    if (!client || this.waStatuses[userId] !== WHATSAPP_STATUS.CONNECTED) {
+    const isConn = this.waStatuses[userId] === WHATSAPP_STATUS.CONNECTED || this.waStatuses[userId] === 'AUTHENTICATED';
+    if (!client || !isConn) {
       throw new Error(`Session WhatsApp non connectée pour l'utilisateur ${userId}.`);
     }
 
