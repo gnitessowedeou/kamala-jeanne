@@ -845,8 +845,11 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     // Niveau 2 : client.sendMessage avec cibles candidates (@c.us et @lid)
     if (!delivered) {
       const candidates = [];
-      if (isSelfTest && client.info && client.info.wid) {
-        candidates.push(client.info.wid._serialized);
+      if (isSelfTest) {
+        if (client.info && client.info.wid) candidates.push(client.info.wid._serialized);
+        const myP = (client.info && client.info.wid ? client.info.wid.user : null) || (waNumbers[userId] ? String(waNumbers[userId]).replace(/\D/g, '') : null);
+        if (myP) candidates.push(`${myP}@c.us`);
+        if (msg.from) candidates.push(msg.from);
       } else {
         if (msg.from) candidates.push(msg.from);
         if (cleanPhone && cleanPhone.length >= 8) candidates.push(`${cleanPhone}@c.us`);
@@ -1236,20 +1239,26 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         }
       }
 
-      const myPhone = client.info && client.info.wid ? client.info.wid.user : null;
-      const myWid = client.info && client.info.wid ? client.info.wid._serialized : null;
+      const myPhone = (client.info && client.info.wid ? client.info.wid.user : null) || (waNumbers[userId] ? String(waNumbers[userId]).replace(/\D/g, '') : null);
+      const myWid = client.info && client.info.wid ? client.info.wid._serialized : (myPhone ? `${myPhone}@c.us` : null);
+      const toJid = msg.to ? String(msg.to) : '';
+      const fromJid = msg.from ? String(msg.from) : '';
+      const remoteJid = (msg.id && msg.id.remote) ? String(msg.id.remote) : '';
+      const bodyLower = (msg.body || '').trim().toLowerCase();
 
-      // Détection message auto-test
+      // Détection message auto-test : envoyé à soi-même ou commence par test / !test
       const isSelf = Boolean(
         msg.fromMe && (
-          (msg.to && myWid && msg.to === myWid) ||
-          (msg.to && myPhone && msg.to.includes(myPhone)) ||
-          (msg.id && msg.id.remote && myWid && msg.id.remote === myWid) ||
-          (msg.id && msg.id.remote && myPhone && msg.id.remote.includes(myPhone))
+          (toJid && fromJid && toJid === fromJid) ||
+          (myWid && (toJid === myWid || remoteJid === myWid)) ||
+          (myPhone && (toJid.includes(myPhone) || remoteJid.includes(myPhone))) ||
+          bodyLower.startsWith('test') ||
+          bodyLower.startsWith('!test') ||
+          bodyLower.startsWith('/test')
         )
       );
 
-      // Si le message a été envoyé par moi à un client (l'humain parle), on n'intervient pas mais on note dans l'historique
+      // Si le message a été envoyé par moi à un tiers (l'humain parle sans mot-clé test), l'IA n'intervient pas
       if (msg.fromMe && !isSelf) {
         try {
           if (msg.body && !msg.body.startsWith('[IA') && !msg.body.startsWith('[BOT')) {
