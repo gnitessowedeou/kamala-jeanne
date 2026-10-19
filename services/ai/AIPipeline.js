@@ -15,7 +15,12 @@ class AIPipeline {
    */
   constructor(dependencies = {}) {
     this.openai = dependencies.openai || null;
+    if (!this.openai && dependencies.openaiApiKey) {
+      const { OpenAI } = require('openai');
+      this.openai = new OpenAI({ apiKey: dependencies.openaiApiKey });
+    }
     this.supabase = dependencies.supabase || null;
+    this.whatsappManager = dependencies.whatsappManager || null;
     this.chatHistories = dependencies.chatHistories || new Map();
     this.maxHistory = dependencies.maxHistory || 12;
     this.processedMessageIds = new Set();
@@ -148,13 +153,17 @@ class AIPipeline {
     }
 
     // 9. Expédition de la réponse via le WhatsAppManager (qui choisit le bon pilote)
-    console.log(`[AIPipeline] Envoi réponse IA vers ${msg.from} via WhatsAppManager (Catégorie: FREE_FORM)`);
-    const sendResult = await whatsappManager.sendMessage(userId, msg.from, aiResponse, {
-      category: MESSAGE_CATEGORIES.FREE_FORM,
-      chatObject: msg.rawChat || null,
-      msgObject: msg.rawMsg || null,
-      skipInitiatorCheck: true // Réponse autorisée car initiée par le client
-    });
+    const wm = whatsappManager || this.whatsappManager;
+    let sendResult = null;
+    if (wm && typeof wm.sendMessage === 'function') {
+      console.log(`[AIPipeline] Envoi réponse IA vers ${msg.from} via WhatsAppManager (Catégorie: FREE_FORM)`);
+      sendResult = await wm.sendMessage(userId, msg.from, aiResponse, {
+        category: MESSAGE_CATEGORIES.FREE_FORM,
+        chatObject: msg.rawChat || null,
+        msgObject: msg.rawMsg || null,
+        skipInitiatorCheck: true // Réponse autorisée car initiée par le client
+      });
+    }
 
     // 10. Décrémentation d'un crédit dans Supabase
     if (this.supabase && sendResult && sendResult.success) {
