@@ -107,20 +107,39 @@ const allowedOrigins = [
   'http://127.0.0.1:3000'
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    const isExplicitAllowed = allowedOrigins.indexOf(origin) !== -1;
-    const isOfficialVercel = origin === 'https://kamala-jeanne.vercel.app';
-    if (!origin || isExplicitAllowed || isOfficialVercel) {
+    if (!origin) return callback(null, true);
+    const isExplicit = allowedOrigins.indexOf(origin) !== -1;
+    const isVercelSubdomain = origin.endsWith('.vercel.app');
+    const isVandiasSubdomain = origin.endsWith('.vandias.com') || origin.endsWith('.vandia.ai');
+    if (isExplicit || isVercelSubdomain || isVandiasSubdomain) {
       callback(null, true);
     } else {
+      console.warn(`[CORS] Origine bloquée : ${origin}`);
       callback(null, false);
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-webhook-secret', 'x-saspay-signature']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'x-user-id',
+    'X-User-Id',
+    'x-admin-key',
+    'x-webhook-secret',
+    'x-saspay-signature',
+    'Accept',
+    'Origin'
+  ],
+  exposedHeaders: ['Authorization', 'x-user-id'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // === GESTIONNAIRE DE LIMITATION DE DEBIT (RATE LIMITING ANTI-DOS & ABUS) ===
 const rateLimitMap = new Map();
@@ -236,6 +255,9 @@ app.get('/api/diag', (req, res, next) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/privacy.html', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get('/data-deletion.html', (req, res) => res.sendFile(path.join(__dirname, 'data-deletion.html')));
 app.get('/admin.html', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
   res.setHeader('Cache-Control', 'no-store');

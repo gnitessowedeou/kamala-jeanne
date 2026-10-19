@@ -5904,6 +5904,12 @@ function setupBillingAndAffiliate() {
             });
             
             const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                const errMsg = data.error || `Erreur serveur HTTP ${res.status}`;
+                throw new Error(errMsg);
+            }
+
             if (data.status === 'QR_READY' && data.qr) {
                 renderQrImage(data.qr);
                 window.applyWhatsAppState('QR_READY', null);
@@ -5919,13 +5925,13 @@ function setupBillingAndAffiliate() {
                 if (qrBox) {
                     qrBox.innerHTML = `
                         <div style="padding: 18px; text-align: center;">
-                            <i class="fa-solid fa-rotate" style="font-size: 28px; color: #25D366; margin-bottom: 10px;"></i>
-                            <p style="color: #fbbf24; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Initialisation de la liaison</p>
-                            <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                                Cliquez ci-dessous pour relancer et afficher votre QR Code :
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size: 26px; color: #ef4444; margin-bottom: 8px;"></i>
+                            <p style="color: #ef4444; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Échec d'initialisation WhatsApp</p>
+                            <p style="font-size: 12px; color: #fca5a5; line-height: 1.45; margin-bottom: 12px; word-break: break-word;">
+                                ${data.error || 'Erreur interne du moteur Chromium WhatsApp.'}
                             </p>
                             <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 8px 18px; font-size: 12px;">
-                                <i class="fa-solid fa-qrcode"></i> Générer mon QR Code
+                                <i class="fa-solid fa-rotate-right"></i> Relancer la session
                             </button>
                         </div>
                     `;
@@ -5935,15 +5941,14 @@ function setupBillingAndAffiliate() {
             
             statusInterval = setInterval(checkStatus, 2000);
         } catch (error) {
-            console.error("Erreur connexion WhatsApp:", error);
+            console.error("[WA] Erreur connexion WhatsApp détaillée:", error);
             if (qrBox) {
                 qrBox.innerHTML = `
                     <div style="padding: 18px; text-align: center;">
-                        <i class="fa-solid fa-wifi" style="font-size: 28px; color: #f59e0b; margin-bottom: 10px;"></i>
-                        <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Connexion au Cloud en cours</p>
-                        <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                            Le serveur prépare l'accès WhatsApp.<br>
-                            Cliquez ci-dessous pour actualiser :
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 26px; color: #f59e0b; margin-bottom: 10px;"></i>
+                        <p style="color: #f59e0b; font-weight: bold; margin-bottom: 6px; font-size: 13.5px;">Erreur de communication serveur</p>
+                        <p style="font-size: 11.5px; color: #f87171; line-height: 1.45; margin-bottom: 12px; word-break: break-word;">
+                            ${error.message || 'Impossible de joindre le serveur WhatsApp Cloud.'}
                         </p>
                         <button type="button" class="btn-primary-glow" onclick="window.startWhatsApp(true)" style="padding: 8px 18px; font-size: 12px;">
                             <i class="fa-solid fa-rotate-right"></i> Réessayer la connexion
