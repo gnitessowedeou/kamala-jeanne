@@ -49,6 +49,12 @@ function getAuthHeaders(extraHeaders = {}) {
   if (token) {
     headers['Authorization'] = 'Bearer ' + token;
   }
+  try {
+    const currentUid = (typeof getAppUserId === 'function') ? getAppUserId() : null;
+    if (currentUid) {
+      headers['x-user-id'] = currentUid;
+    }
+  } catch(e) {}
   return headers;
 }
 

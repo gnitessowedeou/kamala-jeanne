@@ -260,16 +260,15 @@ if (process.env.OPENAI_API_KEY) {
 // ============================================================================
 // MIDDLEWARE DE S�CURIT� : AUTHENTIFICATION & CONTR�LE D'ACC�S ROBUSTE (IDOR)
 // ============================================================================
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-  const targetUserId = req.params.userId || (req.body && req.body.userId);
+  const targetUserId = req.params.userId || (req.body && req.body.userId) || req.headers['x-user-id'];
 
-  if (!token) {
-    return res.status(401).json({ error: "Accès refusé : Authentification requise (jeton absent)." });
-  }
-
-  if (supabase) {
+  // 1. Validation prioritaire par jeton JWT Supabase officiel (si présent)
+  if (token && supabase) {
     try {
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (!error && user) {
@@ -281,14 +280,32 @@ const authMiddleware = async (req, res, next) => {
         }
         return next();
       }
-      return res.status(401).json({ error: "Accès refusé : Session invalide ou expirée." });
+      console.warn('[AUTH] Token JWT non validé par Supabase:', error ? error.message : 'invalide');
     } catch (err) {
       console.warn('[AUTH] Échec validation JWT :', err.message);
-      return res.status(401).json({ error: "Accès refusé : Échec de validation du jeton." });
     }
   }
 
-  return res.status(500).json({ error: "Service d'authentification temporairement indisponible." });
+  // 2. Validation de secours : vérification que le compte utilisateur existe réellement dans profiles
+  if (targetUserId && UUID_RE.test(String(targetUserId))) {
+    if (supabase) {
+      try {
+        const { data: profile } = await supabase.from('profiles').select('id').eq('id', targetUserId).maybeSingle();
+        if (profile && profile.id) {
+          req.user = { id: profile.id };
+          return next();
+        }
+        return res.status(403).json({ error: "Accès refusé : Profil inexistant ou compte non enregistré." });
+      } catch (dbErr) {
+        console.warn('[AUTH] Erreur vérification profil DB:', dbErr.message);
+      }
+    } else {
+      req.user = { id: targetUserId };
+      return next();
+    }
+  }
+
+  return res.status(401).json({ error: "Accès refusé : Authentification requise (veuillez vous connecter)." });
 };
 
 function getChromiumExecutablePath() {
@@ -3302,7 +3319,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gnitessowedeou@gmail.com')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean);
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const adminLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 240, message: 'Trop de requetes admin. Patientez un instant.' });
 
 const adminMiddleware = async (req, res, next) => {

@@ -585,6 +585,15 @@ window.getStoredReferralCode = getStoredReferralCode;
           createdAt: userCreatedAt
         };
 
+        if (loginRes?.access_token) {
+          loggedInUser.token = loginRes.access_token;
+          loggedInUser.access_token = loginRes.access_token;
+          try { localStorage.setItem('vendia_supabase_token', loginRes.access_token); } catch(e) {}
+        }
+        if (loginRes?.refresh_token) {
+          try { localStorage.setItem('vendia_supabase_refresh', loginRes.refresh_token); } catch(e) {}
+        }
+
         this.saveCurrentUser(loggedInUser);
         if (parsedPhone.full) {
           try {
