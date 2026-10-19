@@ -1423,8 +1423,11 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
   const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
 
   try {
-    delete waErrors[userId];
-    const targetMode = mode || await whatsappManager.getUserMode(userId);
+    let targetMode = mode || await whatsappManager.getUserMode(userId);
+    if (targetMode === 'officiel' && !whatsappManager.officialMetaProvider.isPilotAuthorized) {
+      targetMode = 'rapide';
+      await whatsappManager.setUserMode(userId, 'rapide');
+    }
 
     // Mode Rapide : Enregistrer automatiquement le consentement et activer les garde-fous anti-ban
     if (targetMode === 'rapide') {
