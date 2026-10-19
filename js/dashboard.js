@@ -1042,7 +1042,7 @@ function initTrialCountdownEngine() {
 
   setInterval(() => {
     if (!document.hidden) syncSubscriptionStatusFromServer();
-  }, 12000);
+  }, 5000);
 
   // Synchronisation instantanée dès que l'utilisateur revient sur son tableau de bord
   document.addEventListener('visibilitychange', () => {
@@ -1140,6 +1140,7 @@ function initDashboard() {
   setupActionButtons();
   setupProfileSystem();
   setupBillingAndAffiliate();
+  initTrialCountdownEngine();
   setupTemplateModalEngine();
 
   // Populate view contents
