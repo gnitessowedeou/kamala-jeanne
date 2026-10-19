@@ -108,8 +108,15 @@ function parseAppPhone(rawPhone, fallbackCountry = '+225') {
 }
 window.parseAppPhone = parseAppPhone;
 
-// Identifiant utilisateur infaillible (Global)
+// Identifiant utilisateur infaillible (Global avec support d'accès Admin)
 function getAppUserId() {
+  try {
+    if (typeof window !== 'undefined' && window.location && window.location.search) {
+      const sp = new URLSearchParams(window.location.search);
+      const imp = sp.get('impersonate') || sp.get('user_id');
+      if (imp && imp.length > 5 && !imp.startsWith('usr_')) return imp;
+    }
+  } catch(e) {}
   try {
     const u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
     if (u && u.id && u.id.length > 5 && !u.id.startsWith('usr_')) return u.id;

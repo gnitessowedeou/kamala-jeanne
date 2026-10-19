@@ -1088,6 +1088,10 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         '--disable-gpu',
         '--no-first-run',
         '--disable-extensions',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--no-default-browser-check',
         '--window-size=1280,800'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
@@ -1170,21 +1174,27 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
       } catch (e) {}
     }
 
-    // Heartbeat Keep-Alive ultra-stable toutes les 25 secondes :
-    // Utilise client.getState() natif de whatsapp-web.js pour maintenir la WebSocket Meta active en continu
+    // Heartbeat Keep-Alive ultra-stable toutes les 20 secondes :
+    // Ping la page Puppeteer et vérifie l'état de la connexion WebSocket Meta
     if (waHeartbeats[userId]) clearInterval(waHeartbeats[userId]);
     waHeartbeats[userId] = setInterval(async () => {
       try {
-        if (client && waStatuses[userId] === 'CONNECTED') {
+        if (client && (waStatuses[userId] === 'CONNECTED' || waStatuses[userId] === 'AUTHENTICATED')) {
           const st = await client.getState().catch(() => null);
           if (st && st !== 'CONNECTED') {
-            console.warn(`[WA/HEARTBEAT] État client inattendu pour ${userId}: ${st}`);
+            console.warn(`[WA/HEARTBEAT] État client pour ${userId}: ${st}`);
+          }
+          // Ping interne Chromium pour empêcher toute mise en veille ou throttling
+          if (client.pupPage && !client.pupPage.isClosed()) {
+            await client.pupPage.evaluate(() => {
+              return typeof window !== 'undefined' && !!window.WWebJS;
+            }).catch(() => {});
           }
         }
       } catch (hbErr) {
         console.warn(`[WA/HEARTBEAT] Signal pour ${userId}:`, hbErr.message);
       }
-    }, 25000);
+    }, 20000);
 
     // Synchronisation automatique dans Supabase
     if (waNumbers[userId] && supabase) {
@@ -1226,7 +1236,7 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
     }
 
     const strReason = String(reason || '').toUpperCase();
-    const isPermanentLogout = strReason.includes('LOGOUT') || strReason.includes('UNPAIRED') || strReason.includes('CONFLICT') || strReason.includes('BAN');
+    const isPermanentLogout = strReason.includes('LOGOUT') || strReason.includes('UNPAIRED');
 
     delete waClients[userId];
     delete waSessionsQR[userId];
@@ -3803,6 +3813,7 @@ app.get('/api/admin/users', adminGuard, async (req, res) => {
         daysLeft: planInfo.daysLeft,
         credits: typeof p.credits === 'number' ? p.credits : null,
         whatsappNumber: p.whatsapp_number || null,
+        aiPrompt: p.ai_prompt || null,
         company: p.company || null,
         affiliateCode: p.affiliate_code || null,
         affiliateBalance: Number(p.affiliate_balance) || 0,
@@ -3982,6 +3993,22 @@ app.post('/api/admin/users/:userId/plan', adminGuard, adminRequireUuid, async (r
 
     console.log(`[ADMIN] ${req.user.email} plan ${userId} -> ${plan} (credits=${newCredits})`);
     res.json({ success: true, plan, credits: newCredits, expiresAt: updates.plan_expires_at });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/users/:userId/prompt', adminGuard, adminRequireUuid, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { prompt } = req.body || {};
+    if (typeof prompt !== 'string') return res.status(400).json({ error: 'Prompt requis.' });
+
+    const { error } = await supabase.from('profiles').update({ ai_prompt: prompt }).eq('id', userId);
+    if (error) return res.status(500).json({ error: error.message });
+
+    console.log(`[ADMIN] ${req.user.email} a mis à jour les instructions IA pour ${userId}`);
+    res.json({ success: true, prompt });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

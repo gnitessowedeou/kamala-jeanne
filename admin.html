@@ -773,12 +773,22 @@
           '<button class="btn sm primary" data-act="plan" data-id="' + esc(u.id) + '">Appliquer</button>' +
         '</div></div>' +
 
+        '<div class="section"><h4>Instructions Commerciales &amp; Prompt IA</h4>' +
+          '<textarea class="input" id="m-prompt" rows="3" style="width:100%;font-size:12px;margin-bottom:8px;resize:vertical;font-family:inherit" placeholder="Instructions et catalogue transmis à l\'agent IA de ce client...">' + esc(u.aiPrompt || '') + '</textarea>' +
+          '<button class="btn sm primary" data-act="prompt" data-id="' + esc(u.id) + '">Enregistrer les instructions IA</button>' +
+        '</div>' +
+
         '<div class="section"><h4>Accès au compte</h4><div class="row">' +
           (isSelf ? '<span class="muted">Votre propre compte ne peut pas être suspendu.</span>'
                   : '<button class="btn sm ' + (u.banned ? 'primary' : 'danger') + '" data-act="ban" data-banned="' + (u.banned ? '0' : '1') + '" data-id="' + esc(u.id) + '">' + (u.banned ? 'Réactiver le compte' : 'Suspendre le compte') + '</button>') +
         '</div></div>' +
 
-        '<div class="modal-actions"><button class="btn" data-close="1">Fermer</button></div>' +
+        '<div class="modal-actions" style="justify-content:space-between">' +
+          '<button class="btn sm" data-act="open-dash" data-id="' + esc(u.id) + '" style="background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);color:#25d366">' +
+            '<span>Ouvrir le Dashboard de ce client ↗</span>' +
+          '</button>' +
+          '<button class="btn" data-close="1">Fermer</button>' +
+        '</div>' +
       '</div></div>';
   }
 
@@ -792,10 +802,20 @@
 
     try {
       if (act === 'user') return openUser(id);
+      if (act === 'open-dash') {
+        window.open('/dashboard.html?impersonate=' + encodeURIComponent(id), '_blank');
+        return;
+      }
       if (act === 's-stop') return sessionAction('stop', id);
       if (act === 's-restart') return sessionAction('restart', id);
       if (act === 's-reset') return sessionAction('reset', id);
 
+      if (act === 'prompt') {
+        var pr = ($('#m-prompt').value || '');
+        await api('/api/admin/users/' + encodeURIComponent(id) + '/prompt', { method: 'POST', body: { prompt: pr } });
+        toast('Instructions IA enregistrées avec succès !');
+        closeModal(); return loadView(false);
+      }
       if (act === 'cr-add' || act === 'cr-set') {
         var v = parseFloat($('#m-credits').value);
         if (!isFinite(v)) return toast('Saisissez un montant valide.', 'err');
