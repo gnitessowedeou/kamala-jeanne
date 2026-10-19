@@ -5500,7 +5500,7 @@ function setupBillingAndAffiliate() {
     window.currentWhatsAppPhone = null;
 
     // Fonction universelle de mise à jour visuelle du statut WhatsApp & Quotas
-    window.applyWhatsAppState = function(status, phone) {
+    window.applyWhatsAppState = function(status, phone, extraData = {}) {
         window.currentWhatsAppStatus = status || 'DISCONNECTED';
         if (phone) window.currentWhatsAppPhone = phone;
         else if (status === 'DISCONNECTED') {
