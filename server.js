@@ -139,7 +139,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('{*path}', cors(corsOptions));
 
 // === GESTIONNAIRE DE LIMITATION DE DEBIT (RATE LIMITING ANTI-DOS & ABUS) ===
 const rateLimitMap = new Map();
@@ -339,7 +339,11 @@ function getChromiumExecutablePath() {
     '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome',
     '/root/.nix-profile/bin/chromium',
-    '/nix/var/nix/profiles/default/bin/chromium'
+    '/nix/var/nix/profiles/default/bin/chromium',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
   ];
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) return p;
@@ -1039,7 +1043,7 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         '--disable-gpu',
         '--no-first-run',
         '--window-size=1280,800',
-        '--js-flags=--max-old-space-size=200'
+        '--js-flags=--max-old-space-size=384'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     }

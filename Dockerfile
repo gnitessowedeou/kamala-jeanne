@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     RAILWAY_VOLUME_MOUNT_PATH=/app/.wwebjs_auth \
-    NODE_OPTIONS="--max-old-space-size=220" \
+    NODE_OPTIONS="--max-old-space-size=512" \
     PORT=8080
 
 WORKDIR /app

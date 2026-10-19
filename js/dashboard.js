@@ -3292,7 +3292,7 @@ function setupTemplateModalEngine() {
           submitBtn.innerHTML = origHtml;
         }
 
-        showToast(`✅ Modèle "${name}" approuvé par Meta avec succès !`, "success");
+        showToast(`✅ Modèle "${name}" enregistré avec succès !`, "success");
       }, 700);
     });
   }
@@ -4302,11 +4302,34 @@ function setupActionButtons() {
   // Initialisation du système de notifications
   initUserNotifications();
 
-  // Test webhook
+  // Test de diagnostic réel du serveur WhatsApp Cloud avec mesure de latence
   const testWebhookBtn = document.getElementById("btn-test-webhook");
   if (testWebhookBtn) {
-    testWebhookBtn.addEventListener("click", () => {
-      showToast("Webhook testé : HTTP 200 OK (Latence : 142ms)", "success");
+    testWebhookBtn.addEventListener("click", async () => {
+      const origText = testWebhookBtn.innerHTML;
+      testWebhookBtn.disabled = true;
+      testWebhookBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Diagnostic...';
+      const startTime = performance.now();
+      try {
+        const targetUserId = getAppUserId();
+        const res = await fetch(API_URL + '/api/whatsapp/status/' + (targetUserId || 'health'), {
+          headers: getAuthHeaders()
+        });
+        const latency = Math.round(performance.now() - startTime);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          const st = data.status || 'OPÉRATIONNEL';
+          showToast(`✅ Diagnostic réussi : HTTP ${res.status} OK (Latence réelle : ${latency}ms) • Statut : ${st}`, "success");
+        } else {
+          showToast(`⚠️ Diagnostic serveur : HTTP ${res.status} (${data.error || 'Erreur passerelle'}) • Latence : ${latency}ms`, "warning");
+        }
+      } catch (err) {
+        const latency = Math.round(performance.now() - startTime);
+        showToast(`❌ Échec diagnostic : Serveur Cloud injoignable (${err.message}) • Latence : ${latency}ms`, "error");
+      } finally {
+        testWebhookBtn.disabled = false;
+        testWebhookBtn.innerHTML = origText;
+      }
     });
   }
 
