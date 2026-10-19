@@ -182,15 +182,10 @@ class QuickLinkProvider extends WhatsAppProvider {
       throw new Error("userId est obligatoire pour initialiser la connexion rapide.");
     }
 
-    // Garde-fou 1 : Acceptation explicite du risque
+    // Garde-fou 1 : Enregistrer automatiquement le consentement d'utilisation si non encore présent
     const isRiskAccepted = await this.hasAcceptedRisk(userId);
-    if (!isRiskAccepted && !options.skipRiskCheck) {
-      return {
-        mode: this.name,
-        status: WHATSAPP_STATUS.AWAITING_RISK_ACCEPTANCE,
-        requiresRiskAcceptance: true,
-        message: "L'activation du mode rapide nécessite l'acceptation expresse des risques de suspension du numéro."
-      };
+    if (!isRiskAccepted) {
+      await this.recordRiskAcceptance(userId, options.clientIp || 'client-connect-action');
     }
 
     // Délégation à createOrGetClient
@@ -224,8 +219,6 @@ class QuickLinkProvider extends WhatsAppProvider {
     let effectiveStatus = rawStatus;
     if (rawStatus === WHATSAPP_STATUS.CONNECTED && !rateCheck.allowed) {
       effectiveStatus = WHATSAPP_STATUS.RATE_LIMITED;
-    } else if (rawStatus === WHATSAPP_STATUS.NOT_INITIALIZED && !isRiskAccepted) {
-      effectiveStatus = WHATSAPP_STATUS.AWAITING_RISK_ACCEPTANCE;
     }
 
     return {

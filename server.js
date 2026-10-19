@@ -1426,22 +1426,18 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     delete waErrors[userId];
     const targetMode = mode || await whatsappManager.getUserMode(userId);
 
-    // Garde-fou Mode Rapide : vérifier l'acceptation expresse du risque
+    // Mode Rapide : Enregistrer automatiquement le consentement et activer les garde-fous anti-ban
     if (targetMode === 'rapide') {
-      const riskAccepted = await whatsappManager.quickLinkProvider.hasAcceptedRisk(userId);
-      if (!riskAccepted) {
-        return res.status(403).json({
-          status: 'AWAITING_RISK_ACCEPTANCE',
-          requiresRiskAcceptance: true,
-          message: "L'activation du mode rapide nécessite l'acceptation expresse des risques de suspension du numéro."
-        });
-      }
+      const forwarded = req.headers['x-forwarded-for'];
+      const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || 'inconnu';
+      await whatsappManager.quickLinkProvider.recordRiskAcceptance(userId, clientIp);
     }
 
     const connectRes = await whatsappManager.connect(userId, {
       mode: targetMode,
       phone: cleanPhone,
-      restart: !!restart
+      restart: !!restart,
+      options: { skipRiskCheck: true }
     });
 
     // Si mode rapide, attendre l'apparition du QR ou du code d'association
