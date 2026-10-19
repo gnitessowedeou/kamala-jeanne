@@ -5921,7 +5921,7 @@ function setupBillingAndAffiliate() {
                 window.renderPairingCode(data.pairingCode);
             }
 
-            if (data.status === 'QR_READY' && data.qr) {
+            if (data.qr && typeof data.qr === 'string' && data.qr.startsWith('data:image/')) {
                 pollAttempts = 0;
                 renderQrImage(data.qr);
             } 
@@ -6003,9 +6003,9 @@ function setupBillingAndAffiliate() {
             try {
                 const quickRes = await fetch(API_URL + '/api/whatsapp/status/' + targetUserId, { headers: getAuthHeaders() });
                 const quickData = await quickRes.json();
-                if (quickData.status === 'QR_READY' && quickData.qr) {
+                if (quickData.qr && typeof quickData.qr === 'string' && quickData.qr.startsWith('data:image/')) {
                     renderQrImage(quickData.qr);
-                    window.applyWhatsAppState('QR_READY', null);
+                    window.applyWhatsAppState(quickData.status || 'QR_READY', null);
                     statusInterval = setInterval(checkStatus, 2000);
                     return;
                 } else if (quickData.status === 'CONNECTED') {
@@ -6032,9 +6032,9 @@ function setupBillingAndAffiliate() {
                 throw new Error(errMsg);
             }
 
-            if (data.status === 'QR_READY' && data.qr) {
+            if (data.qr && typeof data.qr === 'string' && data.qr.startsWith('data:image/')) {
                 renderQrImage(data.qr);
-                window.applyWhatsAppState('QR_READY', null);
+                window.applyWhatsAppState(data.status || 'QR_READY', null);
                 statusInterval = setInterval(checkStatus, 2000);
                 return;
             } else if (data.status === 'CONNECTED') {
