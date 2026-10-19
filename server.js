@@ -1077,6 +1077,7 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
     takeoverTimeoutMs: 10000,
     authTimeoutMs: 120000, // 2 minutes : permet aux bundles WhatsApp Web de se charger sereinement
     bypassCSP: true,       // Contourne les restrictions CSP bloquant l'injection des modules
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     puppeteer: {
       headless: true,
       protocolTimeout: 60000,
@@ -1088,6 +1089,7 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         '--disable-gpu',
         '--no-first-run',
         '--disable-extensions',
+        '--disable-blink-features=AutomationControlled',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
