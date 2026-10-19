@@ -243,10 +243,10 @@
           <div class="nav-section-title">SYSTÈME & CONFIGURATION</div>
           <ul class="nav-list">
             <li>
-              <a href="#devices" class="nav-item-link" data-view="devices" data-title="Numéros & Coexistence WhatsApp">
+              <a href="#devices" class="nav-item-link" data-view="devices" data-title="Numéros &amp; Liaison WhatsApp">
                 <div class="nav-item-left">
                   <i class="fa-solid fa-mobile-screen-button nav-item-icon"></i>
-                  <span>Numéros & Coexist...</span>
+                  <span>Numéros WhatsApp</span>
                 </div>
                 <span class="badge badge-green" id="nav-badge-devices">Prêt</span>
               </a>
@@ -443,8 +443,8 @@
               </p>
               <div class="banner-badges-row">
                 <div class="banner-pill">
-                  <i class="fa-solid fa-shield-halved"></i>
-                  <span>Meta Cloud API Certifié</span>
+                  <i class="fa-solid fa-robot"></i>
+                  <span>Agent IA Vente 24/7</span>
                 </div>
                 <div class="banner-pill">
                   <i class="fa-solid fa-bolt"></i>
@@ -1110,12 +1110,12 @@
         <section class="view-section" id="view-templates">
           <div class="section-header-bar">
             <div class="section-title-wrap">
-              <h2>Modèles WhatsApp Approuvés par Meta</h2>
-              <p class="section-desc">Modèles officiels Meta Cloud API nécessaires pour initier des conversations sortantes et diffusions.</p>
+              <h2>Modèles de Messages WhatsApp</h2>
+              <p class="section-desc">Modèles prêts pour initier des conversations et diffusions commerciales ciblées.</p>
             </div>
             <button class="btn-primary-glow" id="btn-new-template" onclick="openTemplateModal()">
               <i class="fa-solid fa-plus"></i>
-              <span>Créer un Modèle Meta</span>
+              <span>Créer un Modèle</span>
             </button>
           </div>
 
@@ -1130,8 +1130,8 @@
         <section class="view-section" id="view-devices">
           <div class="section-header-bar devices-header-bar">
             <div class="section-title-wrap">
-              <h2>Numéros &amp; Coexistence WhatsApp</h2>
-              <p class="section-desc">Gérez vos lignes WhatsApp Business connectées à l'API Meta Cloud avec coexistence active.</p>
+              <h2>Numéros &amp; Liaison WhatsApp</h2>
+              <p class="section-desc">Gérez vos lignes WhatsApp Business connectées au moteur commercial VANDIAS AI.</p>
             </div>
             <div class="devices-action-row" style="display:flex; align-items:center; gap: 15px;">
               <span id="wa-limit-status" style="font-size: 14px; font-weight: 600; color: var(--amber); background: rgba(245, 158, 11, 0.1); padding: 5px 10px; border-radius: 6px; white-space: nowrap;">0 / 1 Numéro</span>
@@ -1152,7 +1152,7 @@
                   </div>
                   <div>
                     <h3 id="main-card-num" style="font-size: 16px;">WhatsApp non configuré</h3>
-                    <span id="main-card-label" style="font-size: 12px; color: var(--text-muted);">Ligne à synchroniser via QR Code</span>
+                    <span id="main-card-label" style="font-size: 12px; color: var(--text-muted);">Ligne à synchroniser via QR Code ou numéro</span>
                   </div>
                 </div>
                 <span class="badge badge-subtle device-card-badge" id="main-card-status-badge">Non configuré</span>
@@ -1161,19 +1161,19 @@
               <div class="device-specs-list" style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); margin: 16px 0;">
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
                   <span>Protocole :</span>
-                  <strong>Meta Cloud API v19.0</strong>
+                  <strong id="wa-spec-protocol">WhatsApp Web Multi-Appareils</strong>
                 </div>
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
-                  <span>Mode Coexistence :</span>
-                  <strong style="color: var(--whatsapp-green);">Activé (Double Réception)</strong>
+                  <span>État de la session :</span>
+                  <strong id="wa-spec-connection" style="color: var(--text-muted);">Non connecté</strong>
                 </div>
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
-                  <span>Santé du Webhook :</span>
-                  <strong style="color: var(--cyan);">100% opérationnel</strong>
+                  <span>Service Cloud Railway :</span>
+                  <strong id="wa-spec-service" style="color: var(--cyan);">Opérationnel</strong>
                 </div>
                 <div class="device-spec-item" style="display: flex; justify-content: space-between;">
-                  <span>Tier d'envoi Meta :</span>
-                  <strong>Tier 2 (10 000 conv./jour)</strong>
+                  <span>Diagnostic liaison :</span>
+                  <strong id="wa-spec-status-msg" style="color: #94a3b8;">Prêt à connecter</strong>
                 </div>
               </div>
 
@@ -2623,10 +2623,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           <div class="form-group">
             <label class="form-label" for="broadcast-audience">Audience Cible</label>
             <select class="form-control" id="broadcast-audience">
-              <option value="all">Tous les contacts qualifiés (5 280 contacts)</option>
-              <option value="vip">Clients VIP &amp; Récents (1 420 contacts)</option>
-              <option value="abandoned">Paniers non payés récents (142 contacts)</option>
-              <option value="prospects">Nouveaux prospects sans commande (850 contacts)</option>
+              <option value="all">Tous les contacts enregistrés</option>
+              <option value="vip">Clients réguliers &amp; Récents</option>
+              <option value="abandoned">Paniers en attente récents</option>
+              <option value="prospects">Nouveaux prospects sans commande</option>
             </select>
           </div>
 
@@ -2667,7 +2667,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <div class="modal-backdrop" id="qr-modal" role="dialog" aria-modal="true" aria-labelledby="modal-qr-title">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3 class="modal-title" id="modal-qr-title">Connecter WhatsApp (Coexistence)</h3>
+        <h3 class="modal-title" id="modal-qr-title">Connecter WhatsApp (Liaison Multi-Appareils)</h3>
         <button class="modal-close-btn" data-close-modal="qr-modal" aria-label="Fermer la modale">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -2702,7 +2702,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         <!-- Pane A: QR Code Mode -->
         <div id="pane-conn-qr" class="conn-pane active">
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
-            Scannez ce QR Code avec votre téléphone dans <strong>WhatsApp &gt; Appareils Connectés</strong> pour synchroniser vos discussions en coexistence avec l'Agent IA.
+            Scannez ce QR Code avec votre téléphone dans <strong>WhatsApp &gt; Appareils connectés</strong> pour synchroniser vos discussions avec l'Agent IA.
           </p>
 
           <div class="qr-target-badge" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px auto; padding: 7px 16px; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.25); border-radius: 20px; font-size: 13px; color: var(--whatsapp-green); max-width: 360px;">
@@ -3160,7 +3160,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             <div style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(16, 25, 42, 0.8)); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
               <div>
                 <div style="font-size: 14px; font-weight: 700; color: #ffffff;" id="step2-recap-title">Formule Pro 🚀 (14 900 FCFA / mois)</div>
-                <div style="font-size: 12px; color: #cbd5e1; margin-top: 2px;" id="step2-recap-customer">Client : Jean-Marc Kouassi • contact@entreprise.com</div>
+                <div style="font-size: 12px; color: #cbd5e1; margin-top: 2px;" id="step2-recap-customer">Client : Non renseigné</div>
               </div>
               <button type="button" id="btn-edit-step1" style="background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); color: #25d366; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
                 <i class="fa-solid fa-pen-to-square"></i> Modifier
@@ -3421,8 +3421,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             <i class="fa-brands fa-whatsapp" style="color: var(--whatsapp-green); font-size: 20px;"></i>
           </div>
           <div>
-            <h3 class="modal-title" id="modal-template-title">Créer un Modèle WhatsApp Approuvé (Meta Cloud API)</h3>
-            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Conforme aux normes officielles Meta HSM pour diffusions et relances sans blocage.</p>
+            <h3 class="modal-title" id="modal-template-title">Créer un Modèle WhatsApp</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Modèle prêt pour vos diffusions et relances automatisées.</p>
           </div>
         </div>
         <button class="modal-close-btn" data-close-modal="template-modal" onclick="closeTemplateModal()" aria-label="Fermer la modale">
@@ -3566,8 +3566,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
               <!-- Meta Status Badge -->
               <div style="margin-top: 16px; background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.2); border-radius: 8px; padding: 10px; font-size: 11px; color: #8696a0; display: flex; gap: 8px; align-items: center;">
-                <i class="fa-solid fa-shield-halved" style="color: var(--whatsapp-green); font-size: 16px;"></i>
-                <span>Approbation automatique Meta Cloud API sous 1 à 5 minutes.</span>
+                <i class="fa-solid fa-bolt" style="color: var(--whatsapp-green); font-size: 16px;"></i>
+                <span>Modèle opérationnel immédiatement pour vos envois et diffusions.</span>
               </div>
 
             </div>

@@ -430,13 +430,13 @@ const MOCK_DATA = {
       active: true
     },
     {
-      key: "meta_api",
-      name: "Meta Cloud API (WhatsApp Officiel)",
-      status: "Actif & Coexistence",
+      key: "whatsapp_web",
+      name: "Liaison WhatsApp (Multi-Appareils)",
+      status: "Actif",
       badgeClass: "badge-green",
-      desc: "Routage bidirectionnel avec l'infrastructure WhatsApp Cloud officielle pour une livraison 100% garantie.",
-      phone: "ID: 1315731748294861",
-      beneficiary: "Meta Verified",
+      desc: "Synchronisation sécurisée via WhatsApp Web pour permettre à votre Agent IA de répondre à vos clients 24/7.",
+      phone: "Serveur Cloud Railway",
+      beneficiary: "VANDIAS AI",
       color: "#25d366",
       icon: "fa-brands fa-whatsapp",
       active: true
@@ -1489,7 +1489,7 @@ function setupModals() {
   if (simScanBtn) {
     simScanBtn.addEventListener("click", () => {
       closeQrModal();
-      showToast("Appareil WhatsApp synchronisé avec succès en mode Coexistence !", "success");
+      showToast("Appareil WhatsApp synchronisé avec succès !", "success");
     });
   }
 }
@@ -3685,8 +3685,8 @@ function renderSearchResults(query) {
     { title: "Diffusions de Masse", desc: "Envoyer une campagne marketing à tous vos contacts", view: "broadcast", icon: "fa-bullhorn" },
     { title: "Flow Builder (Funnels)", desc: "Tunnels de vente et arbres automatisés", view: "automations", icon: "fa-diagram-project" },
     { title: "Contacts & CRM", desc: "Base de prospects, clients et données d'achat", view: "contacts", icon: "fa-users" },
-    { title: "Modèles WhatsApp", desc: "Templates officiels approuvés par Meta", view: "templates", icon: "fa-file-lines" },
-    { title: "Numéros & Coexistence", desc: "Gérer la liaison WhatsApp Business", view: "devices", icon: "fa-mobile-screen-button" },
+    { title: "Modèles WhatsApp", desc: "Modèles de messages prêts pour vos campagnes", view: "templates", icon: "fa-file-lines" },
+    { title: "Numéros WhatsApp", desc: "Gérer la liaison WhatsApp Business", view: "devices", icon: "fa-mobile-screen-button" },
     { title: "Intégrations & Paiements", desc: "Wave, Orange Money, MoMo, Stripe", view: "integrations", icon: "fa-plug-circle-bolt" },
     { title: "Statistiques & ROI", desc: "Analyse approfondie de rentabilité", view: "analytics", icon: "fa-chart-pie" },
     { title: "Amina Traoré", desc: "Contact VIP (+225 07 48 99 12)", view: "inbox", icon: "fa-user" },
@@ -4170,11 +4170,11 @@ function setupActionButtons() {
         action: () => openPlanModal("pro")
       });
 
-      // 4. Notification Moteur & Sécurité Meta API
+      // 4. Notification Moteur & Sécurité
       notifs.push({
         id: `security_meta_${userId}`,
-        title: "Moteur IA Certifié Meta Cloud",
-        body: "Vos échanges sont sécurisés de bout en bout avec protection anti-bannissement et latence < 1s.",
+        title: "Moteur IA VANDIAS Cloud",
+        body: "Vos échanges sont synchronisés avec un cadencement intelligent anti-suspension et une latence < 2s.",
         time: "Actif",
         icon: "fa-solid fa-shield-halved",
         iconBg: "rgba(6, 182, 212, 0.15)",
@@ -5650,6 +5650,49 @@ function setupBillingAndAffiliate() {
                 cardLabel.textContent = "Ligne enregistrée — Prête pour synchronisation QR Code";
             } else {
                 cardLabel.innerHTML = 'Ajoutez votre numéro dans les <a href="#settings" onclick="if(typeof showSection===\'function\'){showSection(\'settings\');}" style="color: var(--whatsapp-green); text-decoration: underline; font-weight: 600;">Paramètres</a>';
+            }
+        }
+
+        // Mise à jour dynamique des spécifications techniques de la carte
+        const specConn = document.getElementById("wa-spec-connection");
+        const specMsg = document.getElementById("wa-spec-status-msg");
+        if (specConn) {
+            if (isConnected) {
+                specConn.textContent = "Connecté (Session Active)";
+                specConn.style.color = "var(--whatsapp-green)";
+            } else if (status === 'QR_READY') {
+                specConn.textContent = "En attente de scan QR";
+                specConn.style.color = "#fbbf24";
+            } else if (status === 'CODE_READY') {
+                specConn.textContent = "Code d'association prêt";
+                specConn.style.color = "#60a5fa";
+            } else if (status === 'STARTING' || status === 'RECONNECTING') {
+                specConn.textContent = "Initialisation en cours";
+                specConn.style.color = "#fbbf24";
+            } else if (status === 'ERROR') {
+                specConn.textContent = "Erreur de connexion";
+                specConn.style.color = "#ef4444";
+            } else {
+                specConn.textContent = "Non connecté";
+                specConn.style.color = "var(--text-muted)";
+            }
+        }
+        if (specMsg) {
+            if (isConnected) {
+                specMsg.textContent = "Réception active & Réponses IA automatiques";
+                specMsg.style.color = "var(--whatsapp-green)";
+            } else if (status === 'QR_READY') {
+                specMsg.textContent = "Scannez le QR Code depuis votre smartphone";
+                specMsg.style.color = "#fbbf24";
+            } else if (status === 'CODE_READY') {
+                specMsg.textContent = "Entrez le code à 8 chiffres dans WhatsApp";
+                specMsg.style.color = "#60a5fa";
+            } else if (status === 'ERROR') {
+                specMsg.textContent = window.lastWhatsAppError || "Erreur de communication serveur";
+                specMsg.style.color = "#f87171";
+            } else {
+                specMsg.textContent = "Prêt à connecter";
+                specMsg.style.color = "#94a3b8";
             }
         }
 
