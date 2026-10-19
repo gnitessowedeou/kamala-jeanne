@@ -651,6 +651,83 @@ async function saveCustomerSession(userId, phone, contactName, userText, assista
 }
 
 /**
+ * Génère une session de paiement officielle SasPay pour un client WhatsApp.
+ */
+async function generateSasPayCheckoutSession({ userId, amount, productNames, customerPhone, customerName }) {
+  try {
+    if (!amount || amount <= 0) return null;
+
+    let merchantSecret = null;
+    let merchantName = 'Jeff Digital';
+    if (supabase && userId) {
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(userId);
+        const integ = uData?.user?.app_metadata?.integrations || [];
+        const sasItem = integ.find(x => x.key === 'saspay');
+        if (sasItem) {
+          if (sasItem.secretKey && sasItem.secretKey.startsWith('sk_')) {
+            merchantSecret = sasItem.secretKey.trim();
+          }
+          if (sasItem.beneficiary) {
+            merchantName = sasItem.beneficiary;
+          }
+        }
+      } catch (mErr) {
+        console.warn('[WA/SASPAY] Notice lecture intégration commerçant:', mErr.message);
+      }
+    }
+
+    const secretKey = merchantSecret || process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || process.env.SASPAY_KEY || process.env.SAASPAY_KEY || process.env.SASPAY_API_KEY;
+    if (!secretKey) {
+      console.warn(`[WA/SASPAY] Aucune clé SasPay disponible pour générer le lien de ${userId}`);
+      return null;
+    }
+
+    const fetch = (await import('node-fetch')).default;
+    const cleanPhone = String(customerPhone || '').replace(/\D/g, '');
+    const safeEmail = `client.${cleanPhone || Date.now()}@vandias.com`;
+
+    const payload = {
+      amount: String(Math.round(amount)),
+      currency: 'XOF',
+      customer_name: customerName || 'Client WhatsApp',
+      customer_email: safeEmail,
+      customer_phone: cleanPhone ? ('+' + cleanPhone) : '',
+      description: `${productNames} - ${merchantName}`,
+      return_url: 'https://vandias.com',
+      metadata: {
+        userId,
+        merchantName,
+        customerPhone: cleanPhone,
+        productNames,
+        source: 'whatsapp_ai_order'
+      }
+    };
+
+    const res = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data && data.data && data.data.checkout_url) {
+      console.log(`✅ [WA/SASPAY] Lien créé avec succès pour ${userId} (${amount} FCFA, ${productNames}) : ${data.data.checkout_url}`);
+      return data.data.checkout_url;
+    } else {
+      console.warn('[WA/SASPAY] Erreur retour SasPay:', data);
+      return null;
+    }
+  } catch (err) {
+    console.error('[WA/SASPAY] Exception création session SasPay:', err.message);
+    return null;
+  }
+}
+
+/**
  * Moteur de réponse commerciale IA pour VANDIA IA
  * Utilise strictement la configuration, le catalogue, les prix, les instructions et l'historique du compte
  */
@@ -674,19 +751,21 @@ async function generateSalesAgentResponse({
 2. CATALOGUE PRODUITS ET TARIFS (RÈGLE ABSOLUE ANTI-HALLUCINATION) :
 - Tu dois utiliser EXCLUSIVEMENT les produits, services, tarifs, remises et conditions figurant dans les INSTRUCTIONS OFFICIELLES de l'entreprise fournies ci-dessous.
 - INTERDICTION FORMELLE d'inventer des produits, des prix, des fonctionnalités ou des prestations qui ne figurent pas explicitement dans les instructions de l'entreprise.
-- Si le client demande un produit ou service qui n'est pas dans le catalogue, réponds poliment qu'il n'est pas disponible actuellement et oriente-le vers les offres officielles disponibles.
+- Si le client choisit plusieurs produits, additionne les prix avec exactitude pour lui donner le montant total précis.
 
 3. COORDONNÉES DE PAIEMENT & SÉCURITÉ :
 - Utilise EXCLUSIVEMENT les moyens de paiement (Wave, Orange Money, MTN MoMo, Moov Money, Carte, etc.), numéros officiels et noms de bénéficiaires précisés dans les instructions de l'entreprise ci-dessous.
-- N'invente JAMAIS de numéro de paiement ni de nom de titulaire.
-- INTERDICTION ABSOLUE de valider ou confirmer un paiement à l'aveugle. Demande poliment la capture d'écran ou la référence du transfert au client et informe-le avec bienveillance que sa commande sera validée dès confirmation par le responsable.
 - Ne demande JAMAIS de code secret, code PIN, mot de passe bancaire ou identifiant confidentiel.
 
-4. FORMAT WHATSAPP :
-- Réponses courtes (3 à 5 lignes concises), aérées, élégantes et parfaitement lisibles sur smartphone, avec des puces et des émojis bien dosés (😊, ✨, 📦, 💳).
-- Interdiction de faire de longs blocs de texte indigestes.
+4. GÉNÉRATION AUTOMATIQUE DES LIENS DE PAIEMENT (SASPAY MULTI-PAYS : CONGO, CAMEROUN, GABON, RDC, CARTE BANCAIRE) :
+- Si le client réside au Congo (Brazzaville ou Kinshasa RDC), Cameroun, Gabon, ou hors zone UEMOA, ou s'il demande à payer par lien, par carte bancaire ou Mobile Money local :
+  UTILISE SYSTÉMATIQUEMENT l'outil officiel 'create_payment_link' en lui passant le montant total exact calculé des produits choisis.
+- INTERDICTION FORMELLE de dire « je n'ai pas encore reçu le lien » ou « je vais vérifier ». L'outil 'create_payment_link' te génère le lien officiel immédiatement en temps réel pour le client !
 
-5. CONTINUITÉ ET FLUIDITÉ CONVERSATIONNELLE :
+5. FORMAT WHATSAPP :
+- Réponses courtes (3 à 5 lignes concises), aérées, élégantes et parfaitement lisibles sur smartphone, avec des puces et des émojis bien dosés (😊, ✨, 📦, 💳).
+
+6. CONTINUITÉ ET FLUIDITÉ CONVERSATIONNELLE :
 - Consulte attentivement l'historique des derniers échanges ci-dessous. Maintiens une parfaite cohérence avec ce qui a déjà été dit.
 - Ne redis pas "Bonjour" si la conversation est déjà entamée. Réponds directement au client et avance vers l'objectif commercial.
 `;
@@ -717,15 +796,89 @@ async function generateSalesAgentResponse({
       : `Je note votre demande. Souhaitez-vous des détails complémentaires pour finaliser votre commande ?`;
   }
 
+  const tools = [
+    {
+      type: 'function',
+      function: {
+        name: 'create_payment_link',
+        description: "Génère un lien de paiement sécurisé officiel SasPay (Carte Bancaire VISA/Mastercard & Mobile Money multi-pays : Congo, Cameroun, Gabon, RDC, Bénin, CI, Sénégal, etc.) pour le client lorsqu'il souhaite commander ou régler un ou plusieurs produits/services.",
+        parameters: {
+          type: 'object',
+          properties: {
+            amount: {
+              type: 'number',
+              description: 'Le montant total exact à payer en FCFA (XOF), calculé en additionnant le prix exact des produits choisis par le client selon le catalogue de l\'entreprise.'
+            },
+            product_names: {
+              type: 'string',
+              description: 'Le nom ou la liste des produits/services commandés par le client (ex: Canva Pro 1 an).'
+            }
+          },
+          required: ['amount', 'product_names']
+        }
+      }
+    }
+  ];
+
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: openAiMessages,
+    tools,
+    tool_choice: 'auto',
     max_tokens: 450,
     temperature: 0.7
   });
 
-  const replyText = (completion.choices && completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content)
-    ? completion.choices[0].message.content.trim()
+  const choice = completion.choices && completion.choices[0];
+  const msgObj = choice ? choice.message : null;
+
+  if (msgObj && msgObj.tool_calls && msgObj.tool_calls.length > 0) {
+    const toolCall = msgObj.tool_calls[0];
+    if (toolCall.function && toolCall.function.name === 'create_payment_link') {
+      let args = {};
+      try { args = JSON.parse(toolCall.function.arguments || '{}'); } catch(e) {}
+      const amount = Number(args.amount) || 0;
+      const productNames = args.product_names || 'Commande';
+
+      console.log(`[WA/IA] 💳 Outil create_payment_link appelé pour ${userId} : ${amount} FCFA (${productNames})`);
+      const paymentUrl = await generateSasPayCheckoutSession({
+        userId,
+        amount,
+        productNames,
+        customerPhone: phone,
+        customerName: contactName
+      });
+
+      openAiMessages.push(msgObj);
+      openAiMessages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: JSON.stringify({
+          status: paymentUrl ? 'success' : 'failed',
+          payment_url: paymentUrl || null,
+          amount,
+          currency: 'XOF',
+          product_names: productNames
+        })
+      });
+
+      const followUp = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: openAiMessages,
+        max_tokens: 450,
+        temperature: 0.7
+      });
+
+      return (followUp.choices && followUp.choices[0] && followUp.choices[0].message && followUp.choices[0].message.content)
+        ? followUp.choices[0].message.content.trim()
+        : (paymentUrl 
+            ? `Parfait ! Voici votre lien de paiement sécurisé pour ${productNames} (${amount} FCFA) : ${paymentUrl}`
+            : "Votre commande est bien notée. Un responsable va finaliser votre lien de paiement.");
+    }
+  }
+
+  const replyText = (msgObj && msgObj.content)
+    ? msgObj.content.trim()
     : "Je reste à votre entière disposition pour vous accompagner dans votre commande !";
 
   return replyText;
