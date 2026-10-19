@@ -3573,16 +3573,36 @@ window.openPaymentConfigModal = function(key) {
   try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
   const userFullName = u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : "";
 
+  const phoneLabel = document.getElementById("payment-phone-label");
+  const secretGroup = document.getElementById("payment-secret-group");
+  const secretInput = document.getElementById("payment-secret-input");
+
   if (keyInput) keyInput.value = item.key;
-  if (phoneInput) {
-    phoneInput.value = (item.phone && !item.phone.includes('00 00 00')) ? item.phone : "";
-    phoneInput.placeholder = "Ex: +225 07 00 00 00 00";
+
+  if (item.key === 'saspay') {
+    if (secretGroup) secretGroup.style.display = "block";
+    if (secretInput) secretInput.value = item.secretKey || "";
+    if (phoneLabel) phoneLabel.innerHTML = 'Lien de Paiement Permanent ou Numéro Marchand <span style="font-size:11px; color:#94a3b8;">(Optionnel)</span>';
+    if (phoneInput) {
+      phoneInput.value = (item.phone && !item.phone.includes('00 00 00')) ? item.phone : "";
+      phoneInput.placeholder = "Ex: https://checkout.saspay.me/... ou votre WhatsApp commercial";
+      phoneInput.required = false;
+    }
+  } else {
+    if (secretGroup) secretGroup.style.display = "none";
+    if (phoneLabel) phoneLabel.innerHTML = 'Numéro de Réception Mobile Money / Marchand <span style="color: var(--whatsapp-green);">*</span>';
+    if (phoneInput) {
+      phoneInput.value = (item.phone && !item.phone.includes('00 00 00')) ? item.phone : "";
+      phoneInput.placeholder = "Ex: +225 07 00 00 00 00 ou +229 01 00 00 00";
+      phoneInput.required = true;
+    }
   }
+
   if (nameInput) {
     nameInput.value = (item.beneficiary && item.beneficiary !== 'Non configuré' && item.beneficiary !== 'Gnitou Essowedeou') 
       ? item.beneficiary 
       : (userFullName || "");
-    nameInput.placeholder = "Ex: " + (userFullName || "Votre Nom Officiel");
+    nameInput.placeholder = "Ex: " + (userFullName || "Votre Nom Officiel ou Entreprise");
   }
   if (noteInput) noteInput.value = item.note || "";
   if (activeToggle) activeToggle.checked = Boolean(item.active);
@@ -3611,14 +3631,16 @@ window.handleSavePaymentConfig = async function(e) {
   const phone = document.getElementById("payment-phone-input")?.value?.trim() || "";
   const name = document.getElementById("payment-name-input")?.value?.trim() || "";
   const note = document.getElementById("payment-note-input")?.value?.trim() || "";
+  const secretKey = document.getElementById("payment-secret-input")?.value?.trim() || "";
   const isActive = document.getElementById("payment-active-toggle")?.checked;
 
   const items = getSavedIntegrations();
   const updated = items.map(x => x.key === key ? {
     ...x,
-    phone: phone || "+225 00 00 00 00",
+    phone: phone || (key === 'saspay' ? 'SasPay Direct' : "+225 00 00 00 00"),
     beneficiary: name || "Non configuré",
     note: note,
+    secretKey: secretKey,
     active: isActive,
     status: isActive ? "Connecté & Actif" : "En pause"
   } : x);
@@ -3634,7 +3656,7 @@ window.handleSavePaymentConfig = async function(e) {
       await fetch(API_URL + '/api/integrations/payments', {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ userId, method: key, phone, beneficiary: name, note, active: isActive, integrations: updated })
+        body: JSON.stringify({ userId, method: key, phone, beneficiary: name, note, secretKey, active: isActive, integrations: updated })
       });
     }
   } catch (err) {}

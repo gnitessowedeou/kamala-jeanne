@@ -3771,8 +3771,19 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         <div class="modal-body" style="padding: 24px;">
           <input type="hidden" id="payment-method-key">
 
+          <div class="form-group" id="payment-secret-group" style="margin-bottom: 18px; display: none;">
+            <label style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+              <span>Clé Secrète API SasPay (sk_live_...)</span>
+              <span style="font-size: 11px; color: var(--whatsapp-green);"><i class="fa-solid fa-lock"></i> Sécurisé</span>
+            </label>
+            <input type="password" id="payment-secret-input" class="form-control" placeholder="Ex: sk_live_xxxxxxxxxxxxxxxx" style="width: 100%;">
+            <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">
+              <i class="fa-solid fa-circle-info"></i> Optionnel : laissez vide pour utiliser la passerelle de test automatique VANDIAS. Si vous renseignez votre clé marchande SasPay, les fonds iront directement sur votre compte SasPay.
+            </small>
+          </div>
+
           <div class="form-group" style="margin-bottom: 18px;">
-            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Numéro de Réception Mobile Money / Marchand <span style="color: var(--whatsapp-green);">*</span></label>
+            <label id="payment-phone-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Numéro de Réception Mobile Money / Marchand <span style="color: var(--whatsapp-green);">*</span></label>
             <input type="text" id="payment-phone-input" class="form-control" required placeholder="Ex: +225 07 00 00 00 00 ou +229 01 00 00 00" style="width: 100%;">
           </div>
 
@@ -3969,10 +3980,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261019_v54"></script>
+  <script src="js/i18n.js?v=20261019_v55"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261019_v54"></script>
-  <script src="js/dashboard.js?v=20261019_v54"></script>
+  <script src="js/auth.js?v=20261019_v55"></script>
+  <script src="js/dashboard.js?v=20261019_v55"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>

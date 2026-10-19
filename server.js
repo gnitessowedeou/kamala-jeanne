@@ -2682,6 +2682,81 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
 });
 
 // ============================================================================
+// ROUTES D'INTÉGRATIONS PAIEMENT DU MARCHAND (SASPAY, WAVE, MOMO, MOOV)
+// ============================================================================
+app.get('/api/integrations/payments/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+
+    let integrations = [];
+    if (supabase) {
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(userId);
+        integrations = uData?.user?.app_metadata?.integrations || [];
+      } catch (err) {
+        console.warn("[INTEGRATIONS] Notice lecture metadata:", err.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      userId,
+      integrations
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/integrations/payments', async (req, res) => {
+  try {
+    const { userId, integrations, method, phone, beneficiary, note, active, secretKey } = req.body;
+    const targetUserId = userId || (req.user && req.user.id);
+    if (!targetUserId) return res.status(400).json({ error: "userId requis" });
+
+    let updatedList = Array.isArray(integrations) ? integrations : [];
+
+    // Si on a envoyé une méthode individuelle
+    if (method && updatedList.length === 0) {
+      updatedList = [{
+        key: method,
+        phone,
+        beneficiary,
+        note,
+        active: Boolean(active),
+        secretKey: secretKey || ''
+      }];
+    }
+
+    if (supabase) {
+      try {
+        const { data: uData } = await supabase.auth.admin.getUserById(targetUserId);
+        const existingAppMeta = uData?.user?.app_metadata || {};
+        
+        await supabase.auth.admin.updateUserById(targetUserId, {
+          app_metadata: {
+            ...existingAppMeta,
+            integrations: updatedList
+          }
+        });
+        console.log(`✅ [INTEGRATIONS] Intégrations mises à jour pour ${targetUserId} (${updatedList.length} passerelles)`);
+      } catch (saveErr) {
+        console.warn("[INTEGRATIONS] Notice sauvegarde metadata:", saveErr.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: "Intégrations de paiement enregistrées avec succès",
+      integrations: updatedList
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
 // ROUTES DE PAIEMENT (SASPAY)
 // ============================================================================
 app.post('/api/payments/create-session', paymentLimiter, async (req, res) => {

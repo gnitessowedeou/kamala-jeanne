@@ -106,21 +106,99 @@ class AIPipeline {
       { role: 'user', content: msg.body }
     ];
 
-    // 6. Appel IA (OpenAI gpt-4o-mini)
+    // 6. Appel IA (OpenAI gpt-4o-mini avec Outil de Paiement SasPay)
     let aiResponse = "";
     if (!this.openai) {
       aiResponse = `Bonjour ${contactName} ! Bienvenue chez nous 😊 Comment puis-je vous aider aujourd'hui ?`;
     } else {
       try {
+        const tools = [
+          {
+            type: 'function',
+            function: {
+              name: 'create_payment_link',
+              description: "Génère un lien de paiement sécurisé officiel SasPay (Carte Bancaire VISA/Mastercard & Mobile Money multi-pays) pour le client lorsqu'il souhaite commander ou régler un ou plusieurs produits/services.",
+              parameters: {
+                type: 'object',
+                properties: {
+                  amount: {
+                    type: 'number',
+                    description: 'Le montant total exact à payer en FCFA (XOF), calculé en additionnant le prix exact de chaque produit choisi par le client selon le catalogue de l\'entreprise.'
+                  },
+                  product_names: {
+                    type: 'string',
+                    description: 'Le nom ou la liste des produits/services commandés par le client.'
+                  }
+                },
+                required: ['amount', 'product_names']
+              }
+            }
+          }
+        ];
+
         const completion = await this.openai.chat.completions.create({
           model: 'gpt-4o-mini',
           messages,
+          tools,
+          tool_choice: 'auto',
           max_tokens: 450,
           temperature: 0.7
         });
-        aiResponse = (completion.choices && completion.choices[0] && completion.choices[0].message)
-          ? completion.choices[0].message.content.trim()
-          : "Bonjour ! Comment puis-je vous renseigner sur nos produits et services ?";
+
+        const choice = completion.choices && completion.choices[0];
+        const msgObj = choice ? choice.message : null;
+
+        if (msgObj && msgObj.tool_calls && msgObj.tool_calls.length > 0) {
+          const toolCall = msgObj.tool_calls[0];
+          if (toolCall.function && toolCall.function.name === 'create_payment_link') {
+            let args = {};
+            try { args = JSON.parse(toolCall.function.arguments || '{}'); } catch(e) {}
+            const amount = Number(args.amount) || 0;
+            const productNames = args.product_names || 'Commande';
+
+            console.log(`[AIPipeline] 💳 Tool create_payment_link déclenché pour ${userId}: ${amount} FCFA (${productNames})`);
+            const paymentUrl = await this.generateSasPayPaymentLink({
+              userId,
+              amount,
+              productNames,
+              customerPhone: cleanSenderPhone,
+              customerName: contactName,
+              profile
+            });
+
+            messages.push(msgObj);
+            messages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({
+                status: paymentUrl ? 'success' : 'failed',
+                payment_url: paymentUrl || null,
+                amount,
+                currency: 'XOF',
+                product_names: productNames
+              })
+            });
+
+            const followUp = await this.openai.chat.completions.create({
+              model: 'gpt-4o-mini',
+              messages,
+              max_tokens: 450,
+              temperature: 0.7
+            });
+
+            aiResponse = (followUp.choices && followUp.choices[0] && followUp.choices[0].message)
+              ? followUp.choices[0].message.content.trim()
+              : (paymentUrl 
+                  ? `Parfait ! Voici votre lien de paiement sécurisé pour ${productNames} (${amount} FCFA) : ${paymentUrl}`
+                  : "Votre commande est bien notée. Un responsable commercial va vous communiquer les modalités de paiement.");
+          } else {
+            aiResponse = (msgObj && msgObj.content) ? msgObj.content.trim() : "Bonjour ! Comment puis-je vous aider ?";
+          }
+        } else {
+          aiResponse = (msgObj && msgObj.content)
+            ? msgObj.content.trim()
+            : "Bonjour ! Comment puis-je vous renseigner sur nos produits et services ?";
+        }
       } catch (aiErr) {
         console.error(`[AIPipeline] Erreur appel OpenAI: ${aiErr.message}`);
         aiResponse = "Je note bien votre demande, un responsable commercial va prendre le relais très rapidement.";
@@ -196,6 +274,84 @@ class AIPipeline {
   }
 
   /**
+   * Génère dynamiquement une session de paiement SasPay pour un client WhatsApp.
+   */
+  async generateSasPayPaymentLink({ userId, amount, productNames, customerPhone, customerName, profile }) {
+    try {
+      if (!amount || amount <= 0) return null;
+
+      // 1. Clé SasPay personnalisée du commerçant si enregistrée dans ses intégrations
+      let merchantSecret = null;
+      let merchantName = profile?.full_name || 'VANDIAS';
+      if (this.supabase && userId) {
+        try {
+          const { data: uData } = await this.supabase.auth.admin.getUserById(userId);
+          const integ = uData?.user?.app_metadata?.integrations || [];
+          const sasItem = integ.find(x => x.key === 'saspay');
+          if (sasItem) {
+            if (sasItem.secretKey && sasItem.secretKey.startsWith('sk_')) {
+              merchantSecret = sasItem.secretKey.trim();
+            }
+            if (sasItem.beneficiary) {
+              merchantName = sasItem.beneficiary;
+            }
+          }
+        } catch (mErr) {
+          console.warn('[AIPipeline] Notice lecture intégration SasPay commerçant:', mErr.message);
+        }
+      }
+
+      const secretKey = merchantSecret || process.env.SASPAY_SECRET_KEY || process.env.SAASPAY_SECRET_KEY || process.env.SASPAY_KEY || process.env.SAASPAY_KEY || process.env.SASPAY_API_KEY;
+      if (!secretKey) {
+        console.warn(`[AIPipeline] Aucune clé SasPay disponible pour générer le lien de ${userId}`);
+        return null;
+      }
+
+      const fetch = (await import('node-fetch')).default;
+      const cleanPhone = String(customerPhone || '').replace(/\D/g, '');
+      const safeEmail = `client.${cleanPhone || Date.now()}@vandias.com`;
+
+      const payload = {
+        amount: String(Math.round(amount)),
+        currency: 'XOF',
+        customer_name: customerName || 'Client WhatsApp',
+        customer_email: safeEmail,
+        customer_phone: cleanPhone ? ('+' + cleanPhone) : '',
+        description: `Commande ${productNames} - ${merchantName}`,
+        return_url: 'https://vandias.com',
+        metadata: {
+          userId,
+          merchantName,
+          customerPhone: cleanPhone,
+          productNames,
+          source: 'whatsapp_ai_order'
+        }
+      };
+
+      const res = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${secretKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data && data.data && data.data.checkout_url) {
+        console.log(`✅ [AIPipeline] Lien SasPay généré avec succès pour ${userId} (${amount} FCFA, ${productNames}): ${data.data.checkout_url}`);
+        return data.data.checkout_url;
+      } else {
+        console.warn('[AIPipeline] Erreur retour SasPay:', data);
+        return null;
+      }
+    } catch (err) {
+      console.error('[AIPipeline] Exception création lien SasPay:', err.message);
+      return null;
+    }
+  }
+
+  /**
    * Génère le prompt système d'agent commercial strict anti-hallucination.
    */
   buildCommercialPrompt(profile, isNewSession, contactName) {
@@ -213,10 +369,12 @@ class AIPipeline {
 2. CATALOGUE & PRIX (RÈGLE ABSOLUE ANTI-HALLUCINATION) :
 - Utilise EXCLUSIVEMENT les produits, services et tarifs figurant ci-dessous.
 - INTERDICTION FORMELLE d'inventer des produits, remises ou prestations non mentionnés.
+- Si le client choisit plusieurs produits, additionne les prix avec exactitude pour lui donner le total précis.
 
 3. MOYENS DE PAIEMENT & SÉCURITÉ :
-- Utilise uniquement les moyens officiels (Wave, Orange Money, MoMo, Carte).
-- Ne valide jamais un paiement sans preuve de transfert.
+- Utilise uniquement les moyens officiels (Wave, Orange Money, MoMo, Carte Bancaire).
+- Pour tout client qui souhaite passer commande, régler par carte bancaire, ou résidant au Congo (Brazzaville ou Kinshasa RDC), Cameroun, Gabon, ou hors zone : utilise SYSTÉMATIQUEMENT l'outil officiel 'create_payment_link' pour lui générer son lien sécurisé SasPay avec le montant total exact calculé.
+- Ne valide jamais un paiement sans preuve de transfert ou confirmation de session.
 - Ne demande JAMAIS de mot de passe, code secret ou code PIN.
 
 4. FORMAT WHATSAPP :
