@@ -206,6 +206,10 @@ setInterval(() => {
 
 const aiChatLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, message: "Trop de messages de test. Veuillez patienter une minute." });
 const paymentLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 10, message: "Trop de requetes de paiement. Veuillez patienter." });
+const pairingCodeLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 6, message: "Trop de demandes de code de liaison. Veuillez patienter une minute." });
+const whatsappStartLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 6, message: "Trop de lancements de session. Veuillez patienter un instant." });
+const passwordChangeLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5, message: "Trop de tentatives de modification de mot de passe. Patientez 15 minutes." });
+
 
 // Support W3C Private Network Access (permet aux navigateurs sur HTTPS Vercel de contacter http://localhost:8080)
 app.use((req, res, next) => {
@@ -1633,7 +1637,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
 });
 
 // Endpoint : Démarrer la connexion WhatsApp (gère le mode rapide et le mode officiel)
-app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
+app.post('/api/whatsapp/start', authMiddleware, whatsappStartLimiter, async (req, res) => {
   const { userId, restart, phoneNumber, mode } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
   const cleanPhone = phoneNumber ? String(phoneNumber).replace(/\D/g, '') : null;
@@ -1763,7 +1767,7 @@ app.get('/api/whatsapp/screenshot/:userId', authMiddleware, async (req, res) => 
 });
 
 // Endpoint d'association WhatsApp par code à 8 caractères (Pairing Code)
-app.post('/api/whatsapp/pairing-code', authMiddleware, async (req, res) => {
+app.post('/api/whatsapp/pairing-code', authMiddleware, pairingCodeLimiter, async (req, res) => {
   const { userId, phoneNumber } = req.body;
   if (!userId) return res.status(400).json({ error: "userId manquant" });
   if (!phoneNumber) return res.status(400).json({ error: "Numéro de téléphone requis" });
@@ -2837,7 +2841,7 @@ app.post('/api/payments/verify-session', authMiddleware, async (req, res) => {
 // ============================================================================
 // ROUTES D'INTÉGRATIONS PAIEMENT DU MARCHAND (SASPAY, WAVE, MOMO, MOOV)
 // ============================================================================
-app.get('/api/integrations/payments/:userId', async (req, res) => {
+app.get('/api/integrations/payments/:userId', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ error: "userId requis" });
@@ -2846,23 +2850,34 @@ app.get('/api/integrations/payments/:userId', async (req, res) => {
     if (supabase) {
       try {
         const { data: uData } = await supabase.auth.admin.getUserById(userId);
-        integrations = uData?.user?.app_metadata?.integrations || [];
+        integrations = uData?.user?.app_metadata?.integrations || uData?.user?.user_metadata?.payment_integrations || [];
       } catch (err) {
         console.warn("[INTEGRATIONS] Notice lecture metadata:", err.message);
       }
     }
 
+    // Sécurité renforcée : Masquer la clé secrète marchande pour empêcher toute interception
+    const sanitized = (integrations || []).map(item => {
+      const realKey = item.secretKey || '';
+      const hasKey = Boolean(realKey && realKey.startsWith('sk_'));
+      return {
+        ...item,
+        hasSecretKey: hasKey,
+        secretKey: hasKey ? (realKey.substring(0, 10) + '••••••••' + realKey.slice(-4)) : ''
+      };
+    });
+
     return res.json({
       success: true,
       userId,
-      integrations
+      integrations: sanitized
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/integrations/payments', async (req, res) => {
+app.post('/api/integrations/payments', authMiddleware, async (req, res) => {
   try {
     const { userId, integrations, method, phone, beneficiary, note, active, secretKey } = req.body;
     const targetUserId = userId || (req.user && req.user.id);
@@ -2886,14 +2901,34 @@ app.post('/api/integrations/payments', async (req, res) => {
       try {
         const { data: uData } = await supabase.auth.admin.getUserById(targetUserId);
         const existingAppMeta = uData?.user?.app_metadata || {};
-        
+        const existingUserMeta = uData?.user?.user_metadata || {};
+        const currentInteg = existingAppMeta.integrations || existingUserMeta.payment_integrations || [];
+
+        // Protection anti-écrasement accidentel : si la clé envoyée est masquée ou vide, conserver l'ancienne clé active
+        const securedList = updatedList.map(newItem => {
+          const oldItem = currentInteg.find(x => x.key === newItem.key);
+          const isMaskedOrEmpty = !newItem.secretKey || newItem.secretKey.includes('••') || newItem.secretKey.includes('***');
+          const finalSecret = (isMaskedOrEmpty && oldItem && oldItem.secretKey) 
+            ? oldItem.secretKey 
+            : (newItem.secretKey || (oldItem ? oldItem.secretKey : ''));
+
+          return {
+            ...newItem,
+            secretKey: finalSecret
+          };
+        });
+
         await supabase.auth.admin.updateUserById(targetUserId, {
           app_metadata: {
             ...existingAppMeta,
-            integrations: updatedList
+            integrations: securedList
+          },
+          user_metadata: {
+            ...existingUserMeta,
+            payment_integrations: securedList
           }
         });
-        console.log(`✅ [INTEGRATIONS] Intégrations mises à jour pour ${targetUserId} (${updatedList.length} passerelles)`);
+        console.log(`✅ [INTEGRATIONS] Intégrations sécurisées synchronisées pour ${targetUserId} (${securedList.length} passerelles)`);
       } catch (saveErr) {
         console.warn("[INTEGRATIONS] Notice sauvegarde metadata:", saveErr.message);
       }
@@ -2901,8 +2936,7 @@ app.post('/api/integrations/payments', async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Intégrations de paiement enregistrées avec succès",
-      integrations: updatedList
+      message: "Intégrations de paiement enregistrées et sécurisées avec succès"
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -3623,69 +3657,7 @@ app.post('/api/affiliate/reverse', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/api/integrations/payments/:userId', authMiddleware, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    if (!userId) return res.status(400).json({ error: "userId requis" });
-    if (!supabase) return res.status(500).json({ error: "Base de données non disponible" });
 
-    const { data: uData } = await supabase.auth.admin.getUserById(userId);
-    const integrations = uData?.user?.user_metadata?.payment_integrations || null;
-    res.json({ success: true, integrations });
-  } catch (err) {
-    console.error("[GET PAYMENTS] Erreur:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/integrations/payments', authMiddleware, async (req, res) => {
-  try {
-    const { userId, method, phone, beneficiary, note, active, integrations } = req.body;
-    console.log(`[PAYMENTS] Mise a jour passerelle ${method} pour client ${userId}: ${phone} (${beneficiary})`);
-    
-    if (supabase && userId) {
-      // 1. Sauvegarder dans user_metadata pour persistance cloud permanente par utilisateur
-      try {
-        const { data: uData } = await supabase.auth.admin.getUserById(userId);
-        const existingMeta = uData?.user?.user_metadata || {};
-        const currentInteg = existingMeta.payment_integrations || [];
-        let updatedInteg = Array.isArray(integrations) ? integrations : currentInteg;
-        if (!Array.isArray(integrations) && method) {
-          const idx = updatedInteg.findIndex(x => x.key === method);
-          if (idx >= 0) {
-            updatedInteg[idx] = { ...updatedInteg[idx], phone, beneficiary, note, active };
-          } else {
-            updatedInteg.push({ key: method, phone, beneficiary, note, active });
-          }
-        }
-        await supabase.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            ...existingMeta,
-            payment_integrations: updatedInteg
-          }
-        });
-      } catch (metaErr) {
-        console.warn("[PAYMENTS] Notice meta save:", metaErr.message);
-      }
-
-      // 2. Mettre a jour le prompt du profil pour que l'IA connaisse toujours le bon numero vendeur
-      if (phone) {
-        const { data: prof } = await supabase.from('profiles').select('ai_prompt').eq('id', userId).single();
-        if (prof && prof.ai_prompt) {
-          const marker = "\n\n[COORDONNEES DE PAIEMENT ACTUELLES DU VENDEUR] :";
-          const cleanPrompt = prof.ai_prompt.split(marker)[0];
-          const updatedPrompt = `${cleanPrompt}${marker}\nMoyen: ${String(method || 'PAIEMENT').toUpperCase()} | Numero: ${phone} | Beneficiaire: ${beneficiary} | Statut: ${active ? 'Actif' : 'Pause'}`;
-          await supabase.from('profiles').update({ ai_prompt: updatedPrompt }).eq('id', userId);
-        }
-      }
-    }
-
-    res.json({ success: true, message: "Passerelle enregistree avec succes" });
-  } catch (e) {
-    console.error("Erreur save payment:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
 
 app.post('/api/user/profile', authMiddleware, async (req, res) => {
   try {
@@ -3732,7 +3704,7 @@ app.post('/api/user/profile', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/user/change-password', authMiddleware, async (req, res) => {
+app.post('/api/user/change-password', authMiddleware, passwordChangeLimiter, async (req, res) => {
   try {
     const { password } = req.body;
     if (!password || password.length < 8) {
