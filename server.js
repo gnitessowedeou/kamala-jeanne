@@ -78,6 +78,36 @@ function cleanupChromiumLocks(sessionPath) {
   cleanDir(path.join(sessionPath, 'Default'));
 }
 
+// Tampon de logs en mémoire pour le diagnostic temps réel
+const serverLiveLogs = [];
+const _origConsoleLog = console.log;
+const _origConsoleWarn = console.warn;
+const _origConsoleError = console.error;
+
+console.log = (...args) => {
+  _origConsoleLog(...args);
+  try {
+    serverLiveLogs.unshift({ type: 'log', time: new Date().toISOString(), text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') });
+    if (serverLiveLogs.length > 200) serverLiveLogs.pop();
+  } catch(e) {}
+};
+
+console.warn = (...args) => {
+  _origConsoleWarn(...args);
+  try {
+    serverLiveLogs.unshift({ type: 'warn', time: new Date().toISOString(), text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') });
+    if (serverLiveLogs.length > 200) serverLiveLogs.pop();
+  } catch(e) {}
+};
+
+console.error = (...args) => {
+  _origConsoleError(...args);
+  try {
+    serverLiveLogs.unshift({ type: 'error', time: new Date().toISOString(), text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') });
+    if (serverLiveLogs.length > 200) serverLiveLogs.pop();
+  } catch(e) {}
+};
+
 // Purge automatique globale au démarrage du serveur pour tous les profils existants
 try {
   if (fs.existsSync(AUTH_BASE_DIR)) {
@@ -1047,15 +1077,9 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
     takeoverTimeoutMs: 10000,
     authTimeoutMs: 120000, // 2 minutes : permet aux bundles WhatsApp Web de se charger sereinement
     bypassCSP: true,       // Contourne les restrictions CSP bloquant l'injection des modules
-    webVersion: '2.3000.1050642531-alpha',
-    webVersionCache: {
-      type: 'remote',
-      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
-      strict: false
-    },
     puppeteer: {
       headless: true,
-      protocolTimeout: 120000,
+      protocolTimeout: 60000,
       defaultViewport: { width: 1280, height: 800 },
       args: [
         '--no-sandbox',
@@ -1063,8 +1087,8 @@ async function _executeCreateOrGetWhatsAppClient(userId, options = {}) {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-first-run',
-        '--window-size=1280,800',
-        '--js-flags=--max-old-space-size=384'
+        '--disable-extensions',
+        '--window-size=1280,800'
       ],
       ...(chromiumPath ? { executablePath: chromiumPath } : {})
     }
@@ -1499,6 +1523,11 @@ app.post('/api/whatsapp/start', authMiddleware, async (req, res) => {
     console.error("[WA] Erreur start:", err);
     return res.status(500).json({ error: err.message });
   }
+});
+
+// Endpoint de diagnostic temps réel des événements serveur
+app.get('/api/whatsapp/live-logs', authMiddleware, (req, res) => {
+  res.json({ logs: serverLiveLogs.slice(0, 80) });
 });
 
 // Endpoint : Déconnexion unifiée
