@@ -69,7 +69,7 @@ function initMobileMenu() {
 }
 
 // ==============================================================================
-// 3. PRICING TOGGLE (MENSUEL / ANNUEL AVEC ÉQUIVALENTS XOF)
+// 3. PRICING TOGGLE (MENSUEL / ANNUEL AVEC -20% RÉDUCTION)
 // ==============================================================================
 function initPricingToggle() {
   const checkbox = document.getElementById("pricing-toggle-checkbox");
@@ -77,12 +77,8 @@ function initPricingToggle() {
   const lblAnnual = document.getElementById("lbl-annual");
 
   const priceBasic = document.getElementById("price-basic");
-  const xofBasic = document.getElementById("xof-basic");
-
   const pricePro = document.getElementById("price-pro");
-  const xofPro = document.getElementById("xof-pro");
   const priceBusiness = document.getElementById("price-business");
-  const xofBusiness = document.getElementById("xof-business");
 
   if (!checkbox) return;
 
@@ -91,42 +87,80 @@ function initPricingToggle() {
     if (lblAnnual) lblAnnual.classList.toggle("active", isAnnual);
 
     // Update Basic
-    if (priceBasic && xofBasic) {
+    if (priceBasic) {
+      priceBasic.style.transition = "opacity 0.2s ease, transform 0.2s ease";
       priceBasic.style.opacity = "0";
-      xofBasic.style.opacity = "0";
+      priceBasic.style.transform = "scale(0.95)";
       setTimeout(() => {
-        priceBasic.textContent = isAnnual ? priceBasic.getAttribute("data-annual") : priceBasic.getAttribute("data-monthly");
-        const xofVal = isAnnual ? xofBasic.getAttribute("data-xof-annual") : xofBasic.getAttribute("data-xof-monthly");
-        xofBasic.textContent = `≈ ${xofVal} XOF`;
+        priceBasic.textContent = isAnnual 
+          ? (priceBasic.getAttribute("data-annual") || "6 320") 
+          : (priceBasic.getAttribute("data-monthly") || "7 900");
         priceBasic.style.opacity = "1";
-        xofBasic.style.opacity = "1";
+        priceBasic.style.transform = "scale(1)";
       }, 150);
     }
 
     // Update Pro
-    if (pricePro && xofPro) {
+    if (pricePro) {
+      pricePro.style.transition = "opacity 0.2s ease, transform 0.2s ease";
       pricePro.style.opacity = "0";
-      xofPro.style.opacity = "0";
+      pricePro.style.transform = "scale(0.95)";
       setTimeout(() => {
-        pricePro.textContent = isAnnual ? pricePro.getAttribute("data-annual") : pricePro.getAttribute("data-monthly");
-        const xofVal = isAnnual ? xofPro.getAttribute("data-xof-annual") : xofPro.getAttribute("data-xof-monthly");
-        xofPro.textContent = `≈ ${xofVal} XOF`;
+        pricePro.textContent = isAnnual 
+          ? (pricePro.getAttribute("data-annual") || "11 920") 
+          : (pricePro.getAttribute("data-monthly") || "14 900");
         pricePro.style.opacity = "1";
-        xofPro.style.opacity = "1";
+        pricePro.style.transform = "scale(1)";
       }, 150);
     }
 
     // Update Business
-    if (priceBusiness && xofBusiness) {
+    if (priceBusiness) {
+      priceBusiness.style.transition = "opacity 0.2s ease, transform 0.2s ease";
       priceBusiness.style.opacity = "0";
-      xofBusiness.style.opacity = "0";
+      priceBusiness.style.transform = "scale(0.95)";
       setTimeout(() => {
-        priceBusiness.textContent = isAnnual ? priceBusiness.getAttribute("data-annual") : priceBusiness.getAttribute("data-monthly");
-        const xofVal = isAnnual ? xofBusiness.getAttribute("data-xof-annual") : xofBusiness.getAttribute("data-xof-monthly");
-        xofBusiness.textContent = `≈ ${xofVal} XOF`;
+        priceBusiness.textContent = isAnnual 
+          ? (priceBusiness.getAttribute("data-annual") || "24 000") 
+          : (priceBusiness.getAttribute("data-monthly") || "30 000");
         priceBusiness.style.opacity = "1";
-        xofBusiness.style.opacity = "1";
+        priceBusiness.style.transform = "scale(1)";
       }, 150);
+    }
+
+    // Update frequency & annual billing tags
+    document.querySelectorAll(".price-frequency").forEach(el => {
+      el.textContent = isAnnual ? "/mois (facturé à l'année)" : "/mois";
+    });
+
+    const basicTag = document.querySelector(".card-basic .price-xof-tag");
+    if (basicTag) {
+      basicTag.style.display = isAnnual ? "block" : "none";
+      basicTag.innerHTML = isAnnual ? '<i class="fa-solid fa-circle-check"></i> 75 840 FCFA/an (-20% économisés)' : '';
+      basicTag.style.color = "var(--whatsapp-green)";
+      basicTag.style.fontSize = "12px";
+      basicTag.style.marginTop = "4px";
+      basicTag.style.fontWeight = "600";
+    }
+
+    const proTag = document.querySelector(".card-pro .price-xof-tag");
+    if (proTag) {
+      proTag.style.display = isAnnual ? "block" : "none";
+      proTag.innerHTML = isAnnual ? '<i class="fa-solid fa-circle-check"></i> 143 040 FCFA/an (-20% économisés)' : '';
+      proTag.style.color = "var(--whatsapp-green)";
+      proTag.style.fontSize = "12px";
+      proTag.style.marginTop = "4px";
+      proTag.style.fontWeight = "600";
+    }
+
+    const bizTag = document.querySelector(".card-enterprise .price-xof-tag");
+    if (bizTag) {
+      bizTag.style.display = isAnnual ? "block" : "none";
+      bizTag.innerHTML = isAnnual ? '<i class="fa-solid fa-circle-check"></i> 288 000 FCFA/an (-20% économisés)' : '';
+      bizTag.style.color = "var(--whatsapp-green)";
+      bizTag.style.fontSize = "12px";
+      bizTag.style.marginTop = "4px";
+      bizTag.style.fontWeight = "600";
     }
   };
 
@@ -135,6 +169,7 @@ function initPricingToggle() {
   });
 
   if (lblMonthly) {
+    lblMonthly.style.cursor = "pointer";
     lblMonthly.addEventListener("click", () => {
       checkbox.checked = false;
       updatePricing(false);
@@ -142,11 +177,15 @@ function initPricingToggle() {
   }
 
   if (lblAnnual) {
+    lblAnnual.style.cursor = "pointer";
     lblAnnual.addEventListener("click", () => {
       checkbox.checked = true;
       updatePricing(true);
     });
   }
+
+  // Initial trigger to match current checkbox state
+  updatePricing(checkbox.checked);
 }
 
 // ==============================================================================
