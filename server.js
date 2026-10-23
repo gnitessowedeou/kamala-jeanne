@@ -246,6 +246,7 @@ app.use((req, res, next) => {
 // Servir uniquement les r�pertoires et fichiers publics autoris�s
 app.use('/css', express.static(path.join(__dirname, 'css'), { dotfiles: 'ignore' }));
 app.use('/js', express.static(path.join(__dirname, 'js'), { dotfiles: 'ignore' }));
+app.use('/images', express.static(path.join(__dirname, 'images'), { dotfiles: 'ignore' }));
 if (fs.existsSync(path.join(__dirname, 'assets'))) {
   app.use('/assets', express.static(path.join(__dirname, 'assets'), { dotfiles: 'ignore' }));
 }
@@ -297,6 +298,17 @@ app.get('/admin.html', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
+
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.sendFile(path.join(__dirname, 'manifest.json'));
+});
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, 'sw.js'));
+});
+
 
 // === 1. CONNEXION BDD ===
 let supabase;
