@@ -913,15 +913,39 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
       return;
     }
 
+    // Marquer immédiatement le message comme vu (coches bleues) pour rassurer l'expéditeur
+    try {
+      if (typeof msg.getChat === 'function') {
+        const chat = await Promise.race([
+          msg.getChat(),
+          new Promise((_, r) => setTimeout(() => r(null), 3000))
+        ]);
+        if (chat && typeof chat.sendSeen === 'function') {
+          await chat.sendSeen();
+        }
+      }
+    } catch (seenErr) {}
+
     // Support universel et non-intrusif des messages vocaux WhatsApp (PTT / Audio) via OpenAI Whisper
     if ((!msg.body || msg.body.trim() === '') && (msg.hasMedia || msg.type === 'ptt' || msg.type === 'audio')) {
       try {
         if (typeof msg.downloadMedia === 'function') {
           console.log(`[WA/VOICE] 🎙️ Message vocal reçu de ${msg.from}. Téléchargement et transcription OpenAI Whisper...`);
-          const media = await Promise.race([
-            msg.downloadMedia(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Délai téléchargement vocal dépassé (15s)')), 15000))
-          ]);
+          
+          let media = null;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              media = await Promise.race([
+                msg.downloadMedia(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Délai téléchargement')), 10000))
+              ]);
+              if (media && media.data) break;
+            } catch (dErr) {
+              console.warn(`[WA/VOICE] Tentative ${attempt}/3 téléchargement:`, dErr.message);
+            }
+            if (attempt < 3) await new Promise(r => setTimeout(r, 1200));
+          }
+
           if (media && media.data && openai) {
             const audioBuffer = Buffer.from(media.data, 'base64');
             const cleanMime = media.mimetype ? media.mimetype.split(';')[0].trim() : 'audio/ogg';
