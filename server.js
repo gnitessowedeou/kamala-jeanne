@@ -1086,17 +1086,18 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
           .trim();
 
         if (cleanSpeechText.length > 0) {
-          console.log(`[WA/TTS] 🎙️ Synthèse vocale naturelle (OpenAI TTS nova) pour ${msg.from}...`);
+          const selectedVoice = process.env.WHATSAPP_VOICE || 'echo';
+          console.log(`[WA/TTS] 🎙️ Synthèse vocale naturelle (OpenAI TTS voix masculine: ${selectedVoice}) pour ${msg.from}...`);
           const speech = await openai.audio.speech.create({
             model: 'tts-1',
-            voice: 'nova',
+            voice: selectedVoice,
             input: cleanSpeechText.substring(0, 1000), // Confort d'écoute optimal
             response_format: 'opus'
           });
           const audioBuffer = Buffer.from(await speech.arrayBuffer());
           if (audioBuffer && audioBuffer.length > 0) {
             voiceMedia = new MessageMedia('audio/ogg; codecs=opus', audioBuffer.toString('base64'), 'reponse_vocale.opus');
-            console.log(`[WA/TTS] ✅ Note vocale IA générée avec succès (${audioBuffer.length} octets).`);
+            console.log(`[WA/TTS] ✅ Note vocale IA masculine (${selectedVoice}) générée avec succès (${audioBuffer.length} octets).`);
           }
         }
       } catch (ttsErr) {
