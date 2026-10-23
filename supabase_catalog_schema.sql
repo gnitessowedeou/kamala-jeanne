@@ -13,12 +13,18 @@ CREATE TABLE IF NOT EXISTS public.products (
   currency TEXT NOT NULL DEFAULT 'FCFA',
   image_url TEXT,
   category TEXT,
-  variants JSONB DEFAULT '[]'::jsonb,
+  colors JSONB DEFAULT '[]'::jsonb,          -- Couleurs disponibles (ex: ["Noir", "Blanc", "Doré"])
+  sizes JSONB DEFAULT '[]'::jsonb,           -- Tailles / pointures disponibles (ex: ["S", "M", "L", "42"])
+  variants JSONB DEFAULT '[]'::jsonb,        -- Variantes rétro-compatibles
   stock INTEGER DEFAULT -1,            -- -1 = Illimité (produits digitaux), >= 0 = Stock physique réel
   is_active BOOLEAN DEFAULT true,       -- Vrai = Actif dans le catalogue IA
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Colonnes additionnelles rétro-compatibles si la table existe déjà
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS colors JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sizes JSONB DEFAULT '[]'::jsonb;
 
 -- Index pour accélérer les requêtes de l'IA WhatsApp et du Dashboard
 CREATE INDEX IF NOT EXISTS idx_products_user_id ON public.products(user_id);

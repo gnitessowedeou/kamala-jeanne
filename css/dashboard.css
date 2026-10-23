@@ -7780,4 +7780,38 @@ body.modal-open-lock {
   color: #ffffff !important;
 }
 
+/* =============================================================================
+   CATALOGUE PRODUITS : PRODUITS PHYSIQUES VS DIGITAUX & PHOTOS CARREES 1:1
+   ============================================================================= */
+.product-type-option {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none;
+}
+
+.product-type-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.square-photo-dropzone {
+  transition: all 0.2s ease !important;
+}
+
+.square-photo-dropzone:hover {
+  border-color: var(--whatsapp-green, #25D366) !important;
+  background: rgba(37, 211, 102, 0.05) !important;
+  transform: translateY(-1px);
+}
+
+.product-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(37, 211, 102, 0.4) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 0 15px rgba(37, 211, 102, 0.12) !important;
+}
+
+
 

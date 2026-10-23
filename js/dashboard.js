@@ -1157,6 +1157,7 @@ function initDashboard() {
   renderAutomations();
   syncAffiliateModule();
   renderTeamMembers();
+  if (typeof loadCatalogProducts === 'function') loadCatalogProducts();
 
   // Initialize Chart.js
   initCharts();
@@ -7941,12 +7942,14 @@ async function loadCatalogProducts() {
         name: 'Robe Bazin Riche Broderie Or',
         price: 35000,
         currency: 'FCFA',
-        category: 'Mode & Habillement',
+        category: 'Mode & Prêt-à-porter',
         description: 'Bazin riche 100% coton de qualité supérieure, broderie fil d\'or artisanale. Idéal cérémonies et mariages.',
         image_url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&auto=format&fit=crop&q=80',
         stock: 12,
         is_active: true,
-        variants: ['Taille M', 'Taille L', 'Taille XL']
+        colors: ['Doré', 'Blanc Cérémonie', 'Bleu Nuit', 'Noir Royal'],
+        sizes: ['M', 'L', 'XL', 'XXL'],
+        variants: ['Taille M', 'Taille L', 'Taille XL', 'Taille XXL', 'Couleur Doré', 'Couleur Blanc Cérémonie']
       },
       {
         id: 'prod_demo_2',
@@ -7958,19 +7961,23 @@ async function loadCatalogProducts() {
         image_url: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&auto=format&fit=crop&q=80',
         stock: 25,
         is_active: true,
+        colors: ['Ambré Naturel'],
+        sizes: ['Flacon 30ml', 'Pack Duo 60ml'],
         variants: ['Flacon 30ml', 'Pack Duo 60ml']
       },
       {
         id: 'prod_demo_3',
-        name: 'Écouteurs Sans-Fil Pro Bass 5.3',
-        price: 15000,
+        name: 'Baskets Sneakers Running Air Pro',
+        price: 25000,
         currency: 'FCFA',
-        category: 'Électronique & High-Tech',
-        description: 'Réduction de bruit active, autonomie de 28h, boîtier étanche IPX5. Compatible iPhone et Android.',
-        image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80',
-        stock: -1,
+        category: 'Chaussures & Maroquinerie',
+        description: 'Semelle coussin d\'air amortissante, mesh respirant ultra-léger. Confort optimal sport et ville.',
+        image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80',
+        stock: 18,
         is_active: true,
-        variants: ['Noir Mat', 'Blanc Nacré']
+        colors: ['Noir & Rouge', 'Blanc Pur', 'Gris Anthracite'],
+        sizes: ['40', '41', '42', '43', '44', '45'],
+        variants: ['40', '41', '42', '43', '44', '45', 'Couleur Noir & Rouge', 'Couleur Blanc Pur']
       }
     ];
     if (userId) {
@@ -7981,6 +7988,15 @@ async function loadCatalogProducts() {
   window.catalogProducts = items;
   renderCatalog();
   updateCatalogStats();
+
+  // Synchronisation en arrière-plan avec le serveur Node pour l'IA WhatsApp
+  try {
+    fetch('/api/products/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId || 'default', products: items })
+    }).catch(() => {});
+  } catch(e) {}
 }
 
 function updateCatalogStats() {
@@ -7988,6 +8004,7 @@ function updateCatalogStats() {
   const total = items.length;
   const activeCount = items.filter(x => x.is_active !== false).length;
   const outCount = items.filter(x => x.stock === 0).length;
+  const withPhotos = items.filter(x => x.image_url && String(x.image_url).trim().length > 0).length;
   
   let totalVal = 0;
   items.forEach(x => {
@@ -7999,11 +8016,23 @@ function updateCatalogStats() {
   const countActiveEl = document.getElementById('catalog-stat-active');
   const countOutEl = document.getElementById('catalog-stat-out');
   const countValEl = document.getElementById('catalog-stat-value');
+  const countDisplayEl = document.getElementById('catalog-count-display');
+  const activeCountDisplayEl = document.getElementById('catalog-active-count');
+  const photosCountDisplayEl = document.getElementById('catalog-photos-count');
+  const percentBadgeEl = document.getElementById('catalog-percent-badge');
+  const progressBarEl = document.getElementById('catalog-progress-bar');
 
   if (countTotalEl) countTotalEl.textContent = total;
   if (countActiveEl) countActiveEl.textContent = activeCount;
   if (countOutEl) countOutEl.textContent = outCount;
   if (countValEl) countValEl.textContent = new Intl.NumberFormat('fr-FR').format(totalVal) + ' FCFA';
+  if (countDisplayEl) countDisplayEl.textContent = `${total} / 30`;
+  if (activeCountDisplayEl) activeCountDisplayEl.textContent = activeCount;
+  if (photosCountDisplayEl) photosCountDisplayEl.textContent = withPhotos;
+
+  const pct = Math.min(100, Math.round((total / 30) * 100));
+  if (percentBadgeEl) percentBadgeEl.textContent = `${pct}%`;
+  if (progressBarEl) progressBarEl.style.width = `${pct}%`;
 
   if (typeof renderOverviewCatalog === 'function') {
     renderOverviewCatalog();
@@ -8024,10 +8053,18 @@ function renderCatalog() {
       const matchName = (item.name || '').toLowerCase().includes(q);
       const matchDesc = (item.description || '').toLowerCase().includes(q);
       const matchCat = (item.category || '').toLowerCase().includes(q);
-      if (!matchName && !matchDesc && !matchCat) return false;
+      const colorsStr = Array.isArray(item.colors) ? item.colors.join(' ').toLowerCase() : '';
+      const sizesStr = Array.isArray(item.sizes) ? item.sizes.join(' ').toLowerCase() : '';
+      const matchColors = colorsStr.includes(q);
+      const matchSizes = sizesStr.includes(q);
+      if (!matchName && !matchDesc && !matchCat && !matchColors && !matchSizes) return false;
     }
-    if (cat !== 'all' && item.category !== cat) return false;
+    if (cat !== 'all') {
+      const itemCat = (item.category || '').toLowerCase();
+      if (!itemCat.includes(cat.toLowerCase())) return false;
+    }
     if (status === 'active' && item.is_active === false) return false;
+    if (status === 'out_of_stock' && item.stock !== 0) return false;
     if (status === 'out' && item.stock !== 0) return false;
     return true;
   });
@@ -8041,31 +8078,127 @@ function renderCatalog() {
   if (emptyEl) emptyEl.style.display = 'none';
 
   gridEl.innerHTML = filtered.map(item => {
-    const isUnlimited = (item.stock === -1 || item.stock === null || item.stock === undefined);
-    const isOutOfStock = (item.stock === 0);
+    const isDigital = (item.product_type === 'digital');
+    const isUnlimited = isDigital || (item.stock === -1 || item.stock === null || item.stock === undefined);
+    const isOutOfStock = !isDigital && (item.stock === 0);
     const stockBadge = isUnlimited 
-      ? `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);"><i class="fa-solid fa-infinity" style="margin-right: 4px;"></i> Illimité</span>`
+      ? `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px;"><i class="fa-solid fa-infinity" style="margin-right: 4px;"></i> ${isDigital ? 'Accès Immédiat' : 'Illimité'}</span>`
       : isOutOfStock
-        ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);"><i class="fa-solid fa-triangle-exclamation" style="margin-right: 4px;"></i> Rupture</span>`
-        : `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3);"><i class="fa-solid fa-cubes" style="margin-right: 4px;"></i> ${item.stock} en stock</span>`;
+        ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 11px;"><i class="fa-solid fa-triangle-exclamation" style="margin-right: 4px;"></i> Rupture</span>`
+        : `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 11px;"><i class="fa-solid fa-cubes" style="margin-right: 4px;"></i> ${item.stock} en stock</span>`;
 
     const isActive = (item.is_active !== false);
     const aiBadge = isActive
       ? `<span class="badge badge-active cursor-pointer" onclick="toggleProductAiActive('${item.id}')" title="Cliquer pour désactiver dans l'IA"><i class="fa-solid fa-robot" style="margin-right: 4px;"></i> IA Vendeur : Actif</span>`
       : `<span class="badge cursor-pointer" onclick="toggleProductAiActive('${item.id}')" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);" title="Cliquer pour activer dans l'IA"><i class="fa-solid fa-eye-slash" style="margin-right: 4px;"></i> IA : En Pause</span>`;
 
-    const imgDisplay = item.image_url 
-      ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" style="width: 100%; height: 180px; object-fit: cover; border-top-left-radius: 12px; border-top-right-radius: 12px;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\\'height:180px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); color:var(--text-muted);\\\'><i class=\\\'fa-solid fa-image fa-3x\\\'></i></div>';">`
-      : `<div style="height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.05), rgba(16, 185, 129, 0.02)); border-top-left-radius: 12px; border-top-right-radius: 12px; color: var(--text-muted);"><i class="fa-solid fa-box-open fa-3x" style="color: var(--whatsapp-green); opacity: 0.5; margin-bottom: 8px;"></i><span style="font-size: 11px;">Sans photo</span></div>`;
+    // Type de produit (Physique vs Digital)
+    const typeBadge = isDigital
+      ? `<span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 10px; padding: 2px 7px;"><i class="fa-solid fa-laptop-code" style="margin-right: 3px;"></i> Digital</span>`
+      : `<span class="badge" style="background: rgba(37, 211, 102, 0.12); color: var(--whatsapp-green); border: 1px solid rgba(37, 211, 102, 0.25); font-size: 10px; padding: 2px 7px;"><i class="fa-solid fa-shirt" style="margin-right: 3px;"></i> Physique</span>`;
 
-    const variantsList = Array.isArray(item.variants) && item.variants.length > 0 
-      ? item.variants.map(v => `<span style="font-size: 11px; padding: 2px 7px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-muted);">${escapeHtml(v)}</span>`).join(' ')
+    // Gestion des photos (jusqu'à 3 photos au format carré)
+    let photosList = [];
+    if (Array.isArray(item.images) && item.images.length > 0) {
+      photosList = item.images.filter(x => typeof x === 'string' && x.trim().length > 0);
+    }
+    if (photosList.length === 0 && item.image_url && String(item.image_url).trim().length > 0) {
+      photosList = [item.image_url.trim()];
+    }
+    const primaryPhoto = photosList[0] || '';
+
+    const imgDisplay = primaryPhoto 
+      ? `<img src="${escapeHtml(primaryPhoto)}" alt="${escapeHtml(item.name)}" style="width: 100%; height: 210px; object-fit: cover; aspect-ratio: 1/1; border-top-left-radius: 12px; border-top-right-radius: 12px;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\\'height:210px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); color:var(--text-muted);\\\'><i class=\\\'fa-solid fa-image fa-3x\\\'></i></div>';">`
+      : `<div style="height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.05), rgba(16, 185, 129, 0.02)); border-top-left-radius: 12px; border-top-right-radius: 12px; color: var(--text-muted);"><i class="fa-solid fa-box-open fa-3x" style="color: var(--whatsapp-green); opacity: 0.5; margin-bottom: 8px;"></i><span style="font-size: 11px;">Sans photo (Format carré 1:1)</span></div>`;
+
+    const multiPhotoBadge = photosList.length > 1
+      ? `<span class="badge" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); color: #fff; font-size: 10.5px; padding: 2px 7px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2);"><i class="fa-solid fa-images" style="color: #38bdf8; margin-right: 4px;"></i> ${photosList.length} photos</span>`
+      : '';
+
+    // Galerie miniature si plusieurs photos
+    const photoThumbs = photosList.length > 1
+      ? `<div style="display: flex; gap: 6px; padding: 6px 12px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.06); overflow-x: auto;">
+          ${photosList.map((url, i) => `
+            <img src="${escapeHtml(url)}" alt="Vue ${i+1}" style="width: 36px; height: 36px; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px; border: 1px solid ${i === 0 ? 'var(--whatsapp-green)' : 'rgba(255,255,255,0.18)'}; flex-shrink: 0;" title="Vue ${i+1}">
+          `).join('')}
+        </div>`
+      : '';
+
+    // Gestion du prix promotionnel
+    const hasPromo = (item.promo_price && Number(item.promo_price) > 0 && Number(item.promo_price) < Number(item.price));
+    const priceDisplay = hasPromo
+      ? `<div style="margin-bottom: 10px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+           <span style="font-size: 19px; font-weight: 800; color: #f59e0b;">${formatCatalogPrice(item.promo_price, item.currency)}</span>
+           <span style="font-size: 13px; text-decoration: line-through; color: #94a3b8; font-weight: 500;">${formatCatalogPrice(item.price, item.currency)}</span>
+           <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; padding: 1px 6px;">
+             <i class="fa-solid fa-tag"></i> PROMO -${Math.round((1 - item.promo_price / item.price) * 100)}%
+           </span>
+         </div>`
+      : `<div style="font-size: 18px; font-weight: 700; color: var(--whatsapp-green); margin-bottom: 10px;">
+           ${formatCatalogPrice(item.price, item.currency)}
+         </div>`;
+
+    // Couleurs disponibles (Produits physiques)
+    let colorsList = [];
+    if (Array.isArray(item.colors) && item.colors.length > 0) colorsList = item.colors;
+    else if (typeof item.color === 'string' && item.color.trim()) colorsList = item.color.split(',').map(s => s.trim());
+    else if (Array.isArray(item.variants)) {
+      item.variants.forEach(v => {
+        if (typeof v === 'string') {
+          const m = v.match(/couleur\s*:\s*([^,;]+)/i);
+          if (m) colorsList.push(m[1].trim());
+          else if (/^(noir|blanc|rouge|bleu|vert|jaune|rose|doré|argenté|gris|marron|orange|violet)$/i.test(v.trim())) colorsList.push(v.trim());
+        }
+      });
+    }
+
+    // Tailles disponibles (Produits physiques)
+    let sizesList = [];
+    if (Array.isArray(item.sizes) && item.sizes.length > 0) sizesList = item.sizes;
+    else if (typeof item.size === 'string' && item.size.trim()) sizesList = item.size.split(',').map(s => s.trim());
+    else if (Array.isArray(item.variants)) {
+      item.variants.forEach(v => {
+        if (typeof v === 'string') {
+          const m = v.match(/taille\s*:\s*([^,;]+)/i);
+          if (m) sizesList.push(m[1].trim());
+          else if (/^(xs|s|m|l|xl|xxl|xxxl|\b\d{2}\b|unique)$/i.test(v.trim())) sizesList.push(v.trim());
+        }
+      });
+    }
+
+    const colorsBadges = (!isDigital && colorsList.length > 0)
+      ? `<div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 6px;">
+           <span style="font-size: 11px; color: #94a3b8; display: inline-flex; align-items: center; gap: 3px;">
+             <i class="fa-solid fa-palette" style="color: #38bdf8;"></i>
+           </span>
+           ${colorsList.map(c => `<span style="font-size: 10.5px; padding: 2px 7px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 4px; color: #7dd3fc; font-weight: 500;">${escapeHtml(c)}</span>`).join(' ')}
+         </div>`
+      : '';
+
+    const sizesBadges = (!isDigital && sizesList.length > 0)
+      ? `<div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">
+           <span style="font-size: 11px; color: #94a3b8; display: inline-flex; align-items: center; gap: 3px;">
+             <i class="fa-solid fa-ruler-combined" style="color: #f59e0b;"></i>
+           </span>
+           ${sizesList.map(s => `<span style="font-size: 10.5px; padding: 2px 6px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 4px; color: #fcd34d; font-weight: 600;">${escapeHtml(s)}</span>`).join(' ')}
+         </div>`
+      : '';
+
+    // Badges spécifiques pour produits digitaux
+    const digitalSpecs = isDigital
+      ? `<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+           <span style="font-size: 11px; padding: 2px 7px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 4px; color: #7dd3fc;">
+             <i class="fa-solid fa-file-arrow-down" style="margin-right: 4px;"></i> ${escapeHtml(item.digital_format || 'Ebook / Fichier')}
+           </span>
+           ${item.digital_link ? `<span style="font-size: 11px; padding: 2px 7px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 4px; color: #86efac;"><i class="fa-solid fa-check" style="margin-right: 3px;"></i> Lien configuré</span>` : '<span style="font-size: 10.5px; color: var(--text-muted);">(Lien à définir)</span>'}
+         </div>`
       : '';
 
     return `
       <div class="card product-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; position: relative;" id="card-prod-${item.id}">
         <div style="position: relative;">
           ${imgDisplay}
+          ${multiPhotoBadge}
           <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 6px;">
             ${stockBadge}
           </div>
@@ -8073,22 +8206,26 @@ function renderCatalog() {
             ${aiBadge}
           </div>
         </div>
+        ${photoThumbs}
         <div style="padding: 16px; display: flex; flex-direction: column; flex-grow: 1;">
-          <div style="font-size: 11px; color: var(--whatsapp-green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
-            ${escapeHtml(item.category || 'Général')}
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <div style="font-size: 11px; color: var(--whatsapp-green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+              ${escapeHtml(item.category || 'Général')}
+            </div>
+            ${typeBadge}
           </div>
           <h4 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #fff; line-height: 1.3;">
             ${escapeHtml(item.name)}
           </h4>
-          <div style="font-size: 18px; font-weight: 700; color: var(--whatsapp-green); margin-bottom: 10px;">
-            ${formatCatalogPrice(item.price, item.currency)}
-          </div>
-          ${item.description ? `<p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(item.description)}</p>` : ''}
-          ${variantsList ? `<div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px;">${variantsList}</div>` : ''}
+          ${priceDisplay}
+          ${item.description ? `<p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(item.description)}</p>` : ''}
+          ${colorsBadges}
+          ${sizesBadges}
+          ${digitalSpecs}
           <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; gap: 6px;">
               <button class="btn btn-secondary btn-sm" onclick="openProductModal('${item.id}')" title="Modifier l'article" style="padding: 6px 10px; font-size: 12px;">
-                <i class="fa-solid fa-pen-to-square"></i>
+                <i class="fa-solid fa-pen-to-square"></i> Modifier
               </button>
               <button class="btn btn-secondary btn-sm" onclick="duplicateProduct('${item.id}')" title="Dupliquer l'article" style="padding: 6px 10px; font-size: 12px;">
                 <i class="fa-solid fa-copy"></i>
@@ -8114,105 +8251,212 @@ function filterCatalogCards() {
 
 function setCatalogStatusFilter(status, btnEl) {
   window.catalogStatusFilter = status;
-  const pills = document.querySelectorAll('.catalog-filter-pill');
+  const pills = document.querySelectorAll('.tag-select-btn');
   pills.forEach(p => p.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
   renderCatalog();
 }
 
-function openProductModal(productId = null) {
-  const modal = document.getElementById('product-modal');
-  const form = document.getElementById('product-form');
-  const modalTitle = document.getElementById('product-modal-title');
-  if (!modal || !form) return;
-
-  form.reset();
-  document.getElementById('product-id-input').value = '';
-  document.getElementById('product-photo-preview-wrap').style.display = 'none';
-  document.getElementById('product-photo-preview').src = '';
-  document.getElementById('product-image-url-input').value = '';
-  document.getElementById('product-direct-url-wrap').style.display = 'none';
-  document.getElementById('product-stock-qty-wrap').style.display = 'none';
-  document.getElementById('product-unlimited-stock').checked = true;
-
-  if (productId) {
-    const item = (window.catalogProducts || []).find(p => p.id === productId);
-    if (item) {
-      modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square" style="color: var(--whatsapp-green); margin-right: 8px;"></i> Modifier l'Article`;
-      document.getElementById('product-id-input').value = item.id;
-      document.getElementById('product-name-input').value = item.name || '';
-      document.getElementById('product-price-input').value = item.price || '';
-      document.getElementById('product-currency-select').value = item.currency || 'FCFA';
-      document.getElementById('product-category-select').value = item.category || 'Mode & Habillement';
-      document.getElementById('product-description-input').value = item.description || '';
-      document.getElementById('product-variants-input').value = Array.isArray(item.variants) ? item.variants.join(', ') : (item.variants || '');
-      
-      const isUnlimited = (item.stock === -1 || item.stock === null || item.stock === undefined);
-      document.getElementById('product-unlimited-stock').checked = isUnlimited;
-      if (!isUnlimited) {
-        document.getElementById('product-stock-qty-wrap').style.display = 'block';
-        document.getElementById('product-stock-qty-input').value = item.stock;
-      }
-
-      if (item.image_url) {
-        document.getElementById('product-image-url-input').value = item.image_url;
-        document.getElementById('product-photo-preview').src = item.image_url;
-        document.getElementById('product-photo-preview-wrap').style.display = 'block';
-      }
-    }
-  } else {
-    modalTitle.innerHTML = `<i class="fa-solid fa-plus-circle" style="color: var(--whatsapp-green); margin-right: 8px;"></i> Ajouter un Nouvel Article`;
+function addColorTag(colorName) {
+  const input = document.getElementById('product-colors-input');
+  if (!input) return;
+  const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!current.includes(colorName)) {
+    current.push(colorName);
+    input.value = current.join(', ');
   }
-
-  modal.style.display = 'flex';
 }
 
-function closeProductModal() {
-  const modal = document.getElementById('product-modal');
-  if (modal) modal.style.display = 'none';
+function addSizeTag(sizeName) {
+  const input = document.getElementById('product-sizes-input');
+  if (!input) return;
+  const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!current.includes(sizeName)) {
+    current.push(sizeName);
+    input.value = current.join(', ');
+  }
 }
 
-function handleProductPhotoSelected(event) {
+// -----------------------------------------------------------------------------
+// SELECTEUR DU TYPE DE PRODUIT (PHYSIQUE VS DIGITAL)
+// -----------------------------------------------------------------------------
+function selectProductType(type) {
+  const input = document.getElementById('product-type-input');
+  if (input) input.value = type;
+
+  const cardPhysical = document.getElementById('type-card-physical');
+  const cardDigital = document.getElementById('type-card-digital');
+  const radioPhysical = document.getElementById('product-type-physical');
+  const radioDigital = document.getElementById('product-type-digital');
+  const secPhysical = document.getElementById('section-physical-specs');
+  const secDigital = document.getElementById('section-digital-specs');
+
+  if (type === 'digital') {
+    if (cardPhysical) {
+      cardPhysical.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+      cardPhysical.style.background = 'rgba(255, 255, 255, 0.02)';
+    }
+    if (cardDigital) {
+      cardDigital.style.borderColor = '#38bdf8';
+      cardDigital.style.background = 'rgba(56, 189, 248, 0.1)';
+    }
+    if (radioPhysical) radioPhysical.checked = false;
+    if (radioDigital) radioDigital.checked = true;
+    if (secPhysical) secPhysical.style.display = 'none';
+    if (secDigital) secDigital.style.display = 'block';
+  } else {
+    if (cardPhysical) {
+      cardPhysical.style.borderColor = 'var(--whatsapp-green)';
+      cardPhysical.style.background = 'rgba(37, 211, 102, 0.08)';
+    }
+    if (cardDigital) {
+      cardDigital.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+      cardDigital.style.background = 'rgba(255, 255, 255, 0.02)';
+    }
+    if (radioPhysical) radioPhysical.checked = true;
+    if (radioDigital) radioDigital.checked = false;
+    if (secPhysical) secPhysical.style.display = 'block';
+    if (secDigital) secDigital.style.display = 'none';
+  }
+}
+
+// -----------------------------------------------------------------------------
+// CALCULATEUR VISUEL DE REDUCTION PROMOTIONNELLE
+// -----------------------------------------------------------------------------
+function calculatePromoBadge() {
+  const priceInput = document.getElementById('product-price-input');
+  const promoInput = document.getElementById('product-promo-price-input');
+  const hintEl = document.getElementById('promo-calc-hint');
+  const textEl = document.getElementById('promo-calc-text');
+  const currSelect = document.getElementById('product-currency-select');
+  if (!hintEl || !textEl) return;
+
+  const price = Number(priceInput ? priceInput.value : 0) || 0;
+  const promo = Number(promoInput ? promoInput.value : 0) || 0;
+  const currency = currSelect ? currSelect.value : 'FCFA';
+
+  if (promo > 0 && price > 0 && promo < price) {
+    const discountPct = Math.round((1 - promo / price) * 100);
+    const savings = new Intl.NumberFormat('fr-FR').format(price - promo);
+    textEl.innerHTML = `<i class="fa-solid fa-tag" style="color: #f59e0b;"></i> Promotion active : <strong>-${discountPct}%</strong> de remise (Le client économise ${savings} ${currency}). L'IA valorisera cette offre spéciale sur WhatsApp !`;
+    hintEl.style.display = 'flex';
+  } else {
+    hintEl.style.display = 'none';
+  }
+}
+
+// -----------------------------------------------------------------------------
+// GESTION DES 3 PHOTOS CARREES 1:1
+// -----------------------------------------------------------------------------
+function triggerPhotoUpload(slotIndex) {
+  const input = document.getElementById('product-file-input-' + slotIndex);
+  if (input) input.click();
+}
+
+async function handleProductPhotoSlot(event, slotIndex) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  if (file.size > 4 * 1024 * 1024) {
-    if (typeof showToast === 'function') showToast("Veuillez sélectionner une image de moins de 4 Mo.", "error");
+  if (file.size > 10 * 1024 * 1024) {
+    if (typeof showToast === 'function') showToast("Veuillez choisir une image de moins de 10 Mo.", "error");
     return;
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const base64 = e.target.result;
-    document.getElementById('product-image-url-input').value = base64;
-    document.getElementById('product-photo-preview').src = base64;
-    document.getElementById('product-photo-preview-wrap').style.display = 'block';
+    setPhotoSlotPreview(slotIndex, base64);
+
+    // Tentative d'enregistrement sur le serveur Node pour URL publique
+    try {
+      const resp = await fetch('/api/products/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          base64Data: base64,
+          productName: (document.getElementById('product-name-input') ? document.getElementById('product-name-input').value : '')
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.url) {
+          setPhotoSlotPreview(slotIndex, data.url);
+          console.log(`[Catalog] Photo ${slotIndex} enregistrée :`, data.url);
+        }
+      }
+    } catch(err) {
+      console.warn('[Catalog] Upload photo notice:', err.message);
+    }
   };
   reader.readAsDataURL(file);
 }
 
-function removeProductPhoto(event) {
+function setPhotoSlotPreview(slotIndex, url) {
+  const imgUrlInput = document.getElementById('product-image-url-input-' + slotIndex);
+  const previewImg = document.getElementById('product-photo-preview-' + slotIndex);
+  const previewWrap = document.getElementById('photo-preview-wrap-' + slotIndex);
+  const placeholder = document.getElementById('photo-placeholder-' + slotIndex);
+
+  if (imgUrlInput) imgUrlInput.value = url;
+  if (previewImg) previewImg.src = url;
+  if (previewWrap) previewWrap.style.display = 'block';
+  if (placeholder) placeholder.style.display = 'none';
+
+  // Si slot 1 (photo principale), rétro-compatibilité
+  if (slotIndex === 1) {
+    const legacyInput = document.getElementById('product-image-url-input');
+    if (legacyInput) legacyInput.value = url;
+  }
+}
+
+function removeProductPhotoSlot(event, slotIndex) {
   if (event) event.stopPropagation();
-  document.getElementById('product-file-input').value = '';
-  document.getElementById('product-image-url-input').value = '';
-  document.getElementById('product-photo-preview').src = '';
-  document.getElementById('product-photo-preview-wrap').style.display = 'none';
-}
+  const fileInput = document.getElementById('product-file-input-' + slotIndex);
+  const imgUrlInput = document.getElementById('product-image-url-input-' + slotIndex);
+  const previewImg = document.getElementById('product-photo-preview-' + slotIndex);
+  const previewWrap = document.getElementById('photo-preview-wrap-' + slotIndex);
+  const placeholder = document.getElementById('photo-placeholder-' + slotIndex);
+  const urlBox = document.getElementById('url-box-' + slotIndex);
+  const urlInput = document.getElementById('product-url-input-' + slotIndex);
 
-function toggleProductUrlInput() {
-  const wrap = document.getElementById('product-direct-url-wrap');
-  if (wrap) {
-    wrap.style.display = (wrap.style.display === 'none' || !wrap.style.display) ? 'block' : 'none';
+  if (fileInput) fileInput.value = '';
+  if (imgUrlInput) imgUrlInput.value = '';
+  if (previewImg) previewImg.src = '';
+  if (previewWrap) previewWrap.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'block';
+  if (urlBox) urlBox.style.display = 'none';
+  if (urlInput) urlInput.value = '';
+
+  if (slotIndex === 1) {
+    const legacyInput = document.getElementById('product-image-url-input');
+    if (legacyInput) legacyInput.value = '';
   }
 }
 
-function handleDirectUrlInput(url) {
+function toggleUrlInputSlot(slotIndex) {
+  const box = document.getElementById('url-box-' + slotIndex);
+  if (box) {
+    box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+    if (box.style.display === 'block') {
+      const inp = document.getElementById('product-url-input-' + slotIndex);
+      if (inp) inp.focus();
+    }
+  }
+}
+
+function handleDirectUrlSlot(slotIndex, url) {
   const clean = (url || '').trim();
-  if (clean && (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:'))) {
-    document.getElementById('product-photo-preview').src = clean;
-    document.getElementById('product-photo-preview-wrap').style.display = 'block';
+  if (clean && (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('/images/') || clean.startsWith('data:'))) {
+    setPhotoSlotPreview(slotIndex, clean);
   }
 }
+
+// Rétro-compatibilité pour anciens handlers
+function handleProductPhotoSelected(event) { handleProductPhotoSlot(event, 1); }
+function removeProductPhoto(event) { removeProductPhotoSlot(event, 1); }
+function toggleProductUrlInput() { toggleUrlInputSlot(1); }
+function handleDirectUrlInput(url) { handleDirectUrlSlot(1, url); }
 
 function toggleStockInput(isUnlimited) {
   const wrap = document.getElementById('product-stock-qty-wrap');
@@ -8221,43 +8465,227 @@ function toggleStockInput(isUnlimited) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// OUVERTURE ET FERMETURE DE LA MODALE PRODUIT
+// -----------------------------------------------------------------------------
+function openProductModal(productId = null) {
+  const modal = document.getElementById('product-modal');
+  const form = document.getElementById('form-product') || document.getElementById('product-form');
+  const modalTitle = document.getElementById('product-modal-title');
+  const submitBtn = document.getElementById('btn-save-product-submit');
+  if (!modal) return;
+
+  if (form) form.reset();
+
+  // Réinitialiser les 3 slots de photos
+  for (let i = 1; i <= 3; i++) {
+    removeProductPhotoSlot(null, i);
+  }
+
+  // Réinitialiser les champs
+  const idInput = document.getElementById('product-id-input');
+  const nameInput = document.getElementById('product-name-input');
+  const priceInput = document.getElementById('product-price-input');
+  const promoInput = document.getElementById('product-promo-price-input');
+  const currSelect = document.getElementById('product-currency-select');
+  const catSelect = document.getElementById('product-category-select');
+  const descInput = document.getElementById('product-description-input');
+  const colorsInput = document.getElementById('product-colors-input');
+  const sizesInput = document.getElementById('product-sizes-input');
+  const variantsInput = document.getElementById('product-variants-input');
+  const digitalLinkInput = document.getElementById('product-digital-link-input');
+  const digitalFormatSelect = document.getElementById('product-digital-format-select');
+  const unlimitedCheck = document.getElementById('product-unlimited-stock');
+  const stockQtyWrap = document.getElementById('product-stock-qty-wrap');
+  const stockQtyInput = document.getElementById('product-stock-qty-input');
+
+  if (idInput) idInput.value = '';
+  if (nameInput) nameInput.value = '';
+  if (priceInput) priceInput.value = '';
+  if (promoInput) promoInput.value = '';
+  if (descInput) descInput.value = '';
+  if (colorsInput) colorsInput.value = '';
+  if (sizesInput) sizesInput.value = '';
+  if (variantsInput) variantsInput.value = '';
+  if (digitalLinkInput) digitalLinkInput.value = '';
+  if (digitalFormatSelect) digitalFormatSelect.value = 'Ebook PDF';
+  if (stockQtyWrap) stockQtyWrap.style.display = 'none';
+  if (unlimitedCheck) unlimitedCheck.checked = true;
+
+  // Type par défaut : Physique
+  selectProductType('physical');
+  calculatePromoBadge();
+
+  // Mode Édition / Modification
+  if (productId) {
+    const item = (window.catalogProducts || []).find(p => p.id === productId);
+    if (item) {
+      if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square" style="color: var(--whatsapp-green); margin-right: 8px;"></i> Modifier l'Article`;
+      if (submitBtn) submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Mettre à jour l'Article</span>`;
+      
+      if (idInput) idInput.value = item.id;
+      if (nameInput) nameInput.value = item.name || '';
+      if (priceInput) priceInput.value = item.price || '';
+      if (promoInput) promoInput.value = item.promo_price || '';
+      if (currSelect) currSelect.value = item.currency || 'FCFA';
+      if (catSelect) catSelect.value = item.category || 'Mode & Prêt-à-porter';
+      if (descInput) descInput.value = item.description || '';
+
+      // Type de produit
+      const itemType = (item.product_type === 'digital') ? 'digital' : 'physical';
+      selectProductType(itemType);
+      calculatePromoBadge();
+
+      // Photos (jusqu'à 3 photos)
+      let photos = [];
+      if (Array.isArray(item.images) && item.images.length > 0) {
+        photos = item.images.filter(Boolean);
+      } else if (item.image_url) {
+        photos = [item.image_url];
+      }
+      if (photos[0]) setPhotoSlotPreview(1, photos[0]);
+      if (photos[1]) setPhotoSlotPreview(2, photos[1]);
+      if (photos[2]) setPhotoSlotPreview(3, photos[2]);
+
+      // Spécifications physiques
+      let colorsVal = '';
+      if (Array.isArray(item.colors) && item.colors.length > 0) colorsVal = item.colors.join(', ');
+      else if (typeof item.color === 'string') colorsVal = item.color;
+      else if (Array.isArray(item.variants)) {
+        const cArr = [];
+        item.variants.forEach(v => {
+          if (typeof v === 'string') {
+            const m = v.match(/couleur\s*:\s*([^,;]+)/i);
+            if (m) cArr.push(m[1].trim());
+            else if (/^(noir|blanc|rouge|bleu|vert|jaune|rose|doré|argenté|gris|marron|orange|violet)$/i.test(v.trim())) cArr.push(v.trim());
+          }
+        });
+        if (cArr.length > 0) colorsVal = cArr.join(', ');
+      }
+      if (colorsInput) colorsInput.value = colorsVal;
+
+      let sizesVal = '';
+      if (Array.isArray(item.sizes) && item.sizes.length > 0) sizesVal = item.sizes.join(', ');
+      else if (typeof item.size === 'string') sizesVal = item.size;
+      else if (Array.isArray(item.variants)) {
+        const sArr = [];
+        item.variants.forEach(v => {
+          if (typeof v === 'string') {
+            const m = v.match(/taille\s*:\s*([^,;]+)/i);
+            if (m) sArr.push(m[1].trim());
+            else if (/^(xs|s|m|l|xl|xxl|xxxl|\b\d{2}\b|unique)$/i.test(v.trim())) sArr.push(v.trim());
+          }
+        });
+        if (sArr.length > 0) sizesVal = sArr.join(', ');
+      }
+      if (sizesInput) sizesInput.value = sizesVal;
+
+      // Stock
+      const isUnlimited = (item.stock === -1 || item.stock === null || item.stock === undefined || itemType === 'digital');
+      if (unlimitedCheck) unlimitedCheck.checked = isUnlimited;
+      if (!isUnlimited) {
+        if (stockQtyWrap) stockQtyWrap.style.display = 'block';
+        if (stockQtyInput) stockQtyInput.value = item.stock;
+      }
+
+      // Spécifications digitales
+      if (digitalLinkInput) digitalLinkInput.value = item.digital_link || '';
+      if (digitalFormatSelect) digitalFormatSelect.value = item.digital_format || 'Ebook PDF';
+    }
+  } else {
+    // Mode Ajout
+    if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-plus-circle" style="color: var(--whatsapp-green); margin-right: 8px;"></i> Ajouter un Article au Catalogue`;
+    if (submitBtn) submitBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Enregistrer et Synchroniser</span>`;
+  }
+
+  // Ouverture fiable et sans blocage
+  modal.classList.add('active');
+  modal.style.display = 'flex';
+  modal.style.opacity = '1';
+  modal.style.visibility = 'visible';
+  modal.style.pointerEvents = 'auto';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProductModal() {
+  const modal = document.getElementById('product-modal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    modal.style.opacity = '0';
+    modal.style.visibility = 'hidden';
+    modal.style.pointerEvents = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
+// Alias pour compatibilité
+window.doOpenProductModal = openProductModal;
+window.doCloseProductModal = closeProductModal;
+
+// -----------------------------------------------------------------------------
+// ENREGISTREMENT ET SYNCHRONISATION PRODUIT
+// -----------------------------------------------------------------------------
 async function handleSaveProduct(event) {
   if (event && event.preventDefault) event.preventDefault();
 
   const userId = (typeof getAppUserId === 'function') ? getAppUserId() : null;
-  const saveBtn = document.getElementById('btn-save-product');
+  const saveBtn = document.getElementById('btn-save-product-submit');
   const idInput = document.getElementById('product-id-input');
+  const typeInput = document.getElementById('product-type-input');
   const nameInput = document.getElementById('product-name-input');
   const priceInput = document.getElementById('product-price-input');
+  const promoInput = document.getElementById('product-promo-price-input');
   const currSelect = document.getElementById('product-currency-select');
   const catSelect = document.getElementById('product-category-select');
   const descInput = document.getElementById('product-description-input');
+  const colorsInput = document.getElementById('product-colors-input');
+  const sizesInput = document.getElementById('product-sizes-input');
   const variantsInput = document.getElementById('product-variants-input');
+  const digitalLinkInput = document.getElementById('product-digital-link-input');
+  const digitalFormatSelect = document.getElementById('product-digital-format-select');
   const unlimitedCheck = document.getElementById('product-unlimited-stock');
   const stockInput = document.getElementById('product-stock-qty-input');
-  const imgInput = document.getElementById('product-image-url-input');
 
-  const name = (nameInput.value || '').trim();
-  const price = Number(priceInput.value) || 0;
+  const name = (nameInput ? nameInput.value : '').trim();
+  const price = Number(priceInput ? priceInput.value : 0) || 0;
+  const promoPrice = promoInput && promoInput.value ? (Number(promoInput.value) || null) : null;
+  const productType = (typeInput ? typeInput.value : 'physical');
 
   if (!name) {
     if (typeof showToast === 'function') showToast("Veuillez saisir un nom pour l'article.", "error");
     return;
   }
-  if (price < 0) {
-    if (typeof showToast === 'function') showToast("Veuillez saisir un prix valide.", "error");
+  if (price <= 0) {
+    if (typeof showToast === 'function') showToast("Veuillez saisir un prix valide supérieur à 0.", "error");
     return;
   }
 
-  const existingId = idInput.value;
+  const existingId = idInput ? idInput.value : '';
   const productId = existingId || ('prod_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
 
-  const variantsRaw = (variantsInput.value || '').trim();
-  const variants = variantsRaw ? variantsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  // Récupération des 3 photos au format carré
+  const photo1 = (document.getElementById('product-image-url-input-1') ? document.getElementById('product-image-url-input-1').value : '') || (document.getElementById('product-image-url-input') ? document.getElementById('product-image-url-input').value : '');
+  const photo2 = (document.getElementById('product-image-url-input-2') ? document.getElementById('product-image-url-input-2').value : '');
+  const photo3 = (document.getElementById('product-image-url-input-3') ? document.getElementById('product-image-url-input-3').value : '');
+  
+  const images = [photo1, photo2, photo3].map(s => (s || '').trim()).filter(Boolean);
+  const primaryImageUrl = images[0] || '';
+
+  // Couleurs et tailles
+  const colors = (colorsInput && colorsInput.value) ? colorsInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const sizes = (sizesInput && sizesInput.value) ? sizesInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+  
+  const combinedVariants = [
+    ...colors.map(c => `Couleur: ${c}`),
+    ...sizes.map(s => `Taille: ${s}`)
+  ];
 
   let stock = -1;
-  if (!unlimitedCheck.checked) {
-    stock = Math.max(0, parseInt(stockInput.value, 10) || 0);
+  if (productType === 'digital') {
+    stock = -1; // Toujours illimité pour les produits digitaux
+  } else if (unlimitedCheck && !unlimitedCheck.checked) {
+    stock = Math.max(0, parseInt(stockInput ? stockInput.value : 0, 10) || 0);
   }
 
   const productPayload = {
@@ -8265,19 +8693,26 @@ async function handleSaveProduct(event) {
     user_id: userId,
     name: name,
     price: price,
-    currency: currSelect.value || 'FCFA',
-    category: catSelect.value || 'Autre',
-    description: (descInput.value || '').trim(),
-    variants: variants,
+    promo_price: promoPrice,
+    currency: currSelect ? currSelect.value : 'FCFA',
+    category: catSelect ? catSelect.value : 'Mode & Prêt-à-porter',
+    product_type: productType,
+    description: (descInput ? descInput.value : '').trim(),
+    colors: colors,
+    sizes: sizes,
+    variants: combinedVariants.length > 0 ? combinedVariants : (variantsInput ? variantsInput.value.split(',').map(s => s.trim()).filter(Boolean) : []),
     stock: stock,
-    image_url: (imgInput.value || '').trim(),
+    images: images,
+    image_url: primaryImageUrl,
+    digital_link: (digitalLinkInput ? digitalLinkInput.value : '').trim(),
+    digital_format: (digitalFormatSelect ? digitalFormatSelect.value : 'Ebook PDF'),
     is_active: true,
     updated_at: new Date().toISOString()
   };
 
   if (saveBtn) {
     saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement...';
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Synchronisation...';
   }
 
   let items = window.catalogProducts || [];
@@ -8288,10 +8723,21 @@ async function handleSaveProduct(event) {
     items.unshift(productPayload);
   }
   window.catalogProducts = items;
+
   if (userId) {
     try { localStorage.setItem('vandias_catalog_' + userId, JSON.stringify(items)); } catch(e) {}
   }
 
+  // Synchronisation avec le serveur Node pour IA WhatsApp
+  try {
+    fetch('/api/products/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId || 'default', products: items })
+    }).catch(() => {});
+  } catch(syncErr) {}
+
+  // Synchronisation avec Supabase
   if (window.SupabaseRest && userId) {
     try {
       if (existingId && !existingId.startsWith('prod_demo_')) {
@@ -8306,7 +8752,7 @@ async function handleSaveProduct(event) {
 
   if (saveBtn) {
     saveBtn.disabled = false;
-    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer l\'Article';
+    saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Enregistrer et Synchroniser';
   }
 
   closeProductModal();
@@ -8314,7 +8760,8 @@ async function handleSaveProduct(event) {
   updateCatalogStats();
 
   if (typeof showToast === 'function') {
-    showToast(`✓ "${name}" mémorisé ! Votre Agent IA connaît désormais ce produit et son tarif.`, "success");
+    const isEdit = Boolean(existingId);
+    showToast(isEdit ? `✓ "${name}" mis à jour avec succès !` : `✓ "${name}" ajouté au catalogue ! Votre Agent IA le connaît désormais.`, "success");
   }
 }
 
@@ -8331,6 +8778,14 @@ async function toggleProductAiActive(productId) {
 
   renderCatalog();
   updateCatalogStats();
+
+  try {
+    fetch('/api/products/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId || 'default', products: window.catalogProducts })
+    }).catch(() => {});
+  } catch(e) {}
 
   if (window.SupabaseRest && userId && !productId.startsWith('prod_demo_')) {
     try {
@@ -8361,6 +8816,14 @@ function duplicateProduct(productId) {
   renderCatalog();
   updateCatalogStats();
 
+  try {
+    fetch('/api/products/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId || 'default', products: window.catalogProducts })
+    }).catch(() => {});
+  } catch(e) {}
+
   if (typeof showToast === 'function') {
     showToast(`Article dupliqué avec succès : "${clone.name}"`, "success");
   }
@@ -8384,6 +8847,14 @@ async function deleteProduct(productId) {
   renderCatalog();
   updateCatalogStats();
 
+  try {
+    fetch('/api/products/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId || 'default', products: window.catalogProducts })
+    }).catch(() => {});
+  } catch(e) {}
+
   if (window.SupabaseRest && userId && !productId.startsWith('prod_demo_')) {
     try {
       await window.SupabaseRest.request(`/rest/v1/products?id=eq.${encodeURIComponent(productId)}`, 'DELETE');
@@ -8404,7 +8875,7 @@ function renderOverviewCatalog() {
 
   const items = window.catalogProducts || [];
   const total = items.length;
-  const withPhotos = items.filter(x => x.image_url && x.image_url.trim().length > 0).length;
+  const withPhotos = items.filter(x => x.image_url && String(x.image_url).trim().length > 0).length;
   let totalVal = 0;
   items.forEach(x => {
     const qty = (x.stock && x.stock > 0) ? x.stock : (x.stock === -1 ? 10 : 0);
@@ -8422,7 +8893,7 @@ function renderOverviewCatalog() {
       <div style="grid-column: 1 / -1; padding: 28px; text-align: center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
         <i class="fa-solid fa-boxes-stacked fa-2x" style="color: var(--whatsapp-green); opacity: 0.6; margin-bottom: 10px;"></i>
         <h4 style="margin: 0 0 6px 0; color: #fff; font-size: 14.5px;">Aucun article dans votre catalogue</h4>
-        <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 14px 0;">Ajoutez vos produits avec tarifs et photos pour que l'IA puisse les vendre sur WhatsApp.</p>
+        <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 14px 0;">Ajoutez vos produits avec tarifs, photos, couleurs et tailles pour que l'IA puisse les vendre sur WhatsApp.</p>
         <button type="button" class="btn-primary-glow" onclick="openProductModal()" style="padding: 7px 14px; font-size: 12px;">
           <i class="fa-solid fa-plus"></i> Ajouter mon premier article
         </button>
@@ -8442,8 +8913,12 @@ function renderOverviewCatalog() {
         : `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 10px; padding: 2px 6px;">${item.stock} en stock</span>`;
 
     const imgDisplay = item.image_url 
-      ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" style="width: 100%; height: 130px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\\'height:130px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); color:var(--text-muted);\\\'><i class=\\\'fa-solid fa-image fa-2x\\\'></i></div>';">`
-      : `<div style="height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.05), rgba(16, 185, 129, 0.02)); border-top-left-radius: 10px; border-top-right-radius: 10px; color: var(--text-muted);"><i class="fa-solid fa-box-open fa-2x" style="color: var(--whatsapp-green); opacity: 0.5; margin-bottom: 6px;"></i><span style="font-size: 10px;">Sans photo</span></div>`;
+      ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" style="width: 100%; height: 135px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\\'height:135px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); color:var(--text-muted);\\\'><i class=\\\'fa-solid fa-image fa-2x\\\'></i></div>';">`
+      : `<div style="height: 135px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.05), rgba(16, 185, 129, 0.02)); border-top-left-radius: 10px; border-top-right-radius: 10px; color: var(--text-muted);"><i class="fa-solid fa-box-open fa-2x" style="color: var(--whatsapp-green); opacity: 0.5; margin-bottom: 6px;"></i><span style="font-size: 10px;">Sans photo</span></div>`;
+
+    // Couleurs & Tailles rapides
+    let colorsStr = Array.isArray(item.colors) && item.colors.length > 0 ? item.colors.slice(0, 2).join(', ') : '';
+    let sizesStr = Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes.slice(0, 3).join(', ') : '';
 
     return `
       <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; transition: transform 0.2s, border-color 0.2s;">
@@ -8460,9 +8935,14 @@ function renderOverviewCatalog() {
           <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #fff; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.name)}">
             ${escapeHtml(item.name)}
           </h4>
-          <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green); margin-bottom: 8px;">
+          <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green); margin-bottom: 6px;">
             ${formatCatalogPrice(item.price, item.currency)}
           </div>
+          ${(colorsStr || sizesStr) ? `
+            <div style="font-size: 10.5px; color: #94a3b8; margin-bottom: 8px; line-height: 1.3;">
+              ${colorsStr ? `<span><i class="fa-solid fa-palette" style="color:#38bdf8; font-size:9px;"></i> ${escapeHtml(colorsStr)}</span> ` : ''}
+              ${sizesStr ? `<span><i class="fa-solid fa-ruler-combined" style="color:#f59e0b; font-size:9px; margin-left:4px;"></i> ${escapeHtml(sizesStr)}</span>` : ''}
+            </div>` : ''}
           <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center;">
             <button class="btn btn-secondary btn-sm" onclick="openProductModal('${item.id}')" style="padding: 4px 8px; font-size: 11px;">
               <i class="fa-solid fa-pen-to-square"></i> Modifier
@@ -8493,4 +8973,14 @@ window.duplicateProduct = duplicateProduct;
 window.toggleProductAiActive = toggleProductAiActive;
 window.filterCatalogCards = filterCatalogCards;
 window.setCatalogStatusFilter = setCatalogStatusFilter;
+window.addColorTag = addColorTag;
+window.addSizeTag = addSizeTag;
+window.selectProductType = selectProductType;
+window.calculatePromoBadge = calculatePromoBadge;
+window.triggerPhotoUpload = triggerPhotoUpload;
+window.handleProductPhotoSlot = handleProductPhotoSlot;
+window.removeProductPhotoSlot = removeProductPhotoSlot;
+window.toggleUrlInputSlot = toggleUrlInputSlot;
+window.handleDirectUrlSlot = handleDirectUrlSlot;
+
 

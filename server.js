@@ -259,6 +259,89 @@ try {
   }
 } catch (e) {}
 
+// Dossier de stockage persistant des catalogues commerçants
+const DATA_DIR = path.join(__dirname, 'data');
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {}
+
+// Cache mémoire des catalogues produits pour l'Agent IA WhatsApp
+const userCatalogCache = new Map();
+
+async function getUserCatalogProducts(userId) {
+  if (!userId) return [];
+  if (userCatalogCache.has(userId)) {
+    const cached = userCatalogCache.get(userId);
+    if (Array.isArray(cached) && cached.length > 0) return cached;
+  }
+
+  // Vérifier sur le disque local
+  const catalogFile = path.join(DATA_DIR, `catalog_${userId}.json`);
+  if (fs.existsSync(catalogFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
+      if (Array.isArray(data) && data.length > 0) {
+        userCatalogCache.set(userId, data);
+        return data;
+      }
+    } catch(e) {}
+  }
+
+  // Vérifier dans Supabase si disponible
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        userCatalogCache.set(userId, data);
+        return data;
+      }
+    } catch(e) {}
+  }
+
+  return [];
+}
+
+// Endpoint de synchronisation du catalogue produits pour l'Agent IA
+app.post('/api/products/sync', async (req, res) => {
+  try {
+    const { userId, products } = req.body || {};
+    if (!userId || !Array.isArray(products)) {
+      return res.status(400).json({ error: "userId et products requis" });
+    }
+
+    userCatalogCache.set(userId, products);
+
+    try {
+      fs.writeFileSync(path.join(DATA_DIR, `catalog_${userId}.json`), JSON.stringify(products, null, 2), 'utf8');
+    } catch(e) {}
+
+    console.log(`[CATALOG] ✅ Catalogue synchronisé pour l'utilisateur ${userId} (${products.length} articles avec couleurs, tailles et photos)`);
+    res.json({ success: true, count: products.length });
+  } catch(err) {
+    console.error('[CATALOG] Erreur sync:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint pour récupérer le catalogue produits
+app.get('/api/products', async (req, res) => {
+  try {
+    const userId = req.query.userId || req.headers['x-user-id'];
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+    const products = await getUserCatalogProducts(userId);
+    res.json({ success: true, products });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Endpoint d'upload direct d'une photo produit depuis le Dashboard
 app.post('/api/products/upload-photo', async (req, res) => {
   try {
@@ -835,7 +918,8 @@ async function generateSalesAgentResponse({
   userMessage,
   isNewSession,
   history,
-  basePrompt
+  basePrompt,
+  products = []
 }) {
   const strictBusinessDirectives = `
 ## RÈGLES STRICTES DE POSTURE COMMERCIALE (VANDIA IA) :
@@ -846,46 +930,121 @@ async function generateSalesAgentResponse({
 - Pose au maximum UNE seule question courte et pertinente à la fois pour guider le client vers la conclusion de sa commande.
 
 2. CATALOGUE PRODUITS ET TARIFS (RÈGLE ABSOLUE ANTI-HALLUCINATION) :
-- Tu dois utiliser EXCLUSIVEMENT les produits, services, tarifs, remises et conditions figurant dans les INSTRUCTIONS OFFICIELLES de l'entreprise fournies ci-dessous.
-- INTERDICTION FORMELLE d'inventer des produits, des prix, des fonctionnalités ou des prestations qui ne figurent pas explicitement dans les instructions de l'entreprise.
+- Tu dois utiliser EXCLUSIVEMENT les produits, services, tarifs, remises et conditions figurant dans le CATALOGUE OFFICIEL et les INSTRUCTIONS de l'entreprise ci-dessous.
+- INTERDICTION FORMELLE d'inventer des produits, des prix, des fonctionnalités ou des prestations qui ne figurent pas explicitement dans les données officielles.
 - Si le client choisit plusieurs produits, additionne les prix avec exactitude pour lui donner le montant total précis.
 
-3. COORDONNÉES DE PAIEMENT & SÉCURITÉ :
+3. PRODUITS PHYSIQUES — COULEURS, TAILLES ET PHOTOS (RÉPONSE INSTANTANÉE OBLIGATOIRE) :
+- COULEURS DISPONIBLES : Dès qu'un client demande quelles sont les couleurs disponibles ou demande une couleur précise (ex: "Quelles couleurs avez-vous ?", "Est-ce disponible en noir ?", "Avez-vous du rouge ?"), donne-lui DIRECTEMENT et CHALEUREUSEMENT la liste exacte des couleurs disponibles figurant dans le catalogue pour cet article.
+- TAILLES / POINTURES : Dès qu'un client demande les tailles disponibles ou demande une taille/pointure précise (ex: "Avez-vous la taille L ?", "Quelles tailles avez-vous ?", "Avez-vous la pointure 42 ?"), donne-lui DIRECTEMENT et CHALEUREUSEMENT la liste exacte des tailles disponibles figurant dans le catalogue pour cet article.
+- ENVOI AUTOMATIQUE DE PHOTO : Dès qu'un client demande à voir le produit, demande une photo, un visuel ou un flyer (ex: "Envoyez-moi la photo", "Je veux voir l'article", "Avez-vous une photo ?", "Montrez-moi à quoi ça ressemble"), UTILISE SYSTÉMATIQUEMENT l'outil officiel 'send_product_photo' avec le nom précis de l'article et son URL de photo !
+- STOCK ET DISPONIBILITÉ : Si un produit est indiqué en rupture ou stock 0, informe poliment le client qu'il est momentanément épuisé et propose-lui une alternative.
+
+4. COORDONNÉES DE PAIEMENT & SÉCURITÉ :
 - Utilise EXCLUSIVEMENT les moyens de paiement (Wave, Orange Money, MTN MoMo, Moov Money, Carte, etc.), numéros officiels et noms de bénéficiaires précisés dans les instructions de l'entreprise ci-dessous.
 - Ne demande JAMAIS de code secret, code PIN, mot de passe bancaire ou identifiant confidentiel.
 
-4. GÉNÉRATION AUTOMATIQUE DES LIENS DE PAIEMENT (SASPAY MULTI-PAYS : CONGO, CAMEROUN, GABON, RDC, CARTE BANCAIRE) :
+5. GÉNÉRATION AUTOMATIQUE DES LIENS DE PAIEMENT (SASPAY MULTI-PAYS : CONGO, CAMEROUN, GABON, RDC, CARTE BANCAIRE) :
 - Si le client réside au Congo (Brazzaville ou Kinshasa RDC), Cameroun, Gabon, ou hors zone UEMOA, ou s'il demande à payer par lien, par carte bancaire ou Mobile Money local :
   UTILISE SYSTÉMATIQUEMENT l'outil officiel 'create_payment_link' en lui passant le montant total exact calculé des produits choisis.
 - INTERDICTION FORMELLE de dire « je n'ai pas encore reçu le lien » ou « je vais vérifier ». L'outil 'create_payment_link' te génère le lien officiel immédiatement en temps réel pour le client !
 
-5. FORMAT WHATSAPP :
+6. FORMAT WHATSAPP :
 - Réponses courtes (3 à 5 lignes concises), aérées, élégantes et parfaitement lisibles sur smartphone, avec des puces et des émojis bien dosés (😊, ✨, 📦, 💳).
 
-6. CONTINUITÉ ET FLUIDITÉ CONVERSATIONNELLE :
+7. CONTINUITÉ ET FLUIDITÉ CONVERSATIONNELLE :
 - Consulte attentivement l'historique des derniers échanges ci-dessous. Maintiens une parfaite cohérence avec ce qui a déjà été dit.
 - Ne redis pas "Bonjour" si la conversation est déjà entamée. Réponds directement au client et avance vers l'objectif commercial.
 
-7. POLYGLOTTE AFRICAIN & ASSISTANCE VOCALE :
+8. POLYGLOTTE AFRICAIN & ASSISTANCE VOCALE :
 - Tu es polyglotte et t'adaptes naturellement à la langue de ton interlocuteur : Français, Anglais, Lingala (Congo RDC / Brazzaville), Swahili, etc.
 - Si le client s'exprime ou te salue en Lingala (ex: "Mbote", "Nalingi..."), accueille-le et réponds-lui chaleureusement en Lingala (ou en français limpide selon sa fluidité).
 - Si le client semble avoir des difficultés à écrire ou hésite, propose-lui avec bienveillance : « Si vous préférez, vous pouvez m'envoyer un message vocal (en Français, Lingala ou Anglais), je vous écoute et vous réponds immédiatement ! 😊 ».
-
-8. ENVOI AUTOMATIQUE DES PHOTOS DU CATALOGUE :
-- Lorsque le client demande à voir un article, demande des photos, un visuel ou un flyer (ex: "Envoyez-moi la photo", "Je veux voir le produit", "Avez-vous une photo ?", "Montrez-moi à quoi ça ressemble") :
-  UTILISE SYSTÉMATIQUEMENT l'outil officiel 'send_product_photo' avec le nom précis du produit et l'URL de sa photo trouvée dans le catalogue ou les instructions de l'entreprise.
-- L'outil expédiera immédiatement la photo réelle sur WhatsApp avec une légende vendeuse, et tu complèteras ta réponse pour guider et conseiller le client.
 `;
 
+  // Construction du bloc catalogue avec prix, photos réelles, couleurs et tailles
+  let catalogContext = "";
+  if (Array.isArray(products) && products.length > 0) {
+    catalogContext = `\n## CATALOGUE OFFICIEL DES ARTICLES EN VENTE DANS LA BOUTIQUE :\n` +
+      `Tu as accès ci-dessous aux fiches détaillées de chaque article enregistré par le commerçant.\n` +
+      `Pour toute question relative à la couleur, la taille, le prix ou la photo d'un article, base-toi STRICTEMENT sur les données ci-dessous :\n\n`;
+
+    products.forEach((p, idx) => {
+      const pName = p.name || `Article ${idx + 1}`;
+      const normalPriceFormatted = `${new Intl.NumberFormat('fr-FR').format(Number(p.price) || 0)} ${p.currency || 'FCFA'}`;
+      const hasPromo = (p.promo_price && Number(p.promo_price) > 0 && Number(p.promo_price) < Number(p.price));
+      const promoPriceFormatted = hasPromo ? `${new Intl.NumberFormat('fr-FR').format(Number(p.promo_price))} ${p.currency || 'FCFA'}` : '';
+      const pPrice = hasPromo 
+        ? `${promoPriceFormatted} (OFFRE PROMO SPÉCIALE ! Prix régulier : ${normalPriceFormatted})`
+        : normalPriceFormatted;
+
+      const pCategory = p.category ? `[${p.category}] ` : '';
+      const isDigital = (p.product_type === 'digital');
+
+      // Extraction propre des couleurs
+      let colorsList = [];
+      if (Array.isArray(p.colors) && p.colors.length > 0) colorsList = p.colors;
+      else if (typeof p.color === 'string' && p.color.trim()) colorsList = p.color.split(',').map(s => s.trim());
+      else if (Array.isArray(p.variants)) {
+        p.variants.forEach(v => {
+          if (typeof v === 'string') {
+            const m = v.match(/couleur\s*:\s*([^,;]+)/i);
+            if (m) colorsList.push(m[1].trim());
+            else if (/^(noir|blanc|rouge|bleu|vert|jaune|rose|doré|argenté|gris|marron|orange|violet)$/i.test(v.trim())) colorsList.push(v.trim());
+          }
+        });
+      }
+
+      // Extraction propre des tailles
+      let sizesList = [];
+      if (Array.isArray(p.sizes) && p.sizes.length > 0) sizesList = p.sizes;
+      else if (typeof p.size === 'string' && p.size.trim()) sizesList = p.size.split(',').map(s => s.trim());
+      else if (Array.isArray(p.variants)) {
+        p.variants.forEach(v => {
+          if (typeof v === 'string') {
+            const m = v.match(/taille\s*:\s*([^,;]+)/i);
+            if (m) sizesList.push(m[1].trim());
+            else if (/^(xs|s|m|l|xl|xxl|xxxl|\b\d{2}\b|unique)$/i.test(v.trim())) sizesList.push(v.trim());
+          }
+        });
+      }
+
+      const colorsStr = colorsList.length > 0 ? colorsList.join(', ') : 'Standard / Selon arrivage';
+      const sizesStr = sizesList.length > 0 ? sizesList.join(', ') : 'Taille unique / Standard';
+      const stockStr = isDigital ? 'Produit Digital (Accès immédiat après paiement)' : ((p.stock === -1 || p.stock === null || p.stock === undefined) ? 'Illimité / En stock' : (p.stock > 0 ? `${p.stock} unités en stock` : 'Rupture momentanée'));
+      
+      // Photos au format carré
+      let allPhotos = [];
+      if (Array.isArray(p.images) && p.images.length > 0) allPhotos = p.images.filter(Boolean);
+      else if (p.image_url) allPhotos = [p.image_url];
+      const primaryPhoto = allPhotos[0] || 'Aucune photo enregistrée';
+      const photosInfo = allPhotos.length > 1 
+        ? `${primaryPhoto} (Photos supplémentaires : ${allPhotos.slice(1).join(', ')})`
+        : primaryPhoto;
+
+      const digitalDetails = isDigital
+        ? `\n   - Type : Produit Digital (${p.digital_format || 'Ebook / Fichier'})\n   - Lien d'accès / téléchargement : ${p.digital_link ? p.digital_link + ' (À transmettre au client dès validation du paiement)' : 'Non configuré'}`
+        : '';
+      const descStr = p.description ? `\n   - Description & Arguments : ${p.description}` : '';
+
+      catalogContext += `${idx + 1}. ${pCategory}**${pName}** :
+   - Prix officiel : ${pPrice}
+   - Couleurs disponibles : ${isDigital ? 'Non applicable (produit digital)' : colorsStr}
+   - Tailles / pointures disponibles : ${isDigital ? 'Non applicable (produit digital)' : sizesStr}
+   - Disponibilité : ${stockStr}${digitalDetails}
+   - Photo officielle (pour outil send_product_photo) : ${photosInfo}${descStr}\n\n`;
+    });
+  }
+
   const userInstructions = (basePrompt && basePrompt.trim().length > 10)
-    ? `\n## INSTRUCTIONS, CATALOGUE ET COORDONNÉES FOURNIS PAR L'ENTREPRISE :\n${basePrompt.trim()}`
+    ? `\n## INSTRUCTIONS SPÉCIFIQUES ET COORDONNÉES DE L'ENTREPRISE :\n${basePrompt.trim()}`
     : `\n## INSTRUCTIONS DE L'ENTREPRISE :\nTu es l'agent commercial de l'entreprise. Accueille le client chaleureusement, renseigne-le avec précision sur nos offres et guide-le vers la finalisation de sa commande.`;
 
   const sessionDirectives = isNewSession
     ? `\n[CONSIGNE D'ACCUEIL] : Si c'est le tout premier message, salue chaleureusement le client (ex: "Bonjour ${contactName || ''} ! Bienvenue 😊"). Si la discussion est déjà engagée dans l'historique, poursuis naturellement.`
     : `\n[CONSIGNE DE SUIVI] : La discussion est active, réponds directement à la demande du client sans formule d'accueil répétitive.`;
 
-  const systemMessageContent = `${strictBusinessDirectives}\n${userInstructions}\n${sessionDirectives}`;
+  const systemMessageContent = `${strictBusinessDirectives}\n${catalogContext}\n${userInstructions}\n${sessionDirectives}`;
 
   // Conserver au minimum 8 à 12 messages d'historique
   const recentHistory = Array.isArray(history) ? history.slice(-12) : [];
@@ -1014,6 +1173,18 @@ async function generateSalesAgentResponse({
       const caption = args.caption || `${productName} ✨`;
 
       console.log(`[WA/IA] 🖼️ Outil send_product_photo appelé pour ${userId} : ${productName} (${photoUrl || 'Recherche auto URL...'})`);
+
+      if (!photoUrl && Array.isArray(products) && products.length > 0) {
+        const cleanTarget = (productName || '').toLowerCase().trim();
+        const pMatch = products.find(p => {
+          const n = (p.name || '').toLowerCase();
+          return (cleanTarget && n && (n.includes(cleanTarget) || cleanTarget.includes(n))) ||
+                 (cleanTarget && p.category && p.category.toLowerCase().includes(cleanTarget));
+        });
+        if (pMatch && pMatch.image_url) {
+          photoUrl = pMatch.image_url;
+        }
+      }
 
       if (!photoUrl && basePrompt) {
         photoUrl = findPhotoUrlForProduct(productName, basePrompt) || '';
@@ -1211,6 +1382,9 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
       ? profile.ai_prompt 
       : null;
 
+    // Récupérer le catalogue produits officiel de cet utilisateur
+    const userProducts = await getUserCatalogProducts(userId);
+
     // Récupérer ou restaurer la session et l'historique conversationnel (maintient au moins 8 à 12 messages)
     const session = await getCustomerSession(userId, rawSender, cName);
 
@@ -1225,7 +1399,8 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
         userMessage: msg.body,
         isNewSession: session.isNewSession,
         history: session.history,
-        basePrompt
+        basePrompt,
+        products: userProducts
       });
 
       if (rawAiResult && typeof rawAiResult === 'object' && rawAiResult.text) {
@@ -2425,6 +2600,7 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
       session.history = session.history.slice(-12);
     }
 
+    const userProducts = await getUserCatalogProducts(userId || 'test_user');
     const rawReply = await generateSalesAgentResponse({
       userId: userId || 'test_user',
       phone,
@@ -2432,7 +2608,8 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
       userMessage: message,
       isNewSession: session.isNewSession,
       history: session.history,
-      basePrompt: systemPrompt
+      basePrompt: systemPrompt,
+      products: userProducts
     });
 
     const reply = (rawReply && typeof rawReply === 'object' && rawReply.text) ? rawReply.text : String(rawReply || '');

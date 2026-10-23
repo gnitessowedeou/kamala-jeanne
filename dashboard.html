@@ -1091,65 +1091,7 @@
             </div>
           </div>
 
-          <!-- 4 Top Metric Cards -->
-          <div class="overview-stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 24px;">
-            <div class="glass-panel stat-card">
-              <div class="stat-card-header">
-                <span class="stat-card-title">Articles au Catalogue</span>
-                <div class="stat-card-icon" style="background: rgba(37, 211, 102, 0.12); color: var(--whatsapp-green);">
-                  <i class="fa-solid fa-boxes-stacked"></i>
-                </div>
-              </div>
-              <div class="stat-card-val-row">
-                <span class="stat-card-val" id="catalog-count-display">0 / 30</span>
-                <span class="stat-card-badge positive" id="catalog-percent-badge">0%</span>
-              </div>
-              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 99px; margin-top: 8px; overflow: hidden;">
-                <div id="catalog-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #25D366, #128C7E); transition: width 0.4s ease;"></div>
-              </div>
-            </div>
 
-            <div class="glass-panel stat-card">
-              <div class="stat-card-header">
-                <span class="stat-card-title">Articles Actifs IA</span>
-                <div class="stat-card-icon" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
-                  <i class="fa-solid fa-robot"></i>
-                </div>
-              </div>
-              <div class="stat-card-val-row">
-                <span class="stat-card-val" id="catalog-active-count">0</span>
-                <span class="stat-card-badge positive">En vente</span>
-              </div>
-              <span class="stat-card-subtitle">Actifs dans le prompt WhatsApp</span>
-            </div>
-
-            <div class="glass-panel stat-card">
-              <div class="stat-card-header">
-                <span class="stat-card-title">Photos Disponibles</span>
-                <div class="stat-card-icon" style="background: rgba(168, 85, 247, 0.12); color: #c084fc;">
-                  <i class="fa-solid fa-image"></i>
-                </div>
-              </div>
-              <div class="stat-card-val-row">
-                <span class="stat-card-val" id="catalog-photos-count">0</span>
-                <span class="stat-card-badge positive">HD</span>
-              </div>
-              <span class="stat-card-subtitle">Prêtes à être expédiées au client</span>
-            </div>
-
-            <div class="glass-panel stat-card">
-              <div class="stat-card-header">
-                <span class="stat-card-title">Moteur Vendeur IA</span>
-                <div class="stat-card-icon" style="background: rgba(34, 197, 94, 0.12); color: #4ade80;">
-                  <i class="fa-solid fa-circle-check"></i>
-                </div>
-              </div>
-              <div class="stat-card-val-row">
-                <span class="stat-card-val" style="font-size: 17px; color: var(--whatsapp-green);">Synchronisé</span>
-              </div>
-              <span class="stat-card-subtitle">Zero-hallucination sur les prix</span>
-            </div>
-          </div>
 
           <!-- Auto-Sync Explanatory Banner -->
           <div class="glass-panel" style="padding: 16px 20px; margin-bottom: 24px; border-left: 4px solid var(--whatsapp-green); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; background: rgba(37, 211, 102, 0.04);">
@@ -4225,7 +4167,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
        MODAL 12: AJOUTER / MODIFIER UN ARTICLE DU CATALOGUE (#product-modal)
        ========================================================================== -->
   <div class="modal-backdrop" id="product-modal" role="dialog" aria-modal="true" style="display: none;">
-    <div class="modal-dialog" style="max-width: 620px;">
+    <div class="modal-dialog" style="max-width: 680px; width: 95%;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 12px;">
           <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
@@ -4243,119 +4185,348 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
       <form id="form-product" onsubmit="handleSaveProduct(event)">
         <input type="hidden" id="product-id-input" value="">
+        <input type="hidden" id="product-type-input" value="physical">
+        <!-- Rétro-compatibilité image principale -->
         <input type="hidden" id="product-image-url-input" value="">
+        <!-- URLs pour les 3 photos -->
+        <input type="hidden" id="product-image-url-input-1" value="">
+        <input type="hidden" id="product-image-url-input-2" value="">
+        <input type="hidden" id="product-image-url-input-3" value="">
+        <input type="hidden" id="product-variants-input" value="">
 
-        <div class="modal-body" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
-          <!-- Product Name -->
+        <div class="modal-body" style="padding: 22px; max-height: 75vh; overflow-y: auto;">
+          <!-- 1. SELECTEUR DU TYPE DE PRODUIT (PHYSIQUE VS DIGITAL) -->
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #fff;">
+              Type de Produit ou Service <span style="color: var(--whatsapp-green);">*</span>
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <!-- Option Physique -->
+              <div class="product-type-option selected" id="type-card-physical" onclick="selectProductType('physical')" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--whatsapp-green); background: rgba(37, 211, 102, 0.08); cursor: pointer; transition: all 0.2s ease;">
+                <input type="radio" name="product_type_radio" id="product-type-physical" value="physical" checked style="accent-color: var(--whatsapp-green); width: 16px; height: 16px;">
+                <div>
+                  <div style="font-weight: 700; font-size: 13.5px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-shirt" style="color: var(--whatsapp-green);"></i> Produit Physique
+                  </div>
+                  <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">Vêtements, chaussures, stock, tailles &amp; couleurs</span>
+                </div>
+              </div>
+
+              <!-- Option Digital -->
+              <div class="product-type-option" id="type-card-digital" onclick="selectProductType('digital')" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: all 0.2s ease;">
+                <input type="radio" name="product_type_radio" id="product-type-digital" value="digital" style="accent-color: var(--whatsapp-green); width: 16px; height: 16px;">
+                <div>
+                  <div style="font-weight: 700; font-size: 13.5px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-laptop-code" style="color: #38bdf8;"></i> Produit Digital
+                  </div>
+                  <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 2px;">Ebook, formation, fichier, lien d'accès, licence</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. NOM DU PRODUIT -->
           <div class="form-group" style="margin-bottom: 18px;">
             <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nom du Produit / Service <span style="color: var(--whatsapp-green);">*</span></label>
-            <input type="text" id="product-name-input" class="form-control" required placeholder="Ex: Montre Acier Luxe Homme, Robe Soie Dubaï..." style="width: 100%;">
+            <input type="text" id="product-name-input" class="form-control" required placeholder="Ex: Robe Soie Dubaï Élégance, Formation Marketing WhatsApp, Montre Acier Luxe..." style="width: 100%;">
           </div>
 
-          <!-- Price & Currency -->
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 18px;">
-            <div class="form-group">
-              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Prix de Vente <span style="color: var(--whatsapp-green);">*</span></label>
-              <input type="number" id="product-price-input" class="form-control" required min="0" step="any" placeholder="Ex: 15000" style="width: 100%;">
+          <!-- 3. PRIX DE VENTE, PRIX PROMO & DEVISE -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 110px; gap: 12px; margin-bottom: 8px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px;">Prix Standard <span style="color: var(--whatsapp-green);">*</span></label>
+              <input type="number" id="product-price-input" class="form-control" required min="0" step="any" placeholder="Ex: 25000" style="width: 100%;" oninput="calculatePromoBadge()">
             </div>
-            <div class="form-group">
-              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Devise</label>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #f59e0b;">
+                <i class="fa-solid fa-tag"></i> Prix en Promo <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 400;">(optionnel)</span>
+              </label>
+              <input type="number" id="product-promo-price-input" class="form-control" min="0" step="any" placeholder="Ex: 18000" style="width: 100%; border-color: rgba(245, 158, 11, 0.35);" oninput="calculatePromoBadge()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px;">Devise</label>
               <select id="product-currency-select" class="form-control" style="width: 100%;">
-                <option value="FCFA" selected>FCFA (XOF)</option>
+                <option value="FCFA" selected>FCFA</option>
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
-                <option value="CDF">Franc Congolais (CDF)</option>
-                <option value="GNF">Franc Guinéen (GNF)</option>
+                <option value="CDF">CDF</option>
+                <option value="GNF">GNF</option>
               </select>
             </div>
           </div>
-
-          <!-- Photo Upload & Preview -->
-          <div class="form-group" style="margin-bottom: 18px;">
-            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
-              Photo Officielle du Produit (Envoi WhatsApp)
-            </label>
-            
-            <div id="product-photo-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; background: rgba(255,255,255,0.02);" onclick="document.getElementById('product-file-input').click()">
-              <input type="file" id="product-file-input" accept="image/*" style="display: none;" onchange="handleProductPhotoSelected(event)">
-              
-              <div id="product-photo-placeholder">
-                <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto; color: var(--whatsapp-green); font-size: 20px;">
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                </div>
-                <p style="font-size: 13px; font-weight: 600; margin: 0 0 4px 0; color: #fff;">Cliquez pour choisir une photo</p>
-                <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">JPG, PNG ou WEBP depuis votre smartphone ou PC (Max 10 Mo)</p>
-              </div>
-
-              <!-- Preview when image is selected -->
-              <div id="product-photo-preview-wrap" style="display: none; align-items: center; gap: 16px; text-align: left;">
-                <img id="product-photo-preview-img" src="" alt="Aperçu" style="width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2);">
-                <div style="flex: 1;">
-                  <p id="product-photo-filename" style="font-size: 13px; font-weight: 600; margin: 0 0 4px 0; color: #fff; word-break: break-all;"></p>
-                  <span class="badge badge-green" style="font-size: 10.5px;"><i class="fa-solid fa-check"></i> Prête pour envoi WhatsApp</span>
-                </div>
-                <button type="button" class="btn-secondary-glass" onclick="removeProductPhoto(event)" style="padding: 6px 10px; font-size: 11px; color: #ef4444;">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Alternative URL input toggle -->
-            <div style="margin-top: 8px; text-align: right;">
-              <button type="button" style="background: none; border: none; color: var(--text-muted); font-size: 11.5px; cursor: pointer; text-decoration: underline;" onclick="toggleProductUrlInput()">
-                Ou coller un lien direct d'image (URL)
-              </button>
-            </div>
-            <div id="product-url-input-container" style="display: none; margin-top: 8px;">
-              <input type="url" id="product-direct-url-input" class="form-control" placeholder="https://..." style="width: 100%; font-size: 12.5px;" oninput="handleDirectUrlInput(this.value)">
-            </div>
+          <!-- Calculateur visuel de réduction promo -->
+          <div id="promo-calc-hint" style="display: none; align-items: center; gap: 6px; margin-bottom: 18px; font-size: 11.5px; color: #4ade80;">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="promo-calc-text">Promotion appliquée !</span>
           </div>
+          <div style="margin-bottom: 16px;"></div>
 
-          <!-- Category & Variants -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
-            <div class="form-group">
-              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Catégorie</label>
-              <select id="product-category-select" class="form-control" style="width: 100%;">
-                <option value="mode" selected>Prêt-à-porter & Mode</option>
-                <option value="beaute">Beauté & Cosmétiques</option>
-                <option value="tech">Tech & Électronique</option>
-                <option value="digital">Digital & Formation</option>
-                <option value="autre">Autre Catégorie</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Couleurs & Tailles</label>
-              <input type="text" id="product-variants-input" class="form-control" placeholder="Ex: Noir, Doré / M, L, XL" style="width: 100%;">
-            </div>
-          </div>
-
-          <!-- Stock Management -->
-          <div class="form-group" style="margin-bottom: 18px; padding: 14px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <div>
-                <span style="font-size: 13px; font-weight: 600; display: block;">Gestion du Stock</span>
-                <span style="font-size: 11.5px; color: var(--text-muted);">L'IA avertira poliment le client si le produit est épuisé.</span>
-              </div>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
-                <input type="checkbox" id="product-unlimited-stock" checked onchange="toggleStockInput(this.checked)">
-                <span>Stock Illimité / Digital</span>
+          <!-- 4. PHOTOS OFFICIELLES DU PRODUIT (3 PHOTOS EN FORMAT CARRÉ 1:1) -->
+          <div class="form-group" style="margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+              <label style="font-size: 13px; font-weight: 700; color: #fff; margin: 0;">
+                <i class="fa-solid fa-camera" style="color: var(--whatsapp-green); margin-right: 5px;"></i> Photos du Produit (3 photos en carré 1:1)
               </label>
+              <span class="badge" style="background: rgba(37, 211, 102, 0.12); color: var(--whatsapp-green); border: 1px solid rgba(37, 211, 102, 0.25); font-size: 11px; padding: 2px 8px;">
+                📐 Format Carré 1:1 (800×800 px)
+              </span>
             </div>
-            <div id="product-stock-qty-wrap" style="display: none;">
-              <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Nombre d'unités disponibles :</label>
-              <input type="number" id="product-stock-qty-input" class="form-control" min="0" placeholder="Ex: 25" style="width: 140px;">
+            <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 0 12px 0;">
+              Téléchargez jusqu'à 3 photos carrées (PNG haute qualité, JPG ou WEBP). Votre Agent IA WhatsApp expédiera ces visuels officiels dès qu'un prospect demande à voir l'article.
+            </p>
+
+            <!-- Grid des 3 slots carrés 1:1 -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+              <!-- SLOT 1 : Photo Principale -->
+              <div class="product-photo-slot" style="display: flex; flex-direction: column; align-items: center;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--whatsapp-green); margin-bottom: 5px; display: flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-star"></i> Photo 1 (Principale)
+                </div>
+                <div id="photo-box-1" class="square-photo-dropzone" style="position: relative; width: 100%; aspect-ratio: 1 / 1; border: 2px dashed rgba(255,255,255,0.18); border-radius: 12px; background: rgba(255,255,255,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; overflow: hidden; transition: all 0.2s ease;" onclick="triggerPhotoUpload(1)">
+                  <input type="file" id="product-file-input-1" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleProductPhotoSlot(event, 1)">
+                  <!-- Legacy input alias -->
+                  <input type="file" id="product-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleProductPhotoSlot(event, 1)">
+                  
+                  <!-- Placeholder -->
+                  <div id="photo-placeholder-1" style="padding: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(37, 211, 102, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 6px auto; color: var(--whatsapp-green); font-size: 16px;">
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <span style="font-size: 11.5px; font-weight: 600; color: #fff; display: block;">Photo 1</span>
+                    <span style="font-size: 10px; color: var(--text-muted); display: block;">Carré 1:1</span>
+                  </div>
+
+                  <!-- Preview Image -->
+                  <div id="photo-preview-wrap-1" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%;">
+                    <img id="product-photo-preview-1" src="" alt="Photo 1" style="width: 100%; height: 100%; object-fit: cover;">
+                    <button type="button" onclick="removeProductPhotoSlot(event, 1)" style="position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(239, 68, 68, 0.9); border: none; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4);" title="Supprimer">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                    <span style="position: absolute; bottom: 4px; left: 4px; font-size: 9.5px; padding: 2px 6px; background: rgba(0,0,0,0.7); border-radius: 4px; color: #4ade80;">1:1 Carré</span>
+                  </div>
+                </div>
+                <button type="button" onclick="toggleUrlInputSlot(1)" style="background: none; border: none; color: var(--text-muted); font-size: 10.5px; margin-top: 4px; cursor: pointer; text-decoration: underline;">
+                  + Lien URL
+                </button>
+                <div id="url-box-1" style="display: none; width: 100%; margin-top: 4px;">
+                  <input type="url" id="product-url-input-1" class="form-control" placeholder="https://..." style="width: 100%; font-size: 11px; padding: 4px 6px;" oninput="handleDirectUrlSlot(1, this.value)">
+                </div>
+              </div>
+
+              <!-- SLOT 2 : Photo Détail / Angle -->
+              <div class="product-photo-slot" style="display: flex; flex-direction: column; align-items: center;">
+                <div style="font-size: 11px; font-weight: 600; color: #38bdf8; margin-bottom: 5px; display: flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-images"></i> Photo 2 (Détail)
+                </div>
+                <div id="photo-box-2" class="square-photo-dropzone" style="position: relative; width: 100%; aspect-ratio: 1 / 1; border: 2px dashed rgba(255,255,255,0.18); border-radius: 12px; background: rgba(255,255,255,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; overflow: hidden; transition: all 0.2s ease;" onclick="triggerPhotoUpload(2)">
+                  <input type="file" id="product-file-input-2" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleProductPhotoSlot(event, 2)">
+                  
+                  <!-- Placeholder -->
+                  <div id="photo-placeholder-2" style="padding: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 6px auto; color: #38bdf8; font-size: 16px;">
+                      <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <span style="font-size: 11.5px; font-weight: 600; color: #fff; display: block;">Photo 2</span>
+                    <span style="font-size: 10px; color: var(--text-muted); display: block;">Carré 1:1</span>
+                  </div>
+
+                  <!-- Preview Image -->
+                  <div id="photo-preview-wrap-2" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%;">
+                    <img id="product-photo-preview-2" src="" alt="Photo 2" style="width: 100%; height: 100%; object-fit: cover;">
+                    <button type="button" onclick="removeProductPhotoSlot(event, 2)" style="position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(239, 68, 68, 0.9); border: none; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4);" title="Supprimer">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                    <span style="position: absolute; bottom: 4px; left: 4px; font-size: 9.5px; padding: 2px 6px; background: rgba(0,0,0,0.7); border-radius: 4px; color: #7dd3fc;">1:1 Carré</span>
+                  </div>
+                </div>
+                <button type="button" onclick="toggleUrlInputSlot(2)" style="background: none; border: none; color: var(--text-muted); font-size: 10.5px; margin-top: 4px; cursor: pointer; text-decoration: underline;">
+                  + Lien URL
+                </button>
+                <div id="url-box-2" style="display: none; width: 100%; margin-top: 4px;">
+                  <input type="url" id="product-url-input-2" class="form-control" placeholder="https://..." style="width: 100%; font-size: 11px; padding: 4px 6px;" oninput="handleDirectUrlSlot(2, this.value)">
+                </div>
+              </div>
+
+              <!-- SLOT 3 : Photo Vue 3 / Porté / Pack -->
+              <div class="product-photo-slot" style="display: flex; flex-direction: column; align-items: center;">
+                <div style="font-size: 11px; font-weight: 600; color: #c084fc; margin-bottom: 5px; display: flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-eye"></i> Photo 3 (Autre angle)
+                </div>
+                <div id="photo-box-3" class="square-photo-dropzone" style="position: relative; width: 100%; aspect-ratio: 1 / 1; border: 2px dashed rgba(255,255,255,0.18); border-radius: 12px; background: rgba(255,255,255,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; overflow: hidden; transition: all 0.2s ease;" onclick="triggerPhotoUpload(3)">
+                  <input type="file" id="product-file-input-3" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleProductPhotoSlot(event, 3)">
+                  
+                  <!-- Placeholder -->
+                  <div id="photo-placeholder-3" style="padding: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(192, 132, 252, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 6px auto; color: #c084fc; font-size: 16px;">
+                      <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <span style="font-size: 11.5px; font-weight: 600; color: #fff; display: block;">Photo 3</span>
+                    <span style="font-size: 10px; color: var(--text-muted); display: block;">Carré 1:1</span>
+                  </div>
+
+                  <!-- Preview Image -->
+                  <div id="photo-preview-wrap-3" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%;">
+                    <img id="product-photo-preview-3" src="" alt="Photo 3" style="width: 100%; height: 100%; object-fit: cover;">
+                    <button type="button" onclick="removeProductPhotoSlot(event, 3)" style="position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(239, 68, 68, 0.9); border: none; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4);" title="Supprimer">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                    <span style="position: absolute; bottom: 4px; left: 4px; font-size: 9.5px; padding: 2px 6px; background: rgba(0,0,0,0.7); border-radius: 4px; color: #e9d5ff;">1:1 Carré</span>
+                  </div>
+                </div>
+                <button type="button" onclick="toggleUrlInputSlot(3)" style="background: none; border: none; color: var(--text-muted); font-size: 10.5px; margin-top: 4px; cursor: pointer; text-decoration: underline;">
+                  + Lien URL
+                </button>
+                <div id="url-box-3" style="display: none; width: 100%; margin-top: 4px;">
+                  <input type="url" id="product-url-input-3" class="form-control" placeholder="https://..." style="width: 100%; font-size: 11px; padding: 4px 6px;" oninput="handleDirectUrlSlot(3, this.value)">
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Description & Sales Pitch -->
+          <!-- 5. CATÉGORIE DU PRODUIT -->
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Catégorie de l'Article</label>
+            <select id="product-category-select" class="form-control" style="width: 100%;">
+              <option value="Mode & Prêt-à-porter" selected>👗 Mode &amp; Prêt-à-porter (Robes, Chemises, Costumes...)</option>
+              <option value="Chaussures & Maroquinerie">👟 Chaussures &amp; Maroquinerie (Baskets, Escarpins, Sacs...)</option>
+              <option value="Beauté & Cosmétiques">✨ Beauté &amp; Cosmétiques (Soins, Parfums, Crèmes...)</option>
+              <option value="Bijoux & Accessoires">💍 Bijoux &amp; Accessoires (Montres, Lunettes, Colliers...)</option>
+              <option value="Tech & Électronique">📱 Tech &amp; Électronique (Smartphones, Écouteurs, Accessoires...)</option>
+              <option value="Maison & Décoration">🏠 Maison &amp; Décoration</option>
+              <option value="Digital & Formations">💻 Digital &amp; Formations (Ebooks, Abonnements, Logiciels...)</option>
+              <option value="Autre Catégorie">📦 Autre Catégorie</option>
+            </select>
+          </div>
+
+          <!-- ================================================================
+               SECTION SPÉCIFIQUE : PRODUITS PHYSIQUES (COULEURS, TAILLES, STOCK)
+               ================================================================ -->
+          <div id="section-physical-specs" class="physical-product-specs-box" style="margin-bottom: 18px; padding: 16px; background: rgba(37, 211, 102, 0.05); border-radius: 12px; border: 1px solid rgba(37, 211, 102, 0.22);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(37, 211, 102, 0.2); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 13px;">
+                  <i class="fa-solid fa-shirt"></i>
+                </div>
+                <strong style="font-size: 13.5px; color: #fff;">Critères Produit Physique : Couleurs &amp; Tailles</strong>
+              </div>
+              <span class="badge badge-green" style="font-size: 10.5px; padding: 3px 8px;">
+                <i class="fa-solid fa-bolt"></i> Réponse Auto IA WhatsApp
+              </span>
+            </div>
+            
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.45;">
+              Renseignez les couleurs et tailles disponibles. Si un prospect WhatsApp demande <strong style="color: #fff;">« Avez-vous la taille L ? »</strong> ou <strong style="color: #fff;">« Quelles sont les couleurs ? »</strong>, votre Agent IA répondra instantanément sans se tromper.
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+              <!-- Couleurs -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #fff;">
+                  <span><i class="fa-solid fa-palette" style="color: #38bdf8; margin-right: 5px;"></i> Couleurs Disponibles</span>
+                </label>
+                <input type="text" id="product-colors-input" class="form-control" placeholder="Ex: Noir, Blanc, Rouge, Bleu, Doré..." style="width: 100%; font-size: 12.5px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+                  <button type="button" class="btn-quick-color-tag" onclick="addColorTag('Noir')" style="font-size: 10.5px; padding: 2px 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Noir</button>
+                  <button type="button" class="btn-quick-color-tag" onclick="addColorTag('Blanc')" style="font-size: 10.5px; padding: 2px 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Blanc</button>
+                  <button type="button" class="btn-quick-color-tag" onclick="addColorTag('Rouge')" style="font-size: 10.5px; padding: 2px 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Rouge</button>
+                  <button type="button" class="btn-quick-color-tag" onclick="addColorTag('Bleu')" style="font-size: 10.5px; padding: 2px 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Bleu</button>
+                  <button type="button" class="btn-quick-color-tag" onclick="addColorTag('Doré')" style="font-size: 10.5px; padding: 2px 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Doré</button>
+                  <button type="button" class="btn-quick-color-tag" onclick="addColorTag('Vert')" style="font-size: 10.5px; padding: 2px 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Vert</button>
+                </div>
+              </div>
+
+              <!-- Tailles -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #fff;">
+                  <span><i class="fa-solid fa-ruler-combined" style="color: #f59e0b; margin-right: 5px;"></i> Tailles / Pointures</span>
+                </label>
+                <input type="text" id="product-sizes-input" class="form-control" placeholder="Ex: S, M, L, XL, XXL ou 38, 40, 42..." style="width: 100%; font-size: 12.5px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('S')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ S</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('M')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ M</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('L')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ L</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('XL')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ XL</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('XXL')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ XXL</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('40')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ 40</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('42')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ 42</button>
+                  <button type="button" class="btn-quick-size-tag" onclick="addSizeTag('Unique')" style="font-size: 10.5px; padding: 2px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; color: #cbd5e1; cursor: pointer;">+ Unique</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stock Physique -->
+            <div style="padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <span style="font-size: 12.5px; font-weight: 600; display: block; color: #fff;">Gestion du Stock Physique</span>
+                <span style="font-size: 11px; color: var(--text-muted);">L'IA avertira poliment le client si le produit est épuisé.</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+                  <input type="checkbox" id="product-unlimited-stock" checked onchange="toggleStockInput(this.checked)">
+                  <span>Stock Illimité</span>
+                </label>
+                <div id="product-stock-qty-wrap" style="display: none;">
+                  <input type="number" id="product-stock-qty-input" class="form-control" min="0" placeholder="Ex: 25 pcs" style="width: 105px; font-size: 12px; padding: 5px 8px;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================================================================
+               SECTION SPÉCIFIQUE : PRODUITS DIGITAUX (LIEN D'ACCÈS, FORMAT)
+               ================================================================ -->
+          <div id="section-digital-specs" class="digital-product-specs-box" style="display: none; margin-bottom: 18px; padding: 16px; background: rgba(56, 189, 248, 0.05); border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.25);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(56, 189, 248, 0.2); display: flex; align-items: center; justify-content: center; color: #38bdf8; font-size: 13px;">
+                  <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <strong style="font-size: 13.5px; color: #fff;">Critères Produit Digital : Accès &amp; Format</strong>
+              </div>
+              <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 10.5px; padding: 3px 8px;">
+                <i class="fa-solid fa-bolt"></i> Expédition Automatique après Paiement
+              </span>
+            </div>
+
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.45;">
+              Pour un produit digital, l'Agent IA WhatsApp délivrera instantanément le lien officiel de téléchargement ou d'accès au client dès validation du paiement.
+            </p>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 8px;">
+              <!-- Lien d'accès ou téléchargement -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #fff;">
+                  <i class="fa-solid fa-link" style="color: #38bdf8; margin-right: 4px;"></i> Lien de Téléchargement ou d'Accès Immédiat
+                </label>
+                <input type="url" id="product-digital-link-input" class="form-control" placeholder="https://drive.google.com/... ou lien Notion, Canva, Espace de formation..." style="width: 100%; font-size: 12.5px;">
+              </div>
+
+              <!-- Format du produit digital -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #fff;">Format du Produit</label>
+                <select id="product-digital-format-select" class="form-control" style="width: 100%; font-size: 12.5px;">
+                  <option value="Ebook PDF" selected>📄 Ebook PDF téléchargeable</option>
+                  <option value="Formation Vidéo">🎥 Formation Vidéo / Espace Membre</option>
+                  <option value="Pack Templates">🎨 Pack Modèles / Templates (Canva, Notion)</option>
+                  <option value="Lien VIP">🔐 Lien Groupe / Canal VIP WhatsApp/Telegram</option>
+                  <option value="Licence Logiciel">🔑 Licence / Clé Logiciel</option>
+                  <option value="Coaching / Consulting">📞 Session Coaching (Meet / Zoom)</option>
+                  <option value="Autre Fichier Digital">📦 Autre Fichier Digital</option>
+                </select>
+              </div>
+            </div>
+            <small style="color: #94a3b8; font-size: 11px;">Ce lien d'accès reste confidentiel et n'est transmis par l'IA qu'une fois la preuve ou le lien de paiement validé.</small>
+          </div>
+
+          <!-- 6. DESCRIPTION & ARGUMENTS COMMERCIAUX POUR L'IA -->
           <div class="form-group" style="margin-bottom: 8px;">
             <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Description &amp; Arguments de Vente pour l'IA</label>
-            <textarea id="product-description-input" class="form-control form-control-textarea" rows="3" placeholder="Ex: Cuir véritable résistant à l'eau. Livré avec son coffret cadeau. Livraison offerte à Cotonou et Abidjan." style="width: 100%;"></textarea>
+            <textarea id="product-description-input" class="form-control form-control-textarea" rows="3" placeholder="Ex: Bazin riche 100% coton de qualité supérieure, broderie fil d'or artisanale. Idéal cérémonies et mariages. Livraison offerte à Cotonou et Abidjan." style="width: 100%;"></textarea>
             <small style="color: var(--text-muted); font-size: 11px;">Ces arguments seront naturellement utilisés par l'IA lors des conversations WhatsApp pour convaincre le client.</small>
           </div>
         </div>
 
-        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+        <div class="modal-footer" style="padding: 16px 22px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
           <button type="button" class="btn-secondary-glass" onclick="closeProductModal()">Annuler</button>
           <button type="submit" class="btn-primary-glow" id="btn-save-product-submit">
             <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -4380,6 +4551,36 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
+    window.openProductModal = function(productId) {
+      if (typeof window.doOpenProductModal === 'function') {
+        return window.doOpenProductModal(productId);
+      }
+      var modal = document.getElementById("product-modal");
+      if (modal) {
+        modal.classList.add("active");
+        modal.style.display = "flex";
+        modal.style.opacity = "1";
+        modal.style.visibility = "visible";
+        modal.style.pointerEvents = "auto";
+        document.body.style.overflow = "hidden";
+      }
+    };
+
+    window.closeProductModal = function() {
+      if (typeof window.doCloseProductModal === 'function') {
+        return window.doCloseProductModal();
+      }
+      var modal = document.getElementById("product-modal");
+      if (modal) {
+        modal.classList.remove("active");
+        modal.style.display = "none";
+        modal.style.opacity = "0";
+        modal.style.visibility = "hidden";
+        modal.style.pointerEvents = "none";
+        document.body.style.overflow = "";
+      }
+    };
+
     window.openTemplateModal = function(prefillData, isDuplicate) {
       var modal = document.getElementById("template-modal");
       if (modal) {
