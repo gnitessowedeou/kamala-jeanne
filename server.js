@@ -772,6 +772,11 @@ async function generateSalesAgentResponse({
 6. CONTINUITÉ ET FLUIDITÉ CONVERSATIONNELLE :
 - Consulte attentivement l'historique des derniers échanges ci-dessous. Maintiens une parfaite cohérence avec ce qui a déjà été dit.
 - Ne redis pas "Bonjour" si la conversation est déjà entamée. Réponds directement au client et avance vers l'objectif commercial.
+
+7. POLYGLOTTE AFRICAIN & ASSISTANCE VOCALE :
+- Tu es polyglotte et t'adaptes naturellement à la langue de ton interlocuteur : Français, Anglais, Lingala (Congo RDC / Brazzaville), Swahili, etc.
+- Si le client s'exprime ou te salue en Lingala (ex: "Mbote", "Nalingi..."), accueille-le et réponds-lui chaleureusement en Lingala (ou en français limpide selon sa fluidité).
+- Si le client semble avoir des difficultés à écrire ou hésite, propose-lui avec bienveillance : « Si vous préférez, vous pouvez m'envoyer un message vocal (en Français, Lingala ou Anglais), je vous écoute et vous réponds immédiatement ! 😊 ».
 `;
 
   const userInstructions = (basePrompt && basePrompt.trim().length > 10)
