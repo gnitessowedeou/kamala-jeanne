@@ -251,6 +251,47 @@ if (fs.existsSync(path.join(__dirname, 'assets'))) {
   app.use('/assets', express.static(path.join(__dirname, 'assets'), { dotfiles: 'ignore' }));
 }
 
+// Dossier de stockage des photos de produits du catalogue
+const PRODUCTS_DIR = path.join(__dirname, 'images', 'products');
+try {
+  if (!fs.existsSync(PRODUCTS_DIR)) {
+    fs.mkdirSync(PRODUCTS_DIR, { recursive: true });
+  }
+} catch (e) {}
+
+// Endpoint d'upload direct d'une photo produit depuis le Dashboard
+app.post('/api/products/upload-photo', async (req, res) => {
+  try {
+    const { fileName, base64Data, productName, price } = req.body || {};
+    if (!base64Data) {
+      return res.status(400).json({ error: "Aucune donnee d'image fournie." });
+    }
+    const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+    const extMatch = (fileName || '').match(/\.(png|jpe?g|webp|gif)$/i);
+    const ext = extMatch ? extMatch[0].toLowerCase() : '.jpg';
+    const safeBase = (fileName || 'produit')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .substring(0, 30);
+    const generatedName = `${Date.now()}_${safeBase}${ext}`;
+    const destPath = path.join(PRODUCTS_DIR, generatedName);
+    fs.writeFileSync(destPath, buffer);
+    const publicUrl = `/images/products/${generatedName}`;
+    console.log(`[PRODUCTS] 📸 Photo enregistree : ${generatedName} (${buffer.length} octets)`);
+    res.json({
+      success: true,
+      url: publicUrl,
+      fileName: generatedName,
+      productName: productName || '',
+      price: price || ''
+    });
+  } catch (err) {
+    console.error("[PRODUCTS] ❌ Erreur upload photo :", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Healthcheck officiel pour Railway, Vercel et monitoring uptime
 app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'OK', uptime: Math.floor(process.uptime()), memory: process.memoryUsage() }));
@@ -743,6 +784,46 @@ async function generateSasPayCheckoutSession({ userId, amount, productNames, cus
   }
 }
 
+// Helper pour extraire l'URL de la photo d'un produit depuis le prompt ou instructions
+function findPhotoUrlForProduct(productName, basePrompt) {
+  if (!basePrompt || typeof basePrompt !== 'string') return null;
+  const lines = basePrompt.split('\n');
+  const cleanPName = (productName || '').toLowerCase().trim();
+  const keywords = cleanPName.split(/\s+/).filter(w => w.length > 2);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toLowerCase();
+    const matchesKeyword = keywords.length > 0 && keywords.some(kw => line.includes(kw));
+    if (matchesKeyword) {
+      for (let j = i; j <= Math.min(i + 3, lines.length - 1); j++) {
+        const urlMatch = lines[j].match(/(https?:\/\/[^\s)"'<>]+\.(?:png|jpe?g|webp|gif)(?:\?[^\s)"'<>]*)?)/i) ||
+                         lines[j].match(/(\/images\/products\/[^\s)"'<>]+\.(?:png|jpe?g|webp|gif))/i) ||
+                         lines[j].match(/(https?:\/\/[^\s)"'<>]+(?:photo|image|flyer|visuel|cdn|unsplash|cloudinary|imgbb)[^\s)"'<>]*)?/i);
+        if (urlMatch && urlMatch[1]) return urlMatch[1];
+      }
+    }
+  }
+
+  const allUrls = basePrompt.match(/(https?:\/\/[^\s)"'<>]+\.(?:png|jpe?g|webp|gif)(?:\?[^\s)"'<>]*)?)/i) ||
+                  basePrompt.match(/(\/images\/products\/[^\s)"'<>]+\.(?:png|jpe?g|webp|gif))/i);
+  return allUrls ? allUrls[1] : null;
+}
+
+// Helper pour extraire une photo detectee dans le texte genere par l'IA
+function extractPhotoFromResponse(text, basePrompt) {
+  if (!text || typeof text !== 'string') return null;
+  const photoTagMatch = text.match(/\[PHOTO:\s*([^\s\]|]+)(?:\s*\|\s*([^\]]*))?\]/i);
+  if (photoTagMatch) {
+    return { url: photoTagMatch[1].trim(), caption: (photoTagMatch[2] || '').trim() };
+  }
+  const urlMatch = text.match(/(https?:\/\/[^\s)"'<>]+\.(?:png|jpe?g|webp|gif)(?:\?[^\s)"'<>]*)?)/i) ||
+                   text.match(/(\/images\/products\/[^\s)"'<>]+\.(?:png|jpe?g|webp|gif))/i);
+  if (urlMatch) {
+    return { url: urlMatch[1].trim(), caption: '' };
+  }
+  return null;
+}
+
 /**
  * Moteur de réponse commerciale IA pour VANDIA IA
  * Utilise strictement la configuration, le catalogue, les prix, les instructions et l'historique du compte
@@ -789,6 +870,11 @@ async function generateSalesAgentResponse({
 - Tu es polyglotte et t'adaptes naturellement à la langue de ton interlocuteur : Français, Anglais, Lingala (Congo RDC / Brazzaville), Swahili, etc.
 - Si le client s'exprime ou te salue en Lingala (ex: "Mbote", "Nalingi..."), accueille-le et réponds-lui chaleureusement en Lingala (ou en français limpide selon sa fluidité).
 - Si le client semble avoir des difficultés à écrire ou hésite, propose-lui avec bienveillance : « Si vous préférez, vous pouvez m'envoyer un message vocal (en Français, Lingala ou Anglais), je vous écoute et vous réponds immédiatement ! 😊 ».
+
+8. ENVOI AUTOMATIQUE DES PHOTOS DU CATALOGUE :
+- Lorsque le client demande à voir un article, demande des photos, un visuel ou un flyer (ex: "Envoyez-moi la photo", "Je veux voir le produit", "Avez-vous une photo ?", "Montrez-moi à quoi ça ressemble") :
+  UTILISE SYSTÉMATIQUEMENT l'outil officiel 'send_product_photo' avec le nom précis du produit et l'URL de sa photo trouvée dans le catalogue ou les instructions de l'entreprise.
+- L'outil expédiera immédiatement la photo réelle sur WhatsApp avec une légende vendeuse, et tu complèteras ta réponse pour guider et conseiller le client.
 `;
 
   const userInstructions = (basePrompt && basePrompt.trim().length > 10)
@@ -836,6 +922,31 @@ async function generateSalesAgentResponse({
             }
           },
           required: ['amount', 'product_names']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'send_product_photo',
+        description: "Envoie directement la photo ou le visuel officiel d'un produit/article du catalogue au client sur WhatsApp lorsqu'il demande à voir le produit, demande des photos, un visuel ou un flyer.",
+        parameters: {
+          type: 'object',
+          properties: {
+            product_name: {
+              type: 'string',
+              description: "Le nom précis de l'article ou produit dont le client souhaite voir la photo."
+            },
+            photo_url: {
+              type: 'string',
+              description: "L'URL directe de l'image (https://...) ou le chemin local de la photo du produit, extrait du catalogue ou des instructions du commerçant."
+            },
+            caption: {
+              type: 'string',
+              description: "Légende commerciale courte et attractive accompagnant la photo (ex: 'Voici notre formule Canva Pro 2 ans en promotion à 1 600 FCFA ✨')."
+            }
+          },
+          required: ['product_name']
         }
       }
     }
@@ -895,12 +1006,61 @@ async function generateSalesAgentResponse({
         : (paymentUrl 
             ? `Parfait ! Voici votre lien de paiement sécurisé pour ${productNames} (${amount} FCFA) : ${paymentUrl}`
             : "Votre commande est bien notée. Un responsable va finaliser votre lien de paiement.");
+    } else if (toolCall.function && toolCall.function.name === 'send_product_photo') {
+      let args = {};
+      try { args = JSON.parse(toolCall.function.arguments || '{}'); } catch(e) {}
+      const productName = args.product_name || 'Produit';
+      let photoUrl = args.photo_url || '';
+      const caption = args.caption || `${productName} ✨`;
+
+      console.log(`[WA/IA] 🖼️ Outil send_product_photo appelé pour ${userId} : ${productName} (${photoUrl || 'Recherche auto URL...'})`);
+
+      if (!photoUrl && basePrompt) {
+        photoUrl = findPhotoUrlForProduct(productName, basePrompt) || '';
+      }
+
+      openAiMessages.push(msgObj);
+      openAiMessages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: JSON.stringify({
+          status: photoUrl ? 'success' : 'not_found',
+          product_name: productName,
+          photo_url: photoUrl || null,
+          message: photoUrl ? 'Photo prête à être expédiée' : 'Aucune photo trouvée pour ce produit'
+        })
+      });
+
+      const followUp = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: openAiMessages,
+        max_tokens: 450,
+        temperature: 0.7
+      });
+
+      const replyContent = (followUp.choices && followUp.choices[0] && followUp.choices[0].message && followUp.choices[0].message.content)
+        ? followUp.choices[0].message.content.trim()
+        : `Voici la photo de ${productName} ! 😊`;
+
+      return {
+        text: replyContent,
+        photo: photoUrl ? { url: photoUrl, caption, productName } : null
+      };
     }
   }
 
   const replyText = (msgObj && msgObj.content)
     ? msgObj.content.trim()
     : "Je reste à votre entière disposition pour vous accompagner dans votre commande !";
+
+  const photoDetected = extractPhotoFromResponse(replyText, basePrompt);
+  if (photoDetected && photoDetected.url) {
+    const cleanText = replyText.replace(photoDetected.url, '').replace(/\[PHOTO:[^\]]+\]/gi, '').trim();
+    return {
+      text: cleanText,
+      photo: photoDetected
+    };
+  }
 
   return replyText;
 }
@@ -1056,8 +1216,9 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
 
     // Générer la réponse de l'agent commercial VANDIA IA
     let aiResponse = "";
+    let photoData = null;
     try {
-      aiResponse = await generateSalesAgentResponse({
+      const rawAiResult = await generateSalesAgentResponse({
         userId,
         phone: rawSender,
         contactName: session.contactName || cName,
@@ -1066,6 +1227,21 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
         history: session.history,
         basePrompt
       });
+
+      if (rawAiResult && typeof rawAiResult === 'object' && rawAiResult.text) {
+        aiResponse = rawAiResult.text;
+        photoData = rawAiResult.photo || null;
+      } else {
+        aiResponse = String(rawAiResult || '');
+      }
+
+      if (!photoData && aiResponse) {
+        const detected = extractPhotoFromResponse(aiResponse, basePrompt);
+        if (detected && detected.url) {
+          photoData = detected;
+          aiResponse = aiResponse.replace(detected.url, '').replace(/\[PHOTO:[^\]]+\]/gi, '').trim();
+        }
+      }
     } catch (aiErr) {
       console.error("[WA/IA] Erreur génération IA :", aiErr.message);
       aiResponse = session.isNewSession
@@ -1085,6 +1261,61 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     );
 
     console.log(`[WA/REPLY] Envoi de la réponse IA vers ${msg.from} : "${aiResponse.substring(0, 80)}..."`);
+
+    // =========================================================================
+    // LIVRAISON DE LA PHOTO PRODUIT DU CATALOGUE (SI DEMANDÉE PAR LE CLIENT)
+    // =========================================================================
+    let photoDelivered = false;
+    if (photoData && photoData.url) {
+      try {
+        console.log(`[WA/PHOTO] 🖼️ Préparation de la photo pour ${msg.from} : ${photoData.url}`);
+        let pMedia = null;
+        const pUrl = photoData.url;
+        if (pUrl.startsWith('/images/')) {
+          const localPath = path.join(__dirname, pUrl);
+          if (fs.existsSync(localPath)) {
+            pMedia = MessageMedia.fromFilePath(localPath);
+          }
+        } else if (pUrl.startsWith('http://') || pUrl.startsWith('https://')) {
+          pMedia = await MessageMedia.fromUrl(pUrl, { unsafeMime: true });
+        } else if (fs.existsSync(pUrl)) {
+          pMedia = MessageMedia.fromFilePath(pUrl);
+        }
+
+        if (pMedia) {
+          const photoCaption = photoData.caption || (photoData.productName ? `${photoData.productName} ✨` : '');
+          try {
+            if (typeof msg.reply === 'function') {
+              const pSent = await msg.reply(pMedia, undefined, { caption: photoCaption });
+              if (pSent) photoDelivered = true;
+            }
+          } catch (pReplyErr) {
+            console.warn(`[WA/PHOTO] msg.reply photo notice: ${pReplyErr.message}`);
+          }
+
+          if (!photoDelivered) {
+            try {
+              const chat = await Promise.race([
+                msg.getChat(),
+                new Promise((_, r) => setTimeout(() => r(null), 10000))
+              ]);
+              if (chat && typeof chat.sendMessage === 'function') {
+                const pSentChat = await chat.sendMessage(pMedia, { caption: photoCaption });
+                if (pSentChat) photoDelivered = true;
+              }
+            } catch (pChatErr) {
+              console.warn(`[WA/PHOTO] chat.sendMessage photo notice: ${pChatErr.message}`);
+            }
+          }
+
+          if (photoDelivered) {
+            console.log(`[WA/PHOTO] ✅ Photo produit (${photoData.productName || 'catalogue'}) délivrée à ${msg.from} !`);
+          }
+        }
+      } catch (photoSendErr) {
+        console.warn(`[WA/PHOTO] ⚠️ Note envoi photo :`, photoSendErr.message);
+      }
+    }
 
     // =========================================================================
     // SYNTHÈSE VOCALE IA NATURELLE (VOICE-TO-VOICE) : L'IA RÉPOND EN VOCAL
@@ -2194,7 +2425,7 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
       session.history = session.history.slice(-12);
     }
 
-    const reply = await generateSalesAgentResponse({
+    const rawReply = await generateSalesAgentResponse({
       userId: userId || 'test_user',
       phone,
       contactName: session.contactName,
@@ -2203,6 +2434,9 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
       history: session.history,
       basePrompt: systemPrompt
     });
+
+    const reply = (rawReply && typeof rawReply === 'object' && rawReply.text) ? rawReply.text : String(rawReply || '');
+    const photo = (rawReply && typeof rawReply === 'object' && rawReply.photo) ? rawReply.photo : null;
 
     await saveCustomerSession(
       userId || 'test_user',
@@ -2217,6 +2451,7 @@ app.post('/api/ai/chat-test', aiChatLimiter, async (req, res) => {
     res.json({
       success: true,
       reply,
+      photo,
       session: {
         isNewSession: session.isNewSession,
         historyCount: session.history.length + 2,
