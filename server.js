@@ -1105,104 +1105,122 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     }
 
     // Si une note vocale a été générée, l'expédier immédiatement en format PTT (Push-To-Talk)
+    let voiceDelivered = false;
     if (voiceMedia) {
       try {
         if (typeof msg.reply === 'function') {
-          await msg.reply(voiceMedia, undefined, { sendAudioAsVoice: true });
-          console.log(`[WA/DELIVERED] 🎙️ Note vocale PTT délivrée instantanément via msg.reply vers ${msg.from}`);
-        } else {
-          const chat = await msg.getChat();
-          if (chat && typeof chat.sendMessage === 'function') {
-            await chat.sendMessage(voiceMedia, { sendAudioAsVoice: true });
-            console.log(`[WA/DELIVERED] 🎙️ Note vocale PTT délivrée via chat.sendMessage vers ${msg.from}`);
+          const vSent = await msg.reply(voiceMedia, undefined, { sendAudioAsVoice: true });
+          if (vSent) {
+            voiceDelivered = true;
+            delivered = true;
+            console.log(`[WA/DELIVERED] 🎙️ Note vocale PTT délivrée instantanément via msg.reply vers ${msg.from}`);
           }
         }
       } catch (vSendErr) {
-        console.warn('[WA/DELIVERY] ⚠️ Note livraison vocale PTT :', vSendErr.message);
-      }
-    }
-
-    // DÉLIVRANCE MULTI-NIVEAUX GARANTIE À 100% DU TEXTE (Gère nativement @c.us et @lid)
-    let delivered = false;
-
-    // Niveau 1 : msg.reply direct (Le plus fiable pour répondre instantanément à un message entrant)
-    try {
-      if (typeof msg.reply === 'function') {
-        const sent = await msg.reply(aiResponse);
-        if (sent) {
-          delivered = true;
-          console.log(`[WA/DELIVERED] Réponse IA délivrée instantanément via msg.reply vers ${msg.from}`);
-        }
-      }
-    } catch (replyErr) {
-      console.warn(`[WA/DELIVERY] msg.reply direct a échoué: ${replyErr.message}`);
-    }
-
-    // Niveau 2 : Envoi via l'objet Chat (recommandé et officiel whatsapp-web.js)
-    if (!delivered) {
-      try {
-        const chat = await Promise.race([
-          msg.getChat(),
-          new Promise((_, r) => setTimeout(() => r(null), 10000))
-        ]);
-        if (chat && typeof chat.sendMessage === 'function') {
-          try { await chat.sendStateTyping(); } catch(e) {}
-          await new Promise(r => setTimeout(r, 500));
-          const sent = await chat.sendMessage(aiResponse);
-          if (sent) delivered = true;
-          console.log(`[WA/DELIVERED] Réponse IA délivrée avec succès via chat.sendMessage à ${chat.id ? chat.id._serialized : msg.from}`);
-        }
-      } catch (chatSendErr) {
-        console.warn(`[WA/DELIVERY] chat.sendMessage a échoué: ${chatSendErr.message}`);
-      }
-    }
-
-    // Niveau 3 : client.sendMessage avec cibles candidates (@c.us et @lid)
-    if (!delivered) {
-      const candidates = [];
-      if (isSelfTest) {
-        if (client.info && client.info.wid) candidates.push(client.info.wid._serialized);
-        const myP = (client.info && client.info.wid ? client.info.wid.user : null) || (waNumbers[userId] ? String(waNumbers[userId]).replace(/\D/g, '') : null);
-        if (myP) candidates.push(`${myP}@c.us`);
-        if (msg.from) candidates.push(msg.from);
-      } else {
-        if (cleanPhone && cleanPhone.length >= 8 && !cleanPhone.startsWith('3900')) {
-          candidates.push(`${cleanPhone}@c.us`);
-        }
-        if (msg.from) candidates.push(msg.from);
-        if (msg.author) candidates.push(msg.author);
+        console.warn('[WA/DELIVERY] ⚠️ Note livraison vocale msg.reply :', vSendErr.message);
       }
 
-      for (const target of candidates) {
-        if (delivered) break;
-        let formattedTarget = target;
-        if (formattedTarget.includes('@s.whatsapp.net')) {
-          formattedTarget = formattedTarget.replace('@s.whatsapp.net', '@c.us');
-        } else if (!formattedTarget.includes('@')) {
-          formattedTarget = `${formattedTarget.replace(/\D/g, '')}@c.us`;
-        }
-
+      if (!voiceDelivered) {
         try {
-          const sent = await client.sendMessage(formattedTarget, aiResponse);
+          const chat = await Promise.race([
+            msg.getChat(),
+            new Promise((_, r) => setTimeout(() => r(null), 10000))
+          ]);
+          if (chat && typeof chat.sendMessage === 'function') {
+            const vSentChat = await chat.sendMessage(voiceMedia, { sendAudioAsVoice: true });
+            if (vSentChat) {
+              voiceDelivered = true;
+              delivered = true;
+              console.log(`[WA/DELIVERED] 🎙️ Note vocale PTT délivrée via chat.sendMessage vers ${msg.from}`);
+            }
+          }
+        } catch (vChatErr) {
+          console.warn('[WA/DELIVERY] ⚠️ Note livraison vocale chat.sendMessage :', vChatErr.message);
+        }
+      }
+    }
+
+    // DÉLIVRANCE TEXTE (Uniquement si le message entrant était en texte, ou en secours si la note vocale a échoué)
+    if (!voiceDelivered) {
+      // Niveau 1 : msg.reply direct (Le plus fiable pour répondre instantanément à un message entrant)
+      try {
+        if (typeof msg.reply === 'function') {
+          const sent = await msg.reply(aiResponse);
           if (sent) {
             delivered = true;
-            console.log(`[WA/DELIVERED] Réponse IA délivrée via client.sendMessage à ${formattedTarget}`);
-            break;
+            console.log(`[WA/DELIVERED] Réponse IA délivrée instantanément via msg.reply vers ${msg.from}`);
           }
-        } catch (directErr) {
-          console.warn(`[WA/DELIVERY] client.sendMessage direct vers ${formattedTarget} a échoué: ${directErr.message}`);
+        }
+      } catch (replyErr) {
+        console.warn(`[WA/DELIVERY] msg.reply direct a échoué: ${replyErr.message}`);
+      }
+
+      // Niveau 2 : Envoi via l'objet Chat (recommandé et officiel whatsapp-web.js)
+      if (!delivered) {
+        try {
+          const chat = await Promise.race([
+            msg.getChat(),
+            new Promise((_, r) => setTimeout(() => r(null), 10000))
+          ]);
+          if (chat && typeof chat.sendMessage === 'function') {
+            try { await chat.sendStateTyping(); } catch(e) {}
+            await new Promise(r => setTimeout(r, 500));
+            const sent = await chat.sendMessage(aiResponse);
+            if (sent) delivered = true;
+            console.log(`[WA/DELIVERED] Réponse IA délivrée avec succès via chat.sendMessage à ${chat.id ? chat.id._serialized : msg.from}`);
+          }
+        } catch (chatSendErr) {
+          console.warn(`[WA/DELIVERY] chat.sendMessage a échoué: ${chatSendErr.message}`);
         }
       }
-    }
 
-    // Niveau 3 : msg.reply en ultime secours
-    if (!delivered) {
-      try {
-        const sent = await msg.reply(aiResponse);
-        if (sent) delivered = true;
-        console.log(`[WA/DELIVERED] Réponse IA délivrée via msg.reply en ultime secours`);
-      } catch (replyErr) {
-        console.error(`[WA/DELIVERY] Échec définitif délivrance réponse: ${replyErr.message}`);
+      // Niveau 3 : client.sendMessage avec cibles candidates (@c.us et @lid)
+      if (!delivered) {
+        const candidates = [];
+        if (isSelfTest) {
+          if (client.info && client.info.wid) candidates.push(client.info.wid._serialized);
+          const myP = (client.info && client.info.wid ? client.info.wid.user : null) || (waNumbers[userId] ? String(waNumbers[userId]).replace(/\D/g, '') : null);
+          if (myP) candidates.push(`${myP}@c.us`);
+          if (msg.from) candidates.push(msg.from);
+        } else {
+          if (cleanPhone && cleanPhone.length >= 8 && !cleanPhone.startsWith('3900')) {
+            candidates.push(`${cleanPhone}@c.us`);
+          }
+          if (msg.from) candidates.push(msg.from);
+          if (msg.author) candidates.push(msg.author);
+        }
+
+        for (const target of candidates) {
+          if (delivered) break;
+          let formattedTarget = target;
+          if (formattedTarget.includes('@s.whatsapp.net')) {
+            formattedTarget = formattedTarget.replace('@s.whatsapp.net', '@c.us');
+          } else if (!formattedTarget.includes('@')) {
+            formattedTarget = `${formattedTarget.replace(/\D/g, '')}@c.us`;
+          }
+
+          try {
+            const sent = await client.sendMessage(formattedTarget, aiResponse);
+            if (sent) {
+              delivered = true;
+              console.log(`[WA/DELIVERED] Réponse IA délivrée via client.sendMessage à ${formattedTarget}`);
+              break;
+            }
+          } catch (directErr) {
+            console.warn(`[WA/DELIVERY] client.sendMessage direct vers ${formattedTarget} a échoué: ${directErr.message}`);
+          }
+        }
+      }
+
+      // Niveau 4 : msg.reply en ultime secours
+      if (!delivered) {
+        try {
+          const sent = await msg.reply(aiResponse);
+          if (sent) delivered = true;
+          console.log(`[WA/DELIVERED] Réponse IA délivrée via msg.reply en ultime secours`);
+        } catch (replyErr) {
+          console.error(`[WA/DELIVERY] Échec définitif délivrance réponse: ${replyErr.message}`);
+        }
       }
     }
 
