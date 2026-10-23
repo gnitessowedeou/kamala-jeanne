@@ -25,7 +25,7 @@ const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-const { OpenAI } = require('openai');
+const { OpenAI, toFile } = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -906,6 +906,40 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     // Ignorer les statuts WhatsApp et les groupes de discussion
     if (msg.isStatus || (msg.from && msg.from.includes('@g.us')) || (msg.to && msg.to.includes('@g.us'))) {
       return;
+    }
+
+    // Support universel et non-intrusif des messages vocaux WhatsApp (PTT / Audio) via OpenAI Whisper
+    if ((!msg.body || msg.body.trim() === '') && (msg.hasMedia || msg.type === 'ptt' || msg.type === 'audio')) {
+      try {
+        if (typeof msg.downloadMedia === 'function') {
+          console.log(`[WA/VOICE] 🎙️ Message vocal reçu de ${msg.from}. Téléchargement et transcription OpenAI Whisper...`);
+          const media = await Promise.race([
+            msg.downloadMedia(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Délai téléchargement vocal dépassé (15s)')), 15000))
+          ]);
+          if (media && media.data && openai) {
+            const audioBuffer = Buffer.from(media.data, 'base64');
+            const cleanMime = media.mimetype ? media.mimetype.split(';')[0].trim() : 'audio/ogg';
+            let ext = 'ogg';
+            if (cleanMime.includes('mp4') || cleanMime.includes('m4a')) ext = 'm4a';
+            else if (cleanMime.includes('mp3') || cleanMime.includes('mpeg')) ext = 'mp3';
+            else if (cleanMime.includes('wav')) ext = 'wav';
+            else if (cleanMime.includes('webm')) ext = 'webm';
+
+            const audioFile = await toFile(audioBuffer, `voice_note.${ext}`, { type: cleanMime });
+            const transcription = await openai.audio.transcriptions.create({
+              file: audioFile,
+              model: 'whisper-1'
+            });
+            if (transcription && transcription.text && transcription.text.trim()) {
+              msg.body = transcription.text.trim();
+              console.log(`[WA/VOICE] ✅ Vocal de ${msg.from} transcrit avec succès : "${msg.body}"`);
+            }
+          }
+        }
+      } catch (audioErr) {
+        console.warn(`[WA/VOICE] ⚠️ Note transcription audio pour ${msg.from} :`, audioErr.message);
+      }
     }
 
     // Vérifier que le message contient du texte
