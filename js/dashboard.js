@@ -8004,6 +8004,10 @@ function updateCatalogStats() {
   if (countActiveEl) countActiveEl.textContent = activeCount;
   if (countOutEl) countOutEl.textContent = outCount;
   if (countValEl) countValEl.textContent = new Intl.NumberFormat('fr-FR').format(totalVal) + ' FCFA';
+
+  if (typeof renderOverviewCatalog === 'function') {
+    renderOverviewCatalog();
+  }
 }
 
 function renderCatalog() {
@@ -8391,8 +8395,91 @@ async function deleteProduct(productId) {
   }
 }
 
+function renderOverviewCatalog() {
+  const countEl = document.getElementById('overview-catalog-count');
+  const photosEl = document.getElementById('overview-catalog-photos');
+  const valEl = document.getElementById('overview-catalog-val');
+  const gridEl = document.getElementById('overview-catalog-grid');
+  if (!gridEl && !countEl) return;
+
+  const items = window.catalogProducts || [];
+  const total = items.length;
+  const withPhotos = items.filter(x => x.image_url && x.image_url.trim().length > 0).length;
+  let totalVal = 0;
+  items.forEach(x => {
+    const qty = (x.stock && x.stock > 0) ? x.stock : (x.stock === -1 ? 10 : 0);
+    totalVal += (Number(x.price) || 0) * qty;
+  });
+
+  if (countEl) countEl.textContent = total;
+  if (photosEl) photosEl.textContent = withPhotos;
+  if (valEl) valEl.textContent = new Intl.NumberFormat('fr-FR').format(totalVal) + ' FCFA';
+
+  if (!gridEl) return;
+
+  if (items.length === 0) {
+    gridEl.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 28px; text-align: center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+        <i class="fa-solid fa-boxes-stacked fa-2x" style="color: var(--whatsapp-green); opacity: 0.6; margin-bottom: 10px;"></i>
+        <h4 style="margin: 0 0 6px 0; color: #fff; font-size: 14.5px;">Aucun article dans votre catalogue</h4>
+        <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 14px 0;">Ajoutez vos produits avec tarifs et photos pour que l'IA puisse les vendre sur WhatsApp.</p>
+        <button type="button" class="btn-primary-glow" onclick="openProductModal()" style="padding: 7px 14px; font-size: 12px;">
+          <i class="fa-solid fa-plus"></i> Ajouter mon premier article
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const previewItems = items.slice(0, 4);
+  gridEl.innerHTML = previewItems.map(item => {
+    const isUnlimited = (item.stock === -1 || item.stock === null || item.stock === undefined);
+    const isOutOfStock = (item.stock === 0);
+    const stockBadge = isUnlimited 
+      ? `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; padding: 2px 6px;"><i class="fa-solid fa-infinity"></i> Illimité</span>`
+      : isOutOfStock
+        ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px; padding: 2px 6px;"><i class="fa-solid fa-triangle-exclamation"></i> Rupture</span>`
+        : `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 10px; padding: 2px 6px;">${item.stock} en stock</span>`;
+
+    const imgDisplay = item.image_url 
+      ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" style="width: 100%; height: 130px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\\'height:130px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); color:var(--text-muted);\\\'><i class=\\\'fa-solid fa-image fa-2x\\\'></i></div>';">`
+      : `<div style="height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(37, 211, 102, 0.05), rgba(16, 185, 129, 0.02)); border-top-left-radius: 10px; border-top-right-radius: 10px; color: var(--text-muted);"><i class="fa-solid fa-box-open fa-2x" style="color: var(--whatsapp-green); opacity: 0.5; margin-bottom: 6px;"></i><span style="font-size: 10px;">Sans photo</span></div>`;
+
+    return `
+      <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; transition: transform 0.2s, border-color 0.2s;">
+        <div style="position: relative;">
+          ${imgDisplay}
+          <div style="position: absolute; top: 8px; right: 8px;">
+            ${stockBadge}
+          </div>
+        </div>
+        <div style="padding: 12px; display: flex; flex-direction: column; flex-grow: 1;">
+          <div style="font-size: 10px; color: var(--whatsapp-green); font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">
+            ${escapeHtml(item.category || 'Général')}
+          </div>
+          <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #fff; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.name)}">
+            ${escapeHtml(item.name)}
+          </h4>
+          <div style="font-size: 15px; font-weight: 700; color: var(--whatsapp-green); margin-bottom: 8px;">
+            ${formatCatalogPrice(item.price, item.currency)}
+          </div>
+          <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center;">
+            <button class="btn btn-secondary btn-sm" onclick="openProductModal('${item.id}')" style="padding: 4px 8px; font-size: 11px;">
+              <i class="fa-solid fa-pen-to-square"></i> Modifier
+            </button>
+            <span style="font-size: 10px; color: var(--text-muted);">
+              <i class="fa-solid fa-robot" style="color: var(--whatsapp-green);"></i> Vendu par IA
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 window.loadCatalogProducts = loadCatalogProducts;
 window.renderCatalog = renderCatalog;
+window.renderOverviewCatalog = renderOverviewCatalog;
 window.openProductModal = openProductModal;
 window.closeProductModal = closeProductModal;
 window.handleProductPhotoSelected = handleProductPhotoSelected;
