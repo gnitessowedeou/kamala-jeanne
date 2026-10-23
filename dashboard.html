@@ -156,6 +156,15 @@
               </a>
             </li>
             <li>
+              <a href="#catalog" class="nav-item-link" data-view="catalog" data-title="Catalogue Produits & Vendeur IA">
+                <div class="nav-item-left">
+                  <i class="fa-solid fa-boxes-stacked nav-item-icon"></i>
+                  <span>Catalogue Produits</span>
+                </div>
+                <span class="badge badge-green" id="nav-badge-catalog">Auto-Sync</span>
+              </a>
+            </li>
+            <li>
               <a href="#billing" class="nav-item-link" data-view="billing" data-title="Forfaits & Abonnement">
                 <div class="nav-item-left">
                   <i class="fa-solid fa-credit-card nav-item-icon"></i>
@@ -982,6 +991,150 @@
                 <span>Tester en direct dans le Chat</span>
               </button>
             </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3B: CATALOGUE PRODUITS & SYNCHRONISATION IA (#catalog)
+             ================================================================== -->
+        <section class="view-section" id="view-catalog">
+          <div class="section-header-bar">
+            <div class="section-title-wrap">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <h2 style="margin: 0;">Catalogue Produits &amp; Synchronisation IA</h2>
+                <span class="badge badge-green" style="font-size: 11px; padding: 3px 8px;">
+                  <i class="fa-solid fa-bolt"></i> Auto-Sync WhatsApp
+                </span>
+              </div>
+              <p class="section-desc">Gérez vos 20 à 30 articles avec prix, photos réelles et stocks. Votre Agent IA WhatsApp s'y réfère instantanément pour renseigner vos clients et expédier les visuels officiels.</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button class="btn-primary-glow" id="btn-add-product" type="button" onclick="openProductModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span>Ajouter un Article</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 Top Metric Cards -->
+          <div class="overview-stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 24px;">
+            <div class="glass-panel stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-title">Articles au Catalogue</span>
+                <div class="stat-card-icon" style="background: rgba(37, 211, 102, 0.12); color: var(--whatsapp-green);">
+                  <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+              </div>
+              <div class="stat-card-val-row">
+                <span class="stat-card-val" id="catalog-count-display">0 / 30</span>
+                <span class="stat-card-badge positive" id="catalog-percent-badge">0%</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 99px; margin-top: 8px; overflow: hidden;">
+                <div id="catalog-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #25D366, #128C7E); transition: width 0.4s ease;"></div>
+              </div>
+            </div>
+
+            <div class="glass-panel stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-title">Articles Actifs IA</span>
+                <div class="stat-card-icon" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
+                  <i class="fa-solid fa-robot"></i>
+                </div>
+              </div>
+              <div class="stat-card-val-row">
+                <span class="stat-card-val" id="catalog-active-count">0</span>
+                <span class="stat-card-badge positive">En vente</span>
+              </div>
+              <span class="stat-card-subtitle">Actifs dans le prompt WhatsApp</span>
+            </div>
+
+            <div class="glass-panel stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-title">Photos Disponibles</span>
+                <div class="stat-card-icon" style="background: rgba(168, 85, 247, 0.12); color: #c084fc;">
+                  <i class="fa-solid fa-image"></i>
+                </div>
+              </div>
+              <div class="stat-card-val-row">
+                <span class="stat-card-val" id="catalog-photos-count">0</span>
+                <span class="stat-card-badge positive">HD</span>
+              </div>
+              <span class="stat-card-subtitle">Prêtes à être expédiées au client</span>
+            </div>
+
+            <div class="glass-panel stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-title">Moteur Vendeur IA</span>
+                <div class="stat-card-icon" style="background: rgba(34, 197, 94, 0.12); color: #4ade80;">
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+              </div>
+              <div class="stat-card-val-row">
+                <span class="stat-card-val" style="font-size: 17px; color: var(--whatsapp-green);">Synchronisé</span>
+              </div>
+              <span class="stat-card-subtitle">Zero-hallucination sur les prix</span>
+            </div>
+          </div>
+
+          <!-- Auto-Sync Explanatory Banner -->
+          <div class="glass-panel" style="padding: 16px 20px; margin-bottom: 24px; border-left: 4px solid var(--whatsapp-green); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; background: rgba(37, 211, 102, 0.04);">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 18px; flex-shrink: 0;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 14px; font-weight: 700; margin: 0 0 2px 0;">Comment l'Agent IA utilise votre catalogue ?</h4>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 0;">
+                  Dès qu'un article est enregistré, l'IA connaît son prix exact, ses couleurs et ses stocks. Si le prospect WhatsApp écrit <strong style="color: #fff;">« Envoyez-moi la photo »</strong>, l'IA expédie automatiquement la photo correspondante sans que vous n'ayez à lever le petit doigt.
+                </p>
+              </div>
+            </div>
+            <button class="btn-secondary-glass" type="button" onclick="openProductModal()" style="padding: 8px 16px; font-size: 12.5px; white-space: nowrap;">
+              <i class="fa-solid fa-plus"></i> Ajouter un Article
+            </button>
+          </div>
+
+          <!-- Filter & Search Controls -->
+          <div class="glass-panel" style="padding: 14px 18px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 12px; flex: 1; min-width: 280px; align-items: center;">
+              <div style="position: relative; flex: 1;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+                <input type="text" id="catalog-search-input" class="form-control" placeholder="Rechercher par nom, couleur, catégorie..." style="padding-left: 38px; width: 100%; height: 38px; font-size: 13px;" oninput="filterCatalogCards()">
+              </div>
+              <select id="catalog-category-filter" class="form-control" style="width: auto; min-width: 160px; height: 38px; font-size: 13px;" onchange="filterCatalogCards()">
+                <option value="all">Toutes Catégories</option>
+                <option value="mode">Prêt-à-porter & Mode</option>
+                <option value="beaute">Beauté & Cosmétiques</option>
+                <option value="tech">Tech & Électronique</option>
+                <option value="digital">Digital & Formations</option>
+                <option value="autre">Autres Articles</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" class="tag-select-btn active" data-status-filter="all" onclick="setCatalogStatusFilter('all', this)" style="padding: 6px 12px; font-size: 12px;">Tous</button>
+              <button type="button" class="tag-select-btn" data-status-filter="active" onclick="setCatalogStatusFilter('active', this)" style="padding: 6px 12px; font-size: 12px;">Actifs IA</button>
+              <button type="button" class="tag-select-btn" data-status-filter="out_of_stock" onclick="setCatalogStatusFilter('out_of_stock', this)" style="padding: 6px 12px; font-size: 12px;">En rupture</button>
+            </div>
+          </div>
+
+          <!-- Product Grid Container -->
+          <div id="catalog-products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+            <!-- Dynamiquement généré par renderCatalog() -->
+          </div>
+
+          <!-- Empty State (Shown when 0 products) -->
+          <div id="catalog-empty-state" class="glass-panel" style="padding: 50px 20px; text-align: center; display: none;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px auto; color: var(--whatsapp-green); font-size: 28px;">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <h3 style="font-size: 17px; margin-bottom: 8px;">Votre catalogue est encore vide</h3>
+            <p style="color: var(--text-muted); font-size: 13.5px; max-width: 480px; margin: 0 auto 22px auto;">
+              Ajoutez vos 20 à 30 articles avec leur prix et leur photo. Votre Agent IA commencera immédiatement à les proposer à vos prospects WhatsApp.
+            </p>
+            <button class="btn-primary-glow" type="button" onclick="openProductModal()">
+              <i class="fa-solid fa-plus"></i>
+              <span>Ajouter mon Premier Article</span>
+            </button>
           </div>
         </section>
 
@@ -3987,6 +4140,151 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           <button type="submit" class="btn-primary-glow" id="btn-submit-team-invite">
             <i class="fa-solid fa-paper-plane"></i>
             <span>Envoyer l'invitation</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 12: AJOUTER / MODIFIER UN ARTICLE DU CATALOGUE (#product-modal)
+       ========================================================================== -->
+  <div class="modal-backdrop" id="product-modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 620px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); display: flex; align-items: center; justify-content: center; color: var(--whatsapp-green); font-size: 16px;">
+            <i class="fa-solid fa-box-open" id="product-modal-icon"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="product-modal-title">Ajouter un Article au Catalogue</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">L'article sera instantanément mémorisé par votre Agent IA WhatsApp.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeProductModal()" aria-label="Fermer la modale" type="button">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-product" onsubmit="handleSaveProduct(event)">
+        <input type="hidden" id="product-id-input" value="">
+        <input type="hidden" id="product-image-url-input" value="">
+
+        <div class="modal-body" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
+          <!-- Product Name -->
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nom du Produit / Service <span style="color: var(--whatsapp-green);">*</span></label>
+            <input type="text" id="product-name-input" class="form-control" required placeholder="Ex: Montre Acier Luxe Homme, Robe Soie Dubaï..." style="width: 100%;">
+          </div>
+
+          <!-- Price & Currency -->
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Prix de Vente <span style="color: var(--whatsapp-green);">*</span></label>
+              <input type="number" id="product-price-input" class="form-control" required min="0" step="any" placeholder="Ex: 15000" style="width: 100%;">
+            </div>
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Devise</label>
+              <select id="product-currency-select" class="form-control" style="width: 100%;">
+                <option value="FCFA" selected>FCFA (XOF)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="CDF">Franc Congolais (CDF)</option>
+                <option value="GNF">Franc Guinéen (GNF)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Photo Upload & Preview -->
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+              Photo Officielle du Produit (Envoi WhatsApp)
+            </label>
+            
+            <div id="product-photo-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; background: rgba(255,255,255,0.02);" onclick="document.getElementById('product-file-input').click()">
+              <input type="file" id="product-file-input" accept="image/*" style="display: none;" onchange="handleProductPhotoSelected(event)">
+              
+              <div id="product-photo-placeholder">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto; color: var(--whatsapp-green); font-size: 20px;">
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 0 0 4px 0; color: #fff;">Cliquez pour choisir une photo</p>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">JPG, PNG ou WEBP depuis votre smartphone ou PC (Max 10 Mo)</p>
+              </div>
+
+              <!-- Preview when image is selected -->
+              <div id="product-photo-preview-wrap" style="display: none; align-items: center; gap: 16px; text-align: left;">
+                <img id="product-photo-preview-img" src="" alt="Aperçu" style="width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2);">
+                <div style="flex: 1;">
+                  <p id="product-photo-filename" style="font-size: 13px; font-weight: 600; margin: 0 0 4px 0; color: #fff; word-break: break-all;"></p>
+                  <span class="badge badge-green" style="font-size: 10.5px;"><i class="fa-solid fa-check"></i> Prête pour envoi WhatsApp</span>
+                </div>
+                <button type="button" class="btn-secondary-glass" onclick="removeProductPhoto(event)" style="padding: 6px 10px; font-size: 11px; color: #ef4444;">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Alternative URL input toggle -->
+            <div style="margin-top: 8px; text-align: right;">
+              <button type="button" style="background: none; border: none; color: var(--text-muted); font-size: 11.5px; cursor: pointer; text-decoration: underline;" onclick="toggleProductUrlInput()">
+                Ou coller un lien direct d'image (URL)
+              </button>
+            </div>
+            <div id="product-url-input-container" style="display: none; margin-top: 8px;">
+              <input type="url" id="product-direct-url-input" class="form-control" placeholder="https://..." style="width: 100%; font-size: 12.5px;" oninput="handleDirectUrlInput(this.value)">
+            </div>
+          </div>
+
+          <!-- Category & Variants -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Catégorie</label>
+              <select id="product-category-select" class="form-control" style="width: 100%;">
+                <option value="mode" selected>Prêt-à-porter & Mode</option>
+                <option value="beaute">Beauté & Cosmétiques</option>
+                <option value="tech">Tech & Électronique</option>
+                <option value="digital">Digital & Formation</option>
+                <option value="autre">Autre Catégorie</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Couleurs & Tailles</label>
+              <input type="text" id="product-variants-input" class="form-control" placeholder="Ex: Noir, Doré / M, L, XL" style="width: 100%;">
+            </div>
+          </div>
+
+          <!-- Stock Management -->
+          <div class="form-group" style="margin-bottom: 18px; padding: 14px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div>
+                <span style="font-size: 13px; font-weight: 600; display: block;">Gestion du Stock</span>
+                <span style="font-size: 11.5px; color: var(--text-muted);">L'IA avertira poliment le client si le produit est épuisé.</span>
+              </div>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="product-unlimited-stock" checked onchange="toggleStockInput(this.checked)">
+                <span>Stock Illimité / Digital</span>
+              </label>
+            </div>
+            <div id="product-stock-qty-wrap" style="display: none;">
+              <label style="display: block; font-size: 12px; margin-bottom: 4px; color: var(--text-muted);">Nombre d'unités disponibles :</label>
+              <input type="number" id="product-stock-qty-input" class="form-control" min="0" placeholder="Ex: 25" style="width: 140px;">
+            </div>
+          </div>
+
+          <!-- Description & Sales Pitch -->
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Description &amp; Arguments de Vente pour l'IA</label>
+            <textarea id="product-description-input" class="form-control form-control-textarea" rows="3" placeholder="Ex: Cuir véritable résistant à l'eau. Livré avec son coffret cadeau. Livraison offerte à Cotonou et Abidjan." style="width: 100%;"></textarea>
+            <small style="color: var(--text-muted); font-size: 11px;">Ces arguments seront naturellement utilisés par l'IA lors des conversations WhatsApp pour convaincre le client.</small>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-secondary-glass" onclick="closeProductModal()">Annuler</button>
+          <button type="submit" class="btn-primary-glow" id="btn-save-product-submit">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Enregistrer et Synchroniser</span>
           </button>
         </div>
       </form>

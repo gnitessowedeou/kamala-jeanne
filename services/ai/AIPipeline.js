@@ -66,6 +66,7 @@ class AIPipeline {
 
     // 3. Récupération du profil commerçant (crédits, prompt personnalisé, consignes)
     let profile = null;
+    let productsList = [];
     if (this.supabase) {
       try {
         const { data } = await this.supabase
@@ -76,6 +77,19 @@ class AIPipeline {
         profile = data;
       } catch (dbErr) {
         console.warn(`[AIPipeline] Notice Supabase profile:`, dbErr.message);
+      }
+
+      try {
+        const { data: prods } = await this.supabase
+          .from('products')
+          .select('name, price, currency, description, variants, stock')
+          .eq('user_id', userId)
+          .eq('is_active', true);
+        if (prods && Array.isArray(prods) && prods.length > 0) {
+          productsList = prods;
+        }
+      } catch (prodErr) {
+        // Table optionnelle si non encore migrée
       }
     }
 
@@ -98,7 +112,7 @@ class AIPipeline {
     }
 
     // 5. Construction du Prompt & Consignes Commerciales
-    const systemPrompt = this.buildCommercialPrompt(profile, session.isNewSession, contactName);
+    const systemPrompt = this.buildCommercialPrompt(profile, session.isNewSession, contactName, productsList);
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -354,10 +368,23 @@ class AIPipeline {
   /**
    * Génère le prompt système d'agent commercial strict anti-hallucination.
    */
-  buildCommercialPrompt(profile, isNewSession, contactName) {
+  buildCommercialPrompt(profile, isNewSession, contactName, productsList = []) {
     const userPrompt = (profile && profile.ai_prompt && profile.ai_prompt.trim().length > 10)
       ? profile.ai_prompt.trim()
       : "Tu es l'agent commercial officiel de l'entreprise. Accueille le client, présente nos produits avec clarté et bienveillance, et aide-le à finaliser sa commande.";
+
+    let catalogSection = "";
+    if (productsList && productsList.length > 0) {
+      const itemsText = productsList.map(p => {
+        const stockStr = (p.stock === -1 || p.stock === null || p.stock === undefined) ? "Stock illimité" : (p.stock > 0 ? `${p.stock} unités dispo` : "RUPTURE TEMPORAIRE");
+        let line = `• ${p.name} : ${p.price} ${p.currency || 'FCFA'} (${stockStr})`;
+        if (p.description) line += ` - ${p.description}`;
+        if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) line += ` (Variantes: ${p.variants.join(', ')})`;
+        return line;
+      }).join('\n');
+
+      catalogSection = `\n### CATALOGUE PRODUITS OFFICIEL EN TEMPS RÉEL (SYNCHRONISÉ PAR LE COMMERÇANT) :\n${itemsText}\n`;
+    }
 
     return `
 ## RÈGLES STRICTES DE POSTURE COMMERCIALE (VANDIAS AI) :
@@ -385,9 +412,9 @@ class AIPipeline {
 - Si le client s'exprime en Lingala (ex: "Mbote", "Nalingi..."), réponds-lui chaleureusement en Lingala ou en français très clair.
 - Si le client a du mal à écrire ou s'il hésite, propose-lui cordialement d'envoyer un message vocal (en Français, Lingala ou Anglais), en le rassurant que tu l'écoutes et le comprends parfaitement ! 😊
 
-## INSTRUCTIONS & CATALOGUE DE L'ENTREPRISE :
+## INSTRUCTIONS & CONSIGNES DU COMMERÇANT :
 ${userPrompt}
-
+${catalogSection}
 ${isNewSession 
   ? `[ACCUEIL] : C'est le premier échange, salue cordialement le client (ex: "Bonjour ${contactName} !").`
   : `[SUIVI] : Conversation en cours, réponds directement sans formule d'accueil redondante.`
