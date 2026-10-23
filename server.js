@@ -23,7 +23,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const { OpenAI, toFile } = require('openai');
 
@@ -927,6 +927,7 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     } catch (seenErr) {}
 
     // Support universel et non-intrusif des messages vocaux WhatsApp (PTT / Audio) via OpenAI Whisper
+    let isVoiceInbound = Boolean(msg.hasMedia || msg.type === 'ptt' || msg.type === 'audio');
     if ((!msg.body || msg.body.trim() === '') && (msg.hasMedia || msg.type === 'ptt' || msg.type === 'audio')) {
       try {
         if (typeof msg.downloadMedia === 'function') {
@@ -962,6 +963,7 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
             });
             if (transcription && transcription.text && transcription.text.trim()) {
               msg.body = transcription.text.trim();
+              isVoiceInbound = true;
               console.log(`[WA/VOICE] ✅ Vocal de ${msg.from} transcrit avec succès : "${msg.body}"`);
             }
           }
@@ -1072,7 +1074,55 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
 
     console.log(`[WA/REPLY] Envoi de la réponse IA vers ${msg.from} : "${aiResponse.substring(0, 80)}..."`);
 
-    // DÉLIVRANCE MULTI-NIVEAUX GARANTIE À 100% (Gère nativement @c.us et @lid)
+    // =========================================================================
+    // SYNTHÈSE VOCALE IA NATURELLE (VOICE-TO-VOICE) : L'IA RÉPOND EN VOCAL
+    // =========================================================================
+    let voiceMedia = null;
+    if (isVoiceInbound && openai && aiResponse) {
+      try {
+        const cleanSpeechText = aiResponse
+          .replace(/https?:\/\/\S+/g, 'le lien envoyé par message')
+          .replace(/[*_~`#]/g, '')
+          .trim();
+
+        if (cleanSpeechText.length > 0) {
+          console.log(`[WA/TTS] 🎙️ Synthèse vocale naturelle (OpenAI TTS nova) pour ${msg.from}...`);
+          const speech = await openai.audio.speech.create({
+            model: 'tts-1',
+            voice: 'nova',
+            input: cleanSpeechText.substring(0, 1000), // Confort d'écoute optimal
+            response_format: 'opus'
+          });
+          const audioBuffer = Buffer.from(await speech.arrayBuffer());
+          if (audioBuffer && audioBuffer.length > 0) {
+            voiceMedia = new MessageMedia('audio/ogg; codecs=opus', audioBuffer.toString('base64'), 'reponse_vocale.opus');
+            console.log(`[WA/TTS] ✅ Note vocale IA générée avec succès (${audioBuffer.length} octets).`);
+          }
+        }
+      } catch (ttsErr) {
+        console.warn('[WA/TTS] ⚠️ Note synthèse vocale TTS :', ttsErr.message);
+      }
+    }
+
+    // Si une note vocale a été générée, l'expédier immédiatement en format PTT (Push-To-Talk)
+    if (voiceMedia) {
+      try {
+        if (typeof msg.reply === 'function') {
+          await msg.reply(voiceMedia, undefined, { sendAudioAsVoice: true });
+          console.log(`[WA/DELIVERED] 🎙️ Note vocale PTT délivrée instantanément via msg.reply vers ${msg.from}`);
+        } else {
+          const chat = await msg.getChat();
+          if (chat && typeof chat.sendMessage === 'function') {
+            await chat.sendMessage(voiceMedia, { sendAudioAsVoice: true });
+            console.log(`[WA/DELIVERED] 🎙️ Note vocale PTT délivrée via chat.sendMessage vers ${msg.from}`);
+          }
+        }
+      } catch (vSendErr) {
+        console.warn('[WA/DELIVERY] ⚠️ Note livraison vocale PTT :', vSendErr.message);
+      }
+    }
+
+    // DÉLIVRANCE MULTI-NIVEAUX GARANTIE À 100% DU TEXTE (Gère nativement @c.us et @lid)
     let delivered = false;
 
     // Niveau 1 : msg.reply direct (Le plus fiable pour répondre instantanément à un message entrant)
