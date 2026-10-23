@@ -7,7 +7,13 @@
   'use strict';
 
   let deferredPrompt = null;
-  const DISMISS_KEY = 'vandias_pwa_prompt_dismissed_until';
+  const DISMISS_KEY = 'vandias_pwa_dismissed_v2';
+  const SNOOZE_DELAY_MS = 2 * 60 * 1000; // Réapparition après 2 minutes si fermée
+
+  // Nettoyage immédiat des anciens verrous
+  try {
+    localStorage.removeItem('vandias_pwa_prompt_dismissed_until');
+  } catch (e) {}
 
   // 1. Enregistrement du Service Worker
   if ('serviceWorker' in navigator) {
@@ -53,10 +59,10 @@
     return isIOS && isWebkit && !isChromeOrFirefox && !isRunningStandalone();
   }
 
-  // 4. Vérification si l'utilisateur a fermé la bannière récemment (snooze 7 jours)
+  // 4. Vérification si l'utilisateur a fermé la bannière récemment (snooze 2 minutes)
   function isPromptDismissed() {
     try {
-      const until = localStorage.getItem(DISMISS_KEY);
+      const until = sessionStorage.getItem(DISMISS_KEY);
       if (until && Date.now() < parseInt(until, 10)) {
         return true;
       }
@@ -66,14 +72,22 @@
 
   function dismissPrompt() {
     try {
-      // Masquer pendant 7 jours
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+      // Masquer pendant 2 minutes seulement
+      sessionStorage.setItem(DISMISS_KEY, String(Date.now() + SNOOZE_DELAY_MS));
     } catch (e) {}
     const banner = document.getElementById('pwa-install-banner');
     if (banner) {
       banner.classList.remove('pwa-banner-visible');
       setTimeout(() => banner.remove(), 400);
     }
+
+    // Réapparaître automatiquement après 2 minutes
+    setTimeout(() => {
+      if (!isRunningStandalone()) {
+        try { sessionStorage.removeItem(DISMISS_KEY); } catch (e) {}
+        showInstallBanner();
+      }
+    }, SNOOZE_DELAY_MS);
   }
 
   // 5. Création et affichage de la bannière d'installation PWA Mobile
@@ -239,5 +253,12 @@
     }
     // Affichage systématique de la bannière sur téléphone après 2.5 secondes
     setTimeout(showInstallBanner, 2500);
+
+    // Rappel récurrent toutes les 2 minutes tant que l'app n'est pas installée
+    setInterval(() => {
+      if (!isRunningStandalone() && !document.getElementById('pwa-install-banner') && !isPromptDismissed()) {
+        showInstallBanner();
+      }
+    }, SNOOZE_DELAY_MS);
   }
 })();
