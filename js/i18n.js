@@ -499,11 +499,11 @@
     },
 
     // Footer
-    "Plateforme SaaS d'Automatisation Commerciale WhatsApp IA pour l'Afrique et l'International.": {
-      en: "WhatsApp AI Sales Automation SaaS Platform for Africa and Global Markets.",
-      es: "Plataforma SaaS de Automatización de Ventas por WhatsApp IA para África y el Mundo.",
-      pt: "Plataforma SaaS de Automação de Vendas no WhatsApp IA para a África e o Mundo.",
-      ar: "منصة ساس لأتمتة مبيعات واتساب بالذكاء الاصطناعي لأفريقيا والعالم."
+    "Plateforme d'Automatisation Commerciale WhatsApp IA pour l'Afrique et l'International.": {
+      en: "WhatsApp AI Sales Automation Platform for Africa and Global Markets.",
+      es: "Plataforma de Automatización de Ventas por WhatsApp IA para África y el Mundo.",
+      pt: "Plataforma de Automação de Vendas no WhatsApp IA para a África e o Mundo.",
+      ar: "منصة لأتمتة مبيعات واتساب بالذكاء الاصطناعي لأفريقيا والعالم."
     },
     "Tous droits réservés.": {
       en: "All rights reserved.",
