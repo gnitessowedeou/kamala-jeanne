@@ -226,12 +226,18 @@
     if (sidebarItem) sidebarItem.style.display = 'none';
   });
 
-  // 10. Activation pour iOS Safari si applicable
-  if (isIOSSafari() && !isRunningStandalone()) {
+  // 10. Activation systématique pour mobile (Android, iOS Safari, etc.)
+  function isMobileDevice() {
+    const ua = (window.navigator.userAgent || '').toLowerCase();
+    return /android|iphone|ipad|ipod|mobile/i.test(ua);
+  }
+
+  if (isMobileDevice() && !isRunningStandalone()) {
     const sidebarItem = document.getElementById('sidebar-pwa-install-item');
     if (sidebarItem) {
       sidebarItem.style.display = 'block';
     }
-    setTimeout(showInstallBanner, 4000);
+    // Affichage systématique de la bannière sur téléphone après 2.5 secondes
+    setTimeout(showInstallBanner, 2500);
   }
 })();
