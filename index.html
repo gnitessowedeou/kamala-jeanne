@@ -36,9 +36,9 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=20261015_v43">
-  <link rel="stylesheet" href="css/auth.css?v=20261015_v43">
-  <link rel="stylesheet" href="css/pwa.css?v=20261023_v1">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v62">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v62">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v62">
 </head>
 <body>
 
@@ -2122,6 +2122,70 @@
   </a>
 
   <!-- ==========================================================================
+       POP-UP TEMPORISÉ CONVERSION / 100 CRÉDITS OFFERTS (#lead-gift-popup)
+       ========================================================================== -->
+  <div class="lead-gift-backdrop" id="lead-gift-popup" role="dialog" aria-modal="true" aria-labelledby="lead-gift-title">
+    <div class="lead-gift-card">
+      <button type="button" class="lead-gift-close-btn" onclick="closeLeadGiftPopup(true)" aria-label="Fermer la proposition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <!-- Animated Gift Box Icon -->
+      <div class="lead-gift-icon-box">
+        <i class="fa-solid fa-gift"></i>
+      </div>
+
+      <!-- Badge Exclusif -->
+      <div class="lead-gift-badge">
+        <i class="fa-solid fa-sparkles"></i> Offre Spéciale Bienvenue
+      </div>
+
+      <!-- Titre & Accroche Commerciale -->
+      <h3 class="lead-gift-title" id="lead-gift-title">
+        Démarrez Gratuitement avec <span class="highlight">100 Crédits IA Offerts !</span>
+      </h3>
+
+      <p class="lead-gift-desc">
+        Automatisez vos ventes et votre service client sur WhatsApp 24h/24 sans débourser 1 centime. Inscription 100% gratuite et instantanée.
+      </p>
+
+      <!-- Avantages Clés -->
+      <div class="lead-gift-perks">
+        <div class="lead-gift-perk">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><strong>100 crédits IA offerts</strong> crédités immédiatement</span>
+        </div>
+        <div class="lead-gift-perk">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><strong>Agent Commercial IA</strong> actif et prêt à vendre sur WhatsApp</span>
+        </div>
+        <div class="lead-gift-perk">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><strong>0 FCFA / 0 $</strong> &bull; Aucune carte bancaire requise</span>
+        </div>
+        <div class="lead-gift-perk">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><strong>Prêt en moins de 2 minutes</strong> avec votre propre numéro</span>
+        </div>
+      </div>
+
+      <!-- Bouton d'action CTA principal -->
+      <button type="button" class="lead-gift-cta" onclick="handleClaimGiftCredits()">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Réclamer mes 100 Crédits Gratuits</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+
+      <!-- Lien de fermeture discret -->
+      <div>
+        <button type="button" class="lead-gift-dismiss" onclick="closeLeadGiftPopup(true)">
+          Non merci, je préfère passer à côté
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        MODALE DÉMONSTRATION VIDÉO / SIMULATEUR
        ========================================================================== -->
   <div class="modal-backdrop" id="demo-modal" role="dialog" aria-modal="true" aria-labelledby="modal-demo-title">
@@ -2401,9 +2465,9 @@
 
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261016_v51"></script>
-  <script src="js/auth.js?v=20261016_v51"></script>
-  <script src="js/script.js?v=20261016_v51"></script>
+  <script src="js/i18n.js?v=20261024_v62"></script>
+  <script src="js/auth.js?v=20261024_v62"></script>
+  <script src="js/script.js?v=20261024_v62"></script>
 
   <!-- VANDIAS Referral & Affiliate Tracker -->
   <script>
@@ -2452,7 +2516,127 @@
     })();
   </script>
 
+  <!-- =========================================================================
+       CONTRÔLEUR DU POP-UP TEMPORISÉ : 100 CRÉDITS OFFERTS (15s, 20s, 15s)
+       ========================================================================= -->
+  <script>
+    (function() {
+      // Séquence de temporisation :
+      // 1ère apparition : 15 secondes après arrivée sur la page
+      // 2ème apparition : 20 secondes après fermeture par l'utilisateur
+      // 3ème apparition : 15 secondes après fermeture
+      // Maximum 3 apparitions au total par session
+      var INTERVALS = [15000, 20000, 15000];
+      var MAX_APPEARANCES = 3;
+      var appearanceCount = 0;
+      var popupTimer = null;
+
+      function isUserLoggedIn() {
+        try {
+          var u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          if (u && (u.id || u.email)) return true;
+        } catch(e) {}
+        return false;
+      }
+
+      function isAuthModalOpen() {
+        var authModal = document.getElementById('auth-modal');
+        return authModal && authModal.classList.contains('active');
+      }
+
+      function schedulePopup() {
+        if (appearanceCount >= MAX_APPEARANCES) return;
+        if (sessionStorage.getItem('vandia_gift_claimed') === 'true') return;
+        if (isUserLoggedIn()) return;
+
+        var delay = INTERVALS[appearanceCount] || 15000;
+        if (popupTimer) clearTimeout(popupTimer);
+
+        popupTimer = setTimeout(function() {
+          if (isUserLoggedIn() || sessionStorage.getItem('vandia_gift_claimed') === 'true') {
+            return;
+          }
+          // Si l'utilisateur est déjà en train de s'inscrire, décaler
+          if (isAuthModalOpen()) {
+            popupTimer = setTimeout(schedulePopup, 8000);
+            return;
+          }
+          showLeadGiftPopup();
+        }, delay);
+      }
+
+      function showLeadGiftPopup() {
+        if (appearanceCount >= MAX_APPEARANCES) return;
+        if (isUserLoggedIn()) return;
+        if (sessionStorage.getItem('vandia_gift_claimed') === 'true') return;
+
+        var popup = document.getElementById('lead-gift-popup');
+        if (!popup) return;
+
+        appearanceCount++;
+        popup.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      window.closeLeadGiftPopup = function(byUser) {
+        var popup = document.getElementById('lead-gift-popup');
+        if (popup) {
+          popup.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+
+        if (byUser && appearanceCount < MAX_APPEARANCES && !isUserLoggedIn() && sessionStorage.getItem('vandia_gift_claimed') !== 'true') {
+          schedulePopup();
+        }
+      };
+
+      window.handleClaimGiftCredits = function() {
+        try {
+          sessionStorage.setItem('vandia_gift_claimed', 'true');
+        } catch(e) {}
+
+        window.closeLeadGiftPopup(false);
+
+        // Ouvre immédiatement le formulaire d'inscription
+        if (typeof window.openAuthModal === 'function') {
+          window.openAuthModal('signup');
+        } else {
+          var btnCta = document.querySelector('.btn-nav-cta') || document.querySelector("a[href='dashboard.html']");
+          if (btnCta) btnCta.click();
+          else window.location.href = 'dashboard.html';
+        }
+
+        setTimeout(function() {
+          var inputFirst = document.getElementById('signup-firstname');
+          if (inputFirst) inputFirst.focus();
+        }, 120);
+      };
+
+      // Écouteurs de fermeture
+      document.addEventListener('DOMContentLoaded', function() {
+        var popup = document.getElementById('lead-gift-popup');
+        if (popup) {
+          popup.addEventListener('click', function(e) {
+            if (e.target === popup) window.closeLeadGiftPopup(true);
+          });
+        }
+
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            var p = document.getElementById('lead-gift-popup');
+            if (p && p.classList.contains('active')) {
+              window.closeLeadGiftPopup(true);
+            }
+          }
+        });
+
+        // Lance le premier compte à rebours de 15 secondes
+        schedulePopup();
+      });
+    })();
+  </script>
+
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261023_v2"></script>
+  <script src="js/pwa.js?v=20261024_v62"></script>
 </body>
 </html>
