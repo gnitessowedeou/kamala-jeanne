@@ -29,10 +29,10 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261024_v59">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v59">
-  <link rel="stylesheet" href="css/auth.css?v=20261024_v59">
-  <link rel="stylesheet" href="css/pwa.css?v=20261024_v59">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v61">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v61">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v61">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v61">
 
   <style>
     .crm-select-contact, #crm-select-all {
@@ -4143,55 +4143,62 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             </div>
           </div>
 
-          <!-- Section Photo / Article / Affiche promotionnelle -->
+          <!-- Section 1: Affiche Publicitaire / Photo / Flyer (Optionnel) -->
           <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <label style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="crm-broadcast-attach-photo" onchange="toggleCrmPhotoSection(this.checked)" style="accent-color: var(--whatsapp-green); width: 16px; height: 16px; cursor: pointer;" />
-                <span><i class="fa-solid fa-image" style="color: #60a5fa;"></i> Joindre une photo (article, affiche promo, catalogue)</span>
-              </label>
-              <span style="font-size: 11px; color: var(--text-muted);">Optionnel</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-image" style="color: #60a5fa; font-size: 14px;"></i>
+                <span>Affiche Publicitaire ou Photo d'Article</span>
+              </span>
+              <span class="badge badge-subtle" style="font-size: 11px;">Optionnel</span>
             </div>
 
-            <div id="crm-photo-uploader-box" style="display: none; flex-direction: column; gap: 10px; margin-top: 12px;">
-              <!-- Bouton Choisir Fichier ou Drag & Drop -->
-              <div id="crm-photo-dropzone" style="border: 2px dashed rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('crm-broadcast-photo-file').click()">
+            <div id="crm-photo-uploader-box" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Dropzone / Bouton fichier -->
+              <div id="crm-photo-dropzone" style="border: 2px dashed rgba(37, 211, 102, 0.35); background: rgba(37, 211, 102, 0.04); border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('crm-broadcast-photo-file').click()">
                 <input type="file" id="crm-broadcast-photo-file" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="handleCrmPhotoFileSelected(event)" />
-                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 24px; color: var(--whatsapp-green); margin-bottom: 6px;"></i>
-                <div style="font-size: 12.5px; color: var(--text-primary); font-weight: 500;">Cliquez pour choisir une photo ou glissez-la ici</div>
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 26px; color: var(--whatsapp-green); margin-bottom: 6px;"></i>
+                <div style="font-size: 13px; color: #fff; font-weight: 600;">Cliquez pour choisir une affiche/photo ou glissez-la ici</div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Formats acceptés : JPG, PNG, WEBP (Max 5 Mo)</div>
               </div>
 
               <!-- Prévisualisation Image sélectionnée -->
-              <div id="crm-photo-preview-wrapper" style="display: none; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 12px;">
-                <img id="crm-photo-preview-img" src="" alt="Aperçu article" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
+              <div id="crm-photo-preview-wrapper" style="display: none; align-items: center; gap: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 8px; padding: 10px 14px;">
+                <img id="crm-photo-preview-img" src="" alt="Aperçu affiche" style="width: 58px; height: 58px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);" />
                 <div style="flex: 1; min-width: 0;">
-                  <div id="crm-photo-preview-name" style="font-size: 12.5px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">affiche.jpg</div>
-                  <div id="crm-photo-preview-size" style="font-size: 11px; color: var(--text-muted);">120 Ko</div>
+                  <div id="crm-photo-preview-name" style="font-size: 13px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">affiche.jpg</div>
+                  <div id="crm-photo-preview-size" style="font-size: 11px; color: var(--whatsapp-green); font-weight: 500;">Prête pour l'envoi</div>
                 </div>
-                <button type="button" class="btn-secondary-glass" onclick="removeCrmSelectedPhoto()" style="padding: 4px 8px; font-size: 11px; color: #f87171;" title="Retirer l'image">
-                  <i class="fa-solid fa-trash"></i>
+                <button type="button" class="btn-secondary-glass" onclick="removeCrmSelectedPhoto()" style="padding: 6px 12px; font-size: 11.5px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);" title="Retirer l'affiche">
+                  <i class="fa-solid fa-trash"></i> Retirer
                 </button>
               </div>
 
               <!-- URL alternative -->
               <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="url" id="crm-broadcast-photo-url" class="form-control" placeholder="Ou collez le lien direct d'une image (https://...)" style="font-size: 12px; padding: 6px 10px;" oninput="handleCrmPhotoUrlInput(this.value)" />
+                <input type="url" id="crm-broadcast-photo-url" class="form-control" placeholder="Ou collez le lien direct d'une affiche Web (https://...)" style="font-size: 12px; padding: 7px 12px;" oninput="handleCrmPhotoUrlInput(this.value)" />
               </div>
             </div>
           </div>
 
-          <!-- Message Texte -->
+          <!-- Section 2: Message Texte Personnalisé -->
           <div class="form-group" style="margin: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <label class="form-label" for="crm-broadcast-text" style="margin: 0; font-size: 13px;">
-                Message WhatsApp <span id="crm-text-caption-hint" style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Légende de la photo)</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+              <label class="form-label" for="crm-broadcast-text" style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-comment-dots" style="color: var(--whatsapp-green);"></i>
+                <span>Message Texte WhatsApp</span>
+                <span id="crm-text-caption-hint" style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Légende de l'affiche si jointe)</span>
               </label>
-              <button type="button" class="btn-secondary-glass" style="padding: 3px 8px; font-size: 11px;" onclick="insertCrmVariable('{nom}')" title="Insérer le nom du contact">
-                <i class="fa-solid fa-plus"></i> Insérer <code>{nom}</code>
-              </button>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-secondary-glass" style="padding: 3px 8px; font-size: 11px;" onclick="insertCrmVariable('{nom}')" title="Insérer le nom du contact">
+                  <i class="fa-solid fa-plus"></i> {nom}
+                </button>
+                <button type="button" class="btn-secondary-glass" style="padding: 3px 8px; font-size: 11px;" onclick="insertCrmVariable('{prenom}')" title="Insérer le prénom du contact">
+                  <i class="fa-solid fa-plus"></i> {prenom}
+                </button>
+              </div>
             </div>
-            <textarea class="form-control form-control-textarea" id="crm-broadcast-text" rows="4" placeholder="Bonjour {nom} ! Découvrez notre nouvelle offre exclusive aujourd'hui..." required style="font-size: 13px; line-height: 1.5;"></textarea>
+            <textarea class="form-control form-control-textarea" id="crm-broadcast-text" rows="4" placeholder="Bonjour {nom} ! Découvrez notre nouvelle collection exclusive..." style="font-size: 13px; line-height: 1.5;"></textarea>
           </div>
 
           <!-- Bannière Anti-Ban SafeSend -->
@@ -4694,10 +4701,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261024_v60"></script>
+  <script src="js/i18n.js?v=20261024_v61"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261024_v60"></script>
-  <script src="js/dashboard.js?v=20261024_v60"></script>
+  <script src="js/auth.js?v=20261024_v61"></script>
+  <script src="js/dashboard.js?v=20261024_v61"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -5250,6 +5257,328 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       // Attacher universellement
       window.renderContacts = window.renderContactsInfallible;
 
+      // =========================================================================
+      // GESTION INFAILLIBLE DE LA MODALE DIFFUSION CIBLÉE CRM (TEXTE + IMAGE)
+      // =========================================================================
+      window.selectedCrmPhotoData = null;
+
+      window.openCrmBroadcastModal = function() {
+        var checkboxes = document.querySelectorAll('.crm-select-contact:checked');
+        var selected = [];
+        checkboxes.forEach(function(cb) {
+          selected.push({
+            phone: cb.getAttribute('data-phone') || '',
+            name: cb.getAttribute('data-name') || 'Client'
+          });
+        });
+
+        if (selected.length === 0) {
+          if (typeof showToast === 'function') {
+            showToast("Veuillez cocher au moins un contact dans le tableau pour lancer une diffusion.", "warning");
+          } else {
+            alert("Veuillez cocher au moins un contact dans le tableau pour lancer une diffusion.");
+          }
+          return;
+        }
+
+        var quota = getPlanQuota();
+        var modal = document.getElementById('crm-broadcast-modal');
+        if (!modal) return;
+
+        var planBadge = document.getElementById('crm-modal-plan-badge');
+        if (planBadge) planBadge.textContent = 'Forfait ' + quota.planName + ' : max ' + quota.max;
+
+        var recipientCount = document.getElementById('crm-modal-recipient-count');
+        if (recipientCount) recipientCount.textContent = selected.length + ' / ' + quota.max;
+
+        var submitText = document.getElementById('crm-submit-btn-text');
+        if (submitText) submitText.textContent = 'Lancer la Diffusion (' + selected.length + ')';
+
+        var listContainer = document.getElementById('crm-modal-recipients-list');
+        if (listContainer) {
+          listContainer.innerHTML = selected.map(function(c) {
+            var displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone) : formatPhoneClean(c.phone);
+            return '<span class="badge badge-subtle" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08);">' +
+              '<i class="fa-solid fa-user" style="color: var(--whatsapp-green); font-size: 10px;"></i>' +
+              '<strong>' + c.name + '</strong> ' +
+              '<span style="color: var(--text-muted); font-family: monospace;">(' + displayPhone + ')</span>' +
+            '</span>';
+          }).join('');
+        }
+
+        var progressBox = document.getElementById('crm-broadcast-progress-box');
+        if (progressBox) progressBox.style.display = 'none';
+        var progressLog = document.getElementById('crm-progress-log');
+        if (progressLog) progressLog.innerHTML = '';
+        var progressFill = document.getElementById('crm-progress-bar-fill');
+        if (progressFill) progressFill.style.width = '0%';
+
+        var submitBtn = document.getElementById('btn-submit-crm-broadcast');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span id="crm-submit-btn-text">Lancer la Diffusion (' + selected.length + ')</span>';
+        }
+        var cancelBtn = document.getElementById('btn-cancel-crm-broadcast');
+        if (cancelBtn) cancelBtn.disabled = false;
+
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+        modal.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'hidden';
+      };
+
+      window.closeCrmBroadcastModal = function() {
+        var modal = document.getElementById('crm-broadcast-modal');
+        if (modal) {
+          modal.classList.remove('active');
+          modal.style.display = 'none';
+          modal.style.opacity = '0';
+          modal.style.visibility = 'hidden';
+          modal.style.pointerEvents = 'none';
+          document.body.style.overflow = '';
+        }
+      };
+
+      window.openSingleBroadcastModal = function(phone, name) {
+        var checkboxes = document.querySelectorAll('.crm-select-contact');
+        checkboxes.forEach(function(cb) {
+          cb.checked = (cb.getAttribute('data-phone') === phone);
+        });
+        window.updateCrmSelectionUI();
+        window.openCrmBroadcastModal();
+      };
+
+      window.handleCrmPhotoFileSelected = function(e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+          if (typeof showToast === 'function') showToast("L'affiche ne doit pas dépasser 5 Mo.", "error");
+          return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          var base64Data = evt.target.result;
+          window.selectedCrmPhotoData = {
+            data: base64Data,
+            mimetype: file.type || 'image/jpeg',
+            filename: file.name
+          };
+
+          var previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+          var previewImg = document.getElementById('crm-photo-preview-img');
+          var previewName = document.getElementById('crm-photo-preview-name');
+          var previewSize = document.getElementById('crm-photo-preview-size');
+          var dropzone = document.getElementById('crm-photo-dropzone');
+
+          if (previewImg) previewImg.src = base64Data;
+          if (previewName) previewName.textContent = file.name;
+          if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
+          if (previewWrapper) previewWrapper.style.display = 'flex';
+          if (dropzone) dropzone.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      };
+
+      window.handleCrmPhotoUrlInput = function(url) {
+        var cleanUrl = (url || '').trim();
+        if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+          window.selectedCrmPhotoData = { url: cleanUrl };
+          var previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+          var previewImg = document.getElementById('crm-photo-preview-img');
+          var previewName = document.getElementById('crm-photo-preview-name');
+          var previewSize = document.getElementById('crm-photo-preview-size');
+          var dropzone = document.getElementById('crm-photo-dropzone');
+
+          if (previewImg) previewImg.src = cleanUrl;
+          if (previewName) previewName.textContent = "Affiche Web distante";
+          if (previewSize) previewSize.textContent = "Lien URL";
+          if (previewWrapper) previewWrapper.style.display = 'flex';
+          if (dropzone) dropzone.style.display = 'none';
+        } else if (!cleanUrl) {
+          window.removeCrmSelectedPhoto();
+        }
+      };
+
+      window.removeCrmSelectedPhoto = function() {
+        window.selectedCrmPhotoData = null;
+        var fileInput = document.getElementById('crm-broadcast-photo-file');
+        if (fileInput) fileInput.value = '';
+        var urlInput = document.getElementById('crm-broadcast-photo-url');
+        if (urlInput) urlInput.value = '';
+        var previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+        if (previewWrapper) previewWrapper.style.display = 'none';
+        var dropzone = document.getElementById('crm-photo-dropzone');
+        if (dropzone) dropzone.style.display = 'block';
+      };
+
+      window.insertCrmVariable = function(varName) {
+        var textarea = document.getElementById('crm-broadcast-text');
+        if (!textarea) return;
+        var start = textarea.selectionStart || 0;
+        var end = textarea.selectionEnd || 0;
+        var text = textarea.value;
+        textarea.value = text.substring(0, start) + varName + text.substring(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + varName.length;
+      };
+
+      window.handleCrmBroadcastSubmit = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+
+        var checkboxes = document.querySelectorAll('.crm-select-contact:checked');
+        var selected = [];
+        checkboxes.forEach(function(cb) {
+          selected.push({
+            phone: cb.getAttribute('data-phone') || '',
+            name: cb.getAttribute('data-name') || 'Client'
+          });
+        });
+
+        if (selected.length === 0) {
+          if (typeof showToast === 'function') showToast("Aucun contact sélectionné pour la diffusion.", "warning");
+          return;
+        }
+
+        var messageText = (document.getElementById('crm-broadcast-text')?.value || '').trim();
+        var photoPayload = window.selectedCrmPhotoData || null;
+
+        if (!messageText && !photoPayload) {
+          if (typeof showToast === 'function') {
+            showToast("Veuillez saisir un message texte ou joindre une affiche publicitaire.", "warning");
+          }
+          return;
+        }
+
+        var userId = null;
+        try {
+          var u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          if (u && u.id) userId = u.id;
+        } catch(err) {}
+        if (!userId && typeof getAppUserId === 'function') {
+          try { userId = getAppUserId(); } catch(err) {}
+        }
+        if (!userId) {
+          if (typeof showToast === 'function') showToast("Veuillez vous connecter pour diffuser.", "error");
+          return;
+        }
+
+        var submitBtn = document.getElementById('btn-submit-crm-broadcast');
+        var cancelBtn = document.getElementById('btn-cancel-crm-broadcast');
+        var progressBox = document.getElementById('crm-broadcast-progress-box');
+        var progressStatus = document.getElementById('crm-progress-status-label');
+        var progressPercent = document.getElementById('crm-progress-percent');
+        var progressFill = document.getElementById('crm-progress-bar-fill');
+        var progressLog = document.getElementById('crm-progress-log');
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours...';
+        }
+        if (cancelBtn) cancelBtn.disabled = true;
+        if (progressBox) progressBox.style.display = 'flex';
+
+        var total = selected.length;
+        var sentCount = 0;
+        var failCount = 0;
+        var apiUrl = window.API_URL || 'https://kamala-jeanne-production.up.railway.app';
+        var authH = (typeof getAuthHeaders === 'function') ? getAuthHeaders() : {};
+
+        for (var i = 0; i < total; i++) {
+          var contact = selected[i];
+          var displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(contact.phone) : formatPhoneClean(contact.phone);
+          var pct = Math.round((i / total) * 100);
+
+          if (progressStatus) progressStatus.textContent = 'Envoi vers ' + contact.name + ' (' + (i + 1) + '/' + total + ')...';
+          if (progressPercent) progressPercent.textContent = pct + '%';
+          if (progressFill) progressFill.style.width = pct + '%';
+
+          try {
+            var res = await fetch(apiUrl + '/api/whatsapp/crm-broadcast-send-one', {
+              method: 'POST',
+              headers: Object.assign({ 'Content-Type': 'application/json' }, authH),
+              body: JSON.stringify({
+                userId: userId,
+                phone: contact.phone,
+                name: contact.name,
+                message: messageText,
+                photo: photoPayload
+              })
+            });
+
+            var resData = await res.json().catch(function() { return {}; });
+            if (res.ok && resData.success) {
+              sentCount++;
+              if (progressLog) {
+                progressLog.innerHTML += '<div style="color: #4ade80;">[' + (i + 1) + '/' + total + '] ✓ ' + contact.name + ' (' + displayPhone + ') - Envoyé</div>';
+                progressLog.scrollTop = progressLog.scrollHeight;
+              }
+            } else {
+              failCount++;
+              var errMsg = resData.error || "Erreur d'envoi";
+              if (progressLog) {
+                progressLog.innerHTML += '<div style="color: #f87171;">[' + (i + 1) + '/' + total + '] ✗ ' + contact.name + ' - ' + errMsg + '</div>';
+                progressLog.scrollTop = progressLog.scrollHeight;
+              }
+            }
+          } catch(netErr) {
+            failCount++;
+            if (progressLog) {
+              progressLog.innerHTML += '<div style="color: #f87171;">[' + (i + 1) + '/' + total + '] ✗ ' + contact.name + ' - Erreur réseau</div>';
+              progressLog.scrollTop = progressLog.scrollHeight;
+            }
+          }
+
+          if (i < total - 1) {
+            if (progressStatus) progressStatus.textContent = 'Temporisation anti-ban active (3s)...';
+            await new Promise(function(r) { setTimeout(r, 3000); });
+          }
+        }
+
+        if (progressPercent) progressPercent.textContent = '100%';
+        if (progressFill) progressFill.style.width = '100%';
+        if (progressStatus) progressStatus.textContent = 'Terminé : ' + sentCount + ' envoyé(s), ' + failCount + ' échec(s)';
+
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Diffusion Terminée';
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+
+        if (typeof showToast === 'function') {
+          showToast('Diffusion ciblée terminée : ' + sentCount + ' message(s) envoyé(s) avec succès !', sentCount > 0 ? 'success' : 'error');
+        }
+
+        setTimeout(function() {
+          window.clearCrmContactSelection();
+          window.closeCrmBroadcastModal();
+          if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span id="crm-submit-btn-text">Lancer la Diffusion (0)</span>';
+          }
+        }, 2200);
+      };
+
+      // Clic en dehors et touche Échap pour fermer la modale
+      document.addEventListener('DOMContentLoaded', function() {
+        var modal = document.getElementById('crm-broadcast-modal');
+        if (modal) {
+          modal.addEventListener('click', function(e) {
+            if (e.target === modal) window.closeCrmBroadcastModal();
+          });
+        }
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          var modal = document.getElementById('crm-broadcast-modal');
+          if (modal && modal.classList.contains('active')) {
+            window.closeCrmBroadcastModal();
+          }
+        }
+      });
+
       // Exécution immédiate et écouteurs d'événements
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
@@ -5268,6 +5597,6 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   </script>
 
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261024_v60"></script>
+  <script src="js/pwa.js?v=20261024_v61"></script>
 </body>
 </html>

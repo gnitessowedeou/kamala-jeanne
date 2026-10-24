@@ -3053,12 +3053,24 @@ function openCrmBroadcastModal() {
   const submitBtn = document.getElementById('btn-submit-crm-broadcast');
   if (submitBtn) submitBtn.disabled = false;
 
+  modal.classList.add('active');
   modal.style.display = 'flex';
+  modal.style.opacity = '1';
+  modal.style.visibility = 'visible';
+  modal.style.pointerEvents = 'auto';
+  document.body.style.overflow = 'hidden';
 }
 
 function closeCrmBroadcastModal() {
   const modal = document.getElementById('crm-broadcast-modal');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    modal.style.opacity = '0';
+    modal.style.visibility = 'hidden';
+    modal.style.pointerEvents = 'none';
+    document.body.style.overflow = '';
+  }
 }
 
 function openSingleBroadcastModal(phone, name) {
@@ -3166,11 +3178,10 @@ async function handleCrmBroadcastSubmit(e) {
   }
 
   const messageText = (document.getElementById('crm-broadcast-text')?.value || '').trim();
-  const attachPhotoChecked = document.getElementById('crm-broadcast-attach-photo')?.checked;
-  const photoPayload = attachPhotoChecked ? selectedCrmPhotoData : null;
+  const photoPayload = selectedCrmPhotoData || window.selectedCrmPhotoData || null;
 
   if (!messageText && !photoPayload) {
-    showToast("Veuillez saisir un message ou joindre une photo.", "warning");
+    showToast("Veuillez saisir un message texte ou choisir une affiche / photo à diffuser.", "warning");
     return;
   }
 
