@@ -29,10 +29,10 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261024_v66">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v66">
-  <link rel="stylesheet" href="css/auth.css?v=20261024_v66">
-  <link rel="stylesheet" href="css/pwa.css?v=20261024_v66">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v67">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v67">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v67">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v67">
 
   <style>
     .crm-select-contact, #crm-select-all {
@@ -1318,13 +1318,17 @@
                     <button type="button" class="btn-period-quick" data-period="this_month" onclick="window.setCrmPeriodFilter('this_month')" style="padding: 4px 10px; font-size: 11.5px; border-radius: 4px; background: transparent; color: var(--text-muted); border: none; cursor: pointer;">Ce mois</button>
                   </div>
 
-                  <!-- Sélecteur Année & Mois -->
-                  <select id="crm-archive-year-select" onchange="window.handleCrmArchiveYearChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                  <!-- Sélecteur Année, Mois & Jour -->
+                  <select id="crm-archive-year-select" onchange="window.handleCrmArchiveYearChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;" title="Choisir une année (antérieure ou postérieure)">
                     <!-- Rempli dynamiquement -->
                   </select>
 
-                  <select id="crm-archive-month-select" onchange="window.handleCrmArchiveMonthChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                  <select id="crm-archive-month-select" onchange="window.handleCrmArchiveMonthChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;" title="Choisir un mois (Janvier à Décembre)">
                     <!-- Rempli dynamiquement -->
+                  </select>
+
+                  <select id="crm-archive-day-select" onchange="window.handleCrmArchiveDaySelectChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;" title="Choisir un jour précis du mois">
+                    <!-- Rempli dynamiquement : 1er au 31 -->
                   </select>
 
                   <!-- Date picker calendrier direct -->
@@ -4813,10 +4817,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261024_v66"></script>
+  <script src="js/i18n.js?v=20261024_v67"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261024_v66"></script>
-  <script src="js/dashboard.js?v=20261024_v66"></script>
+  <script src="js/auth.js?v=20261024_v67"></script>
+  <script src="js/dashboard.js?v=20261024_v67"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -5338,7 +5342,6 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       window.buildCrmArchiveIndices = function(contacts) {
         var list = Array.isArray(contacts) ? contacts : [];
         var yearsSet = new Set();
-        var monthsByYear = {};
         var daysByMonth = {};
 
         var now = new Date();
@@ -5346,10 +5349,12 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         var yesterdayYmd = formatCrmYmd(yesterday);
         var thisMonthYm = formatCrmYm(now);
+        var currentYear = now.getFullYear();
 
         var todayCount = 0;
         var yesterdayCount = 0;
         var thisMonthCount = 0;
+        var contactsByYear = {};
 
         list.forEach(function(c) {
           var d = getCrmContactDate(c);
@@ -5359,8 +5364,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           var ymd = formatCrmYmd(d);
 
           yearsSet.add(y);
-          if (!monthsByYear[y]) monthsByYear[y] = new Set();
-          monthsByYear[y].add(ym);
+          contactsByYear[y] = (contactsByYear[y] || 0) + 1;
 
           if (!daysByMonth[ym]) daysByMonth[ym] = {};
           daysByMonth[ym][ymd] = (daysByMonth[ym][ymd] || 0) + 1;
@@ -5370,22 +5374,16 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           if (ym === thisMonthYm) thisMonthCount++;
         });
 
-        // Garantir la présence de l'année et du mois actuels
-        var currentYearStr = String(now.getFullYear());
-        yearsSet.add(currentYearStr);
-        if (!monthsByYear[currentYearStr]) monthsByYear[currentYearStr] = new Set();
-        monthsByYear[currentYearStr].add(thisMonthYm);
+        // Compléter systématiquement les années antérieures et postérieures (ex: 2021 à 2031)
+        for (var offset = -5; offset <= 5; offset++) {
+          yearsSet.add(String(currentYear + offset));
+        }
 
         var sortedYears = Array.from(yearsSet).sort(function(a, b) { return Number(b) - Number(a); });
-        var finalMonthsByYear = {};
-        sortedYears.forEach(function(yr) {
-          var mSet = monthsByYear[yr] || new Set();
-          finalMonthsByYear[yr] = Array.from(mSet).sort(function(a, b) { return b.localeCompare(a); });
-        });
 
         window.crmArchiveIndices = {
           years: sortedYears,
-          monthsByYear: finalMonthsByYear,
+          contactsByYear: contactsByYear,
           daysByMonth: daysByMonth,
           countByPeriod: {
             all: list.length,
@@ -5399,11 +5397,13 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         var yearSelect = document.getElementById('crm-archive-year-select');
         if (yearSelect) {
           var currentVal = yearSelect.value;
-          var yHtml = '<option value="">Toutes les années</option>';
+          var yHtml = '<option value="">Toutes les années (' + list.length + ')</option>';
           sortedYears.forEach(function(yr) {
-            yHtml += '<option value="' + yr + '">' + yr + '</option>';
+            var yCnt = contactsByYear[yr] || 0;
+            yHtml += '<option value="' + yr + '">' + yr + ' (' + yCnt + ')</option>';
           });
           yearSelect.innerHTML = yHtml;
+
           if (window.crmSelectedArchive.year && sortedYears.includes(window.crmSelectedArchive.year)) {
             yearSelect.value = window.crmSelectedArchive.year;
           } else if (currentVal && sortedYears.includes(currentVal)) {
@@ -5411,8 +5411,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           }
         }
 
-        // Remplir le select des Mois
-        var selectedYr = yearSelect ? yearSelect.value : '';
+        // Remplir le select des Mois pour l'année courante ou sélectionnée
+        var selectedYr = (yearSelect && yearSelect.value) ? yearSelect.value : String(currentYear);
         window.updateCrmArchiveMonthsForYear(selectedYr);
       };
 
@@ -5420,35 +5420,81 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         var monthSelect = document.getElementById('crm-archive-month-select');
         if (!monthSelect) return;
 
-        var availableMonths = [];
-        if (year && window.crmArchiveIndices.monthsByYear[year]) {
-          availableMonths = window.crmArchiveIndices.monthsByYear[year];
-        } else {
-          var allM = new Set();
-          Object.keys(window.crmArchiveIndices.monthsByYear).forEach(function(yr) {
-            window.crmArchiveIndices.monthsByYear[yr].forEach(function(m) { allM.add(m); });
-          });
-          availableMonths = Array.from(allM).sort(function(a, b) { return b.localeCompare(a); });
-        }
-
+        var targetYear = year || (window.crmSelectedArchive && window.crmSelectedArchive.year) || String((new Date()).getFullYear());
         var mHtml = '<option value="">Tous les mois</option>';
-        availableMonths.forEach(function(ym) {
-          var parts = ym.split('-');
-          var mIdx = parseInt(parts[1], 10) - 1;
-          var mName = window.CRM_MONTH_NAMES[mIdx] || ym;
+
+        // Générer systématiquement les 12 mois complets de l'année (antérieurs et postérieurs)
+        for (var mIdx = 0; mIdx < 12; mIdx++) {
+          var mNum = String(mIdx + 1).padStart(2, '0');
+          var ym = targetYear + '-' + mNum;
+          var mName = window.CRM_MONTH_NAMES[mIdx];
           var monthContacts = 0;
-          if (window.crmArchiveIndices.daysByMonth[ym]) {
+          if (window.crmArchiveIndices && window.crmArchiveIndices.daysByMonth && window.crmArchiveIndices.daysByMonth[ym]) {
             Object.values(window.crmArchiveIndices.daysByMonth[ym]).forEach(function(cnt) { monthContacts += cnt; });
           }
-          mHtml += '<option value="' + ym + '">' + mName + ' ' + parts[0] + ' (' + monthContacts + ')</option>';
-        });
+          mHtml += '<option value="' + ym + '">' + mName + ' ' + targetYear + ' (' + monthContacts + ')</option>';
+        }
         monthSelect.innerHTML = mHtml;
 
-        if (window.crmSelectedArchive.month && availableMonths.includes(window.crmSelectedArchive.month)) {
-          monthSelect.value = window.crmSelectedArchive.month;
+        if (window.crmSelectedArchive.month) {
+          // Si on change d'année, synchroniser le même numéro de mois sur la nouvelle année
+          var moPart = window.crmSelectedArchive.month.split('-')[1];
+          var newYm = targetYear + '-' + moPart;
+          monthSelect.value = newYm;
+          window.crmSelectedArchive.month = newYm;
+          if (window.crmSelectedArchive.day) {
+            var dayPart = window.crmSelectedArchive.day.split('-')[2];
+            window.crmSelectedArchive.day = newYm + '-' + dayPart;
+          }
         }
 
         window.renderCrmArchiveDays();
+      };
+
+      window.updateCrmArchiveDaySelect = function(activeYm) {
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (!daySelect) return;
+
+        if (!activeYm) {
+          activeYm = formatCrmYm(new Date());
+        }
+
+        var parts = activeYm.split('-');
+        var yr = parseInt(parts[0], 10);
+        var mo = parseInt(parts[1], 10);
+        var daysInMonth = new Date(yr, mo, 0).getDate();
+
+        var daysMap = (window.crmArchiveIndices && window.crmArchiveIndices.daysByMonth && window.crmArchiveIndices.daysByMonth[activeYm]) || {};
+
+        var dHtml = '<option value="">Tous les jours</option>';
+        for (var d = 1; d <= daysInMonth; d++) {
+          var dStr = String(d).padStart(2, '0');
+          var ymd = activeYm + '-' + dStr;
+          var cnt = daysMap[ymd] || 0;
+          var label = (d === 1 ? '1er' : d) + ' (' + cnt + ')';
+          dHtml += '<option value="' + dStr + '">' + label + '</option>';
+        }
+        daySelect.innerHTML = dHtml;
+
+        if (window.crmSelectedArchive.day) {
+          var activeDayNum = window.crmSelectedArchive.day.split('-')[2];
+          daySelect.value = activeDayNum || '';
+        } else {
+          daySelect.value = '';
+        }
+      };
+
+      window.handleCrmArchiveDaySelectChange = function(dayVal) {
+        var mSel = document.getElementById('crm-archive-month-select');
+        var ym = (mSel && mSel.value) || window.crmSelectedArchive.month || formatCrmYm(new Date());
+
+        if (!dayVal) {
+          window.selectCrmArchiveWholeMonth(ym);
+          return;
+        }
+
+        var ymd = ym + '-' + dayVal;
+        window.selectCrmArchiveDay(ymd);
       };
 
       window.renderCrmArchiveDays = function() {
@@ -5461,20 +5507,20 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         }
 
         if (!activeYm) {
-          var allMonths = [];
-          Object.keys(window.crmArchiveIndices.monthsByYear).forEach(function(yr) {
-            window.crmArchiveIndices.monthsByYear[yr].forEach(function(m) { allMonths.push(m); });
-          });
-          allMonths.sort(function(a, b) { return b.localeCompare(a); });
-          activeYm = allMonths[0] || formatCrmYm(new Date());
+          var ySel = document.getElementById('crm-archive-year-select');
+          var yr = (ySel && ySel.value) || String((new Date()).getFullYear());
+          activeYm = yr + '-' + String((new Date()).getMonth() + 1).padStart(2, '0');
         }
+
+        // Mettre à jour le selecteur de jours (1er -> 31)
+        window.updateCrmArchiveDaySelect(activeYm);
 
         var parts = activeYm.split('-');
         var yr = parts[0];
         var mIdx = parseInt(parts[1], 10) - 1;
         var monthName = window.CRM_MONTH_NAMES[mIdx] || parts[1];
 
-        var daysMap = window.crmArchiveIndices.daysByMonth[activeYm] || {};
+        var daysMap = (window.crmArchiveIndices && window.crmArchiveIndices.daysByMonth && window.crmArchiveIndices.daysByMonth[activeYm]) || {};
         var dayKeys = Object.keys(daysMap).sort();
 
         var totalMonthCount = 0;
@@ -5493,7 +5539,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           '</button>';
 
         if (dayKeys.length === 0) {
-          html += '<span style="color: var(--text-muted); font-size: 11px; font-style: italic; margin-left: 4px;">Aucune interaction enregistrée sur ce mois pour l\'instant.</span>';
+          html += '<span style="color: var(--text-muted); font-size: 11px; font-style: italic; margin-left: 4px;">0 interaction enregistrée sur ' + monthName + ' ' + yr + '.</span>';
         } else {
           dayKeys.forEach(function(ymd) {
             var dParts = ymd.split('-');
@@ -5547,6 +5593,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         var now = new Date();
         var exactInput = document.getElementById('crm-archive-exact-date');
         if (exactInput) exactInput.value = '';
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = '';
 
         if (period === 'all') {
           window.crmSelectedArchive = { mode: 'all', year: null, month: null, day: null, exactDate: null };
@@ -5556,9 +5604,17 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           if (mSel) mSel.value = '';
         } else if (period === 'today') {
           window.crmSelectedArchive = { mode: 'today', year: String(now.getFullYear()), month: formatCrmYm(now), day: formatCrmYmd(now), exactDate: null };
+          var ySel = document.getElementById('crm-archive-year-select');
+          if (ySel) ySel.value = String(now.getFullYear());
+          var mSel = document.getElementById('crm-archive-month-select');
+          if (mSel) mSel.value = formatCrmYm(now);
         } else if (period === 'yesterday') {
           var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
           window.crmSelectedArchive = { mode: 'yesterday', year: String(yesterday.getFullYear()), month: formatCrmYm(yesterday), day: formatCrmYmd(yesterday), exactDate: null };
+          var ySel = document.getElementById('crm-archive-year-select');
+          if (ySel) ySel.value = String(yesterday.getFullYear());
+          var mSel = document.getElementById('crm-archive-month-select');
+          if (mSel) mSel.value = formatCrmYm(yesterday);
         } else if (period === 'this_month') {
           window.crmSelectedArchive = { mode: 'this_month', year: String(now.getFullYear()), month: formatCrmYm(now), day: null, exactDate: null };
           var ySel = document.getElementById('crm-archive-year-select');
@@ -5577,6 +5633,11 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         window.crmSelectedArchive.day = null;
         window.crmSelectedArchive.mode = year ? 'year' : 'all';
 
+        var exactInput = document.getElementById('crm-archive-exact-date');
+        if (exactInput) exactInput.value = '';
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = '';
+
         // Désactiver boutons rapides
         document.querySelectorAll('.btn-period-quick').forEach(function(b) {
           b.classList.remove('active');
@@ -5591,6 +5652,11 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       window.handleCrmArchiveMonthChange = function(monthVal) {
         window.crmSelectedArchive.month = monthVal || null;
         window.crmSelectedArchive.day = null;
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = '';
+        var exactInput = document.getElementById('crm-archive-exact-date');
+        if (exactInput) exactInput.value = '';
+
         if (monthVal) {
           window.crmSelectedArchive.mode = 'month';
           window.crmSelectedArchive.year = monthVal.split('-')[0];
@@ -5619,6 +5685,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         var parts = dateStr.split('-');
         var yr = parts[0];
         var ym = yr + '-' + parts[1];
+        var dayNum = parts[2];
 
         window.crmSelectedArchive = {
           mode: 'exact',
@@ -5633,6 +5700,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         window.updateCrmArchiveMonthsForYear(yr);
         var mSel = document.getElementById('crm-archive-month-select');
         if (mSel) mSel.value = ym;
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = dayNum;
 
         document.querySelectorAll('.btn-period-quick').forEach(function(b) {
           b.classList.remove('active');
@@ -5656,6 +5725,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         if (mSel) mSel.value = ym;
         var ySel = document.getElementById('crm-archive-year-select');
         if (ySel) ySel.value = window.crmSelectedArchive.year;
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = '';
+        var exactInput = document.getElementById('crm-archive-exact-date');
+        if (exactInput) exactInput.value = '';
 
         document.querySelectorAll('.btn-period-quick').forEach(function(b) {
           b.classList.remove('active');
@@ -5669,6 +5742,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
       window.selectCrmArchiveDay = function(ymd) {
         var ym = ymd.substring(0, 7);
+        var dayNum = ymd.split('-')[2];
         window.crmSelectedArchive = {
           mode: 'day',
           year: ymd.split('-')[0],
@@ -5679,6 +5753,12 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
         var exactInput = document.getElementById('crm-archive-exact-date');
         if (exactInput) exactInput.value = ymd;
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = dayNum;
+        var mSel = document.getElementById('crm-archive-month-select');
+        if (mSel) mSel.value = ym;
+        var ySel = document.getElementById('crm-archive-year-select');
+        if (ySel) ySel.value = window.crmSelectedArchive.year;
 
         document.querySelectorAll('.btn-period-quick').forEach(function(b) {
           b.classList.remove('active');
@@ -5691,6 +5771,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       };
 
       window.resetCrmPeriodFilter = function() {
+        var daySelect = document.getElementById('crm-archive-day-select');
+        if (daySelect) daySelect.value = '';
+        var exactInput = document.getElementById('crm-archive-exact-date');
+        if (exactInput) exactInput.value = '';
         window.setCrmPeriodFilter('all');
       };
 
@@ -6638,6 +6722,6 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   </script>
 
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261024_v66"></script>
+  <script src="js/pwa.js?v=20261024_v67"></script>
 </body>
 </html>
