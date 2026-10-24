@@ -3743,6 +3743,9 @@ async function handleCrmBroadcastSubmit(e) {
 // 9.1 RENDU DU TABLEAU DES CONTACTS CRM AVEC SÉLECTION MULTIPLE
 // ==============================================================================
 async function renderContacts() {
+    if (typeof window.renderContactsInfallible === 'function') {
+        return window.renderContactsInfallible();
+    }
     const tbody = document.getElementById("contacts-table-body");
     if (!tbody) return;
 

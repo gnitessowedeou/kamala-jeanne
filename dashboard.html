@@ -29,10 +29,10 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261024_v65">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v65">
-  <link rel="stylesheet" href="css/auth.css?v=20261024_v65">
-  <link rel="stylesheet" href="css/pwa.css?v=20261024_v65">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v66">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v66">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v66">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v66">
 
   <style>
     .crm-select-contact, #crm-select-all {
@@ -1287,16 +1287,79 @@
               </div>
             </div>
 
-            <div class="contacts-filter-bar">
+            <div class="contacts-filter-bar" style="margin-bottom: 10px;">
               <div class="search-input-wrap contacts-search-wrap">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="contacts-search-input" placeholder="Filtrer par nom, numéro ou tag...">
+                <input type="text" id="contacts-search-input" placeholder="Filtrer par nom, numéro ou tag..." oninput="window.applyCrmContactsFilter()">
               </div>
               <div class="filter-pills-scroll">
-                <button class="tag-select-btn active" data-filter="all">Tous</button>
-                <button class="tag-select-btn" data-filter="VIP">Clients VIP</button>
-                <button class="tag-select-btn" data-filter="Chaud">Prospects Chauds</button>
-                <button class="tag-select-btn" data-filter="Panier">Panier Récupéré</button>
+                <button class="tag-select-btn active" data-filter="all" onclick="window.setCrmTagFilter('all')">Tous</button>
+                <button class="tag-select-btn" data-filter="VIP" onclick="window.setCrmTagFilter('VIP')">Clients VIP</button>
+                <button class="tag-select-btn" data-filter="Chaud" onclick="window.setCrmTagFilter('Chaud')">Prospects Chauds</button>
+                <button class="tag-select-btn" data-filter="Panier" onclick="window.setCrmTagFilter('Panier')">Panier Récupéré</button>
+              </div>
+            </div>
+
+            <!-- Barre d'Archives & Filtre Temporel (Par Jour, Mois, Année) -->
+            <div id="crm-archive-bar" class="crm-archive-bar" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #fff;">
+                  <i class="fa-solid fa-calendar-days" style="color: var(--whatsapp-green); font-size: 15px;"></i>
+                  <span>Archives Temporelles des Contacts</span>
+                  <span class="badge badge-subtle" id="crm-archive-total-badge" style="font-size: 11px;">0 contact</span>
+                </div>
+
+                <!-- Sélecteurs Rapides & Calendrier direct -->
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <div style="display: inline-flex; background: rgba(0,0,0,0.35); border-radius: 6px; padding: 2px; border: 1px solid rgba(255,255,255,0.08);">
+                    <button type="button" class="btn-period-quick active" data-period="all" onclick="window.setCrmPeriodFilter('all')" style="padding: 4px 10px; font-size: 11.5px; border-radius: 4px; background: rgba(37,211,102,0.2); color: #25d366; border: none; cursor: pointer; font-weight: 600;">Toutes dates</button>
+                    <button type="button" class="btn-period-quick" data-period="today" onclick="window.setCrmPeriodFilter('today')" style="padding: 4px 10px; font-size: 11.5px; border-radius: 4px; background: transparent; color: var(--text-muted); border: none; cursor: pointer;">Aujourd'hui</button>
+                    <button type="button" class="btn-period-quick" data-period="yesterday" onclick="window.setCrmPeriodFilter('yesterday')" style="padding: 4px 10px; font-size: 11.5px; border-radius: 4px; background: transparent; color: var(--text-muted); border: none; cursor: pointer;">Hier</button>
+                    <button type="button" class="btn-period-quick" data-period="this_month" onclick="window.setCrmPeriodFilter('this_month')" style="padding: 4px 10px; font-size: 11.5px; border-radius: 4px; background: transparent; color: var(--text-muted); border: none; cursor: pointer;">Ce mois</button>
+                  </div>
+
+                  <!-- Sélecteur Année & Mois -->
+                  <select id="crm-archive-year-select" onchange="window.handleCrmArchiveYearChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                    <!-- Rempli dynamiquement -->
+                  </select>
+
+                  <select id="crm-archive-month-select" onchange="window.handleCrmArchiveMonthChange(this.value)" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                    <!-- Rempli dynamiquement -->
+                  </select>
+
+                  <!-- Date picker calendrier direct -->
+                  <div style="display: flex; align-items: center; gap: 5px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 8px;">
+                    <i class="fa-regular fa-calendar" style="color: var(--whatsapp-green); font-size: 12px;"></i>
+                    <input type="date" id="crm-archive-exact-date" onchange="window.handleCrmExactDateChange(this.value)" style="background: transparent; border: none; color: #fff; font-size: 11.5px; outline: none; cursor: pointer;" title="Choisir un jour exact dans le calendrier" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rangée des Jours Actifs du Mois sélectionné -->
+              <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                  <i class="fa-solid fa-arrow-pointer" style="color: #60a5fa; font-size: 10px;"></i>
+                  <span>Cliquez sur un jour du mois pour filtrer les contacts ayant écrit à cette date précise :</span>
+                </div>
+                <div id="crm-archive-days-container" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-height: 95px; overflow-y: auto; padding: 2px 0;">
+                  <!-- Injecté dynamiquement : [Tout le mois (40)] [1er Octobre (5)] [4 Octobre (2)] ... -->
+                </div>
+              </div>
+
+              <!-- Bandeau Récapitulatif & Action Rapide de Relance quand un jour / filtre est actif -->
+              <div id="crm-archive-active-banner" style="display: none; justify-content: space-between; align-items: center; background: rgba(37, 211, 102, 0.12); border: 1px solid rgba(37, 211, 102, 0.35); border-radius: 6px; padding: 8px 12px; margin-top: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #fff;">
+                  <i class="fa-solid fa-filter" style="color: var(--whatsapp-green);"></i>
+                  <span id="crm-archive-active-label" style="font-weight: 500;">Filtre actif</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button type="button" class="btn btn-sm" onclick="window.broadcastFilteredContacts()" style="background: var(--whatsapp-green); color: #000; font-weight: 700; font-size: 11.5px; padding: 4px 12px; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(37,211,102,0.3);">
+                    <i class="fa-solid fa-bullhorn"></i> Relancer ces contacts
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary-glass" onclick="window.resetCrmPeriodFilter()" style="font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer;">
+                    <i class="fa-solid fa-xmark"></i> Effacer le filtre
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -4750,10 +4813,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261024_v65"></script>
+  <script src="js/i18n.js?v=20261024_v66"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261024_v65"></script>
-  <script src="js/dashboard.js?v=20261024_v65"></script>
+  <script src="js/auth.js?v=20261024_v66"></script>
+  <script src="js/dashboard.js?v=20261024_v66"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -5226,6 +5289,596 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         }
       };
 
+      // =========================================================================
+      // MOTEUR D'ARCHIVES TEMPORELLES ET FILTRAGE MULTI-CRITÈRES CRM (JOUR/MOIS/ANNÉE)
+      // =========================================================================
+      window.CRM_MONTH_NAMES = [
+        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+      ];
+
+      window.crmLoadedContacts = [];
+      window.crmFilteredContacts = [];
+      window.crmActiveTagFilter = 'all';
+      window.crmArchiveIndices = {
+        years: [],
+        monthsByYear: {},
+        daysByMonth: {},
+        countByPeriod: {}
+      };
+      window.crmSelectedArchive = {
+        mode: 'all', // 'all', 'today', 'yesterday', 'this_month', 'year', 'month', 'day', 'exact'
+        year: null,
+        month: null,     // 'YYYY-MM'
+        day: null,       // 'YYYY-MM-DD'
+        exactDate: null  // 'YYYY-MM-DD'
+      };
+
+      function getCrmContactDate(c) {
+        if (!c) return null;
+        var raw = c.updated_at || c.created_at || c.timestamp || null;
+        if (!raw) return null;
+        var d = new Date(raw);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      function formatCrmYmd(d) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+      }
+
+      function formatCrmYm(d) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        return y + '-' + m;
+      }
+
+      window.buildCrmArchiveIndices = function(contacts) {
+        var list = Array.isArray(contacts) ? contacts : [];
+        var yearsSet = new Set();
+        var monthsByYear = {};
+        var daysByMonth = {};
+
+        var now = new Date();
+        var todayYmd = formatCrmYmd(now);
+        var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        var yesterdayYmd = formatCrmYmd(yesterday);
+        var thisMonthYm = formatCrmYm(now);
+
+        var todayCount = 0;
+        var yesterdayCount = 0;
+        var thisMonthCount = 0;
+
+        list.forEach(function(c) {
+          var d = getCrmContactDate(c);
+          if (!d) return;
+          var y = String(d.getFullYear());
+          var ym = formatCrmYm(d);
+          var ymd = formatCrmYmd(d);
+
+          yearsSet.add(y);
+          if (!monthsByYear[y]) monthsByYear[y] = new Set();
+          monthsByYear[y].add(ym);
+
+          if (!daysByMonth[ym]) daysByMonth[ym] = {};
+          daysByMonth[ym][ymd] = (daysByMonth[ym][ymd] || 0) + 1;
+
+          if (ymd === todayYmd) todayCount++;
+          if (ymd === yesterdayYmd) yesterdayCount++;
+          if (ym === thisMonthYm) thisMonthCount++;
+        });
+
+        // Garantir la présence de l'année et du mois actuels
+        var currentYearStr = String(now.getFullYear());
+        yearsSet.add(currentYearStr);
+        if (!monthsByYear[currentYearStr]) monthsByYear[currentYearStr] = new Set();
+        monthsByYear[currentYearStr].add(thisMonthYm);
+
+        var sortedYears = Array.from(yearsSet).sort(function(a, b) { return Number(b) - Number(a); });
+        var finalMonthsByYear = {};
+        sortedYears.forEach(function(yr) {
+          var mSet = monthsByYear[yr] || new Set();
+          finalMonthsByYear[yr] = Array.from(mSet).sort(function(a, b) { return b.localeCompare(a); });
+        });
+
+        window.crmArchiveIndices = {
+          years: sortedYears,
+          monthsByYear: finalMonthsByYear,
+          daysByMonth: daysByMonth,
+          countByPeriod: {
+            all: list.length,
+            today: todayCount,
+            yesterday: yesterdayCount,
+            this_month: thisMonthCount
+          }
+        };
+
+        // Remplir le select des Années
+        var yearSelect = document.getElementById('crm-archive-year-select');
+        if (yearSelect) {
+          var currentVal = yearSelect.value;
+          var yHtml = '<option value="">Toutes les années</option>';
+          sortedYears.forEach(function(yr) {
+            yHtml += '<option value="' + yr + '">' + yr + '</option>';
+          });
+          yearSelect.innerHTML = yHtml;
+          if (window.crmSelectedArchive.year && sortedYears.includes(window.crmSelectedArchive.year)) {
+            yearSelect.value = window.crmSelectedArchive.year;
+          } else if (currentVal && sortedYears.includes(currentVal)) {
+            yearSelect.value = currentVal;
+          }
+        }
+
+        // Remplir le select des Mois
+        var selectedYr = yearSelect ? yearSelect.value : '';
+        window.updateCrmArchiveMonthsForYear(selectedYr);
+      };
+
+      window.updateCrmArchiveMonthsForYear = function(year) {
+        var monthSelect = document.getElementById('crm-archive-month-select');
+        if (!monthSelect) return;
+
+        var availableMonths = [];
+        if (year && window.crmArchiveIndices.monthsByYear[year]) {
+          availableMonths = window.crmArchiveIndices.monthsByYear[year];
+        } else {
+          var allM = new Set();
+          Object.keys(window.crmArchiveIndices.monthsByYear).forEach(function(yr) {
+            window.crmArchiveIndices.monthsByYear[yr].forEach(function(m) { allM.add(m); });
+          });
+          availableMonths = Array.from(allM).sort(function(a, b) { return b.localeCompare(a); });
+        }
+
+        var mHtml = '<option value="">Tous les mois</option>';
+        availableMonths.forEach(function(ym) {
+          var parts = ym.split('-');
+          var mIdx = parseInt(parts[1], 10) - 1;
+          var mName = window.CRM_MONTH_NAMES[mIdx] || ym;
+          var monthContacts = 0;
+          if (window.crmArchiveIndices.daysByMonth[ym]) {
+            Object.values(window.crmArchiveIndices.daysByMonth[ym]).forEach(function(cnt) { monthContacts += cnt; });
+          }
+          mHtml += '<option value="' + ym + '">' + mName + ' ' + parts[0] + ' (' + monthContacts + ')</option>';
+        });
+        monthSelect.innerHTML = mHtml;
+
+        if (window.crmSelectedArchive.month && availableMonths.includes(window.crmSelectedArchive.month)) {
+          monthSelect.value = window.crmSelectedArchive.month;
+        }
+
+        window.renderCrmArchiveDays();
+      };
+
+      window.renderCrmArchiveDays = function() {
+        var container = document.getElementById('crm-archive-days-container');
+        if (!container) return;
+
+        var activeYm = window.crmSelectedArchive.month;
+        if (!activeYm && (window.crmSelectedArchive.mode === 'this_month' || window.crmSelectedArchive.mode === 'today' || window.crmSelectedArchive.mode === 'yesterday')) {
+          activeYm = formatCrmYm(new Date());
+        }
+
+        if (!activeYm) {
+          var allMonths = [];
+          Object.keys(window.crmArchiveIndices.monthsByYear).forEach(function(yr) {
+            window.crmArchiveIndices.monthsByYear[yr].forEach(function(m) { allMonths.push(m); });
+          });
+          allMonths.sort(function(a, b) { return b.localeCompare(a); });
+          activeYm = allMonths[0] || formatCrmYm(new Date());
+        }
+
+        var parts = activeYm.split('-');
+        var yr = parts[0];
+        var mIdx = parseInt(parts[1], 10) - 1;
+        var monthName = window.CRM_MONTH_NAMES[mIdx] || parts[1];
+
+        var daysMap = window.crmArchiveIndices.daysByMonth[activeYm] || {};
+        var dayKeys = Object.keys(daysMap).sort();
+
+        var totalMonthCount = 0;
+        dayKeys.forEach(function(k) { totalMonthCount += daysMap[k]; });
+
+        var isWholeMonthActive = (window.crmSelectedArchive.mode === 'month' && window.crmSelectedArchive.month === activeYm) ||
+                                (window.crmSelectedArchive.mode === 'this_month' && activeYm === formatCrmYm(new Date()));
+
+        var html = '';
+
+        // Bouton Mois complet
+        html += '<button type="button" onclick="window.selectCrmArchiveWholeMonth(\'' + activeYm + '\')" ' +
+          'style="padding: 4px 10px; font-size: 11px; border-radius: 20px; cursor: pointer; transition: all 0.2s; ' +
+          (isWholeMonthActive ? 'background: #25D366; color: #000; font-weight: 700; border: 1px solid #25D366; box-shadow: 0 0 10px rgba(37,211,102,0.4);' : 'background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.12);') + '">' +
+          '<i class="fa-solid fa-calendar-check" style="margin-right: 4px;"></i> Tout ' + monthName + ' ' + yr + ' (' + totalMonthCount + ')' +
+          '</button>';
+
+        if (dayKeys.length === 0) {
+          html += '<span style="color: var(--text-muted); font-size: 11px; font-style: italic; margin-left: 4px;">Aucune interaction enregistrée sur ce mois pour l\'instant.</span>';
+        } else {
+          dayKeys.forEach(function(ymd) {
+            var dParts = ymd.split('-');
+            var dayNum = parseInt(dParts[2], 10);
+            var dayLabel = dayNum === 1 ? '1er ' + monthName : dayNum + ' ' + monthName;
+            var count = daysMap[ymd];
+            var isDayActive = (window.crmSelectedArchive.day === ymd);
+
+            html += '<button type="button" onclick="window.selectCrmArchiveDay(\'' + ymd + '\')" ' +
+              'style="padding: 4px 10px; font-size: 11px; border-radius: 20px; cursor: pointer; transition: all 0.2s; ' +
+              (isDayActive ? 'background: #25D366; color: #000; font-weight: 700; border: 1px solid #25D366; box-shadow: 0 0 10px rgba(37,211,102,0.4);' : 'background: rgba(255,255,255,0.04); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1);') + '">' +
+              '<i class="fa-regular fa-clock" style="margin-right: 4px; font-size: 10px;"></i>' + dayLabel + ' <strong>(' + count + ')</strong>' +
+              '</button>';
+          });
+        }
+
+        container.innerHTML = html;
+      };
+
+      window.setCrmTagFilter = function(tag) {
+        window.crmActiveTagFilter = tag || 'all';
+        var tagBtns = document.querySelectorAll('.tag-select-btn');
+        tagBtns.forEach(function(btn) {
+          var btnFilter = btn.getAttribute('data-filter') || 'all';
+          if (btnFilter === window.crmActiveTagFilter) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        window.applyCrmContactsFilter();
+      };
+
+      window.setCrmPeriodFilter = function(period) {
+        var quickBtns = document.querySelectorAll('.btn-period-quick');
+        quickBtns.forEach(function(btn) {
+          var p = btn.getAttribute('data-period');
+          if (p === period) {
+            btn.classList.add('active');
+            btn.style.background = 'rgba(37,211,102,0.2)';
+            btn.style.color = '#25d366';
+            btn.style.fontWeight = '600';
+          } else {
+            btn.classList.remove('active');
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--text-muted)';
+            btn.style.fontWeight = 'normal';
+          }
+        });
+
+        var now = new Date();
+        var exactInput = document.getElementById('crm-archive-exact-date');
+        if (exactInput) exactInput.value = '';
+
+        if (period === 'all') {
+          window.crmSelectedArchive = { mode: 'all', year: null, month: null, day: null, exactDate: null };
+          var ySel = document.getElementById('crm-archive-year-select');
+          if (ySel) ySel.value = '';
+          var mSel = document.getElementById('crm-archive-month-select');
+          if (mSel) mSel.value = '';
+        } else if (period === 'today') {
+          window.crmSelectedArchive = { mode: 'today', year: String(now.getFullYear()), month: formatCrmYm(now), day: formatCrmYmd(now), exactDate: null };
+        } else if (period === 'yesterday') {
+          var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          window.crmSelectedArchive = { mode: 'yesterday', year: String(yesterday.getFullYear()), month: formatCrmYm(yesterday), day: formatCrmYmd(yesterday), exactDate: null };
+        } else if (period === 'this_month') {
+          window.crmSelectedArchive = { mode: 'this_month', year: String(now.getFullYear()), month: formatCrmYm(now), day: null, exactDate: null };
+          var ySel = document.getElementById('crm-archive-year-select');
+          if (ySel) ySel.value = String(now.getFullYear());
+          var mSel = document.getElementById('crm-archive-month-select');
+          if (mSel) mSel.value = formatCrmYm(now);
+        }
+
+        window.renderCrmArchiveDays();
+        window.applyCrmContactsFilter();
+      };
+
+      window.handleCrmArchiveYearChange = function(year) {
+        window.crmSelectedArchive.year = year || null;
+        window.crmSelectedArchive.month = null;
+        window.crmSelectedArchive.day = null;
+        window.crmSelectedArchive.mode = year ? 'year' : 'all';
+
+        // Désactiver boutons rapides
+        document.querySelectorAll('.btn-period-quick').forEach(function(b) {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.color = 'var(--text-muted)';
+        });
+
+        window.updateCrmArchiveMonthsForYear(year);
+        window.applyCrmContactsFilter();
+      };
+
+      window.handleCrmArchiveMonthChange = function(monthVal) {
+        window.crmSelectedArchive.month = monthVal || null;
+        window.crmSelectedArchive.day = null;
+        if (monthVal) {
+          window.crmSelectedArchive.mode = 'month';
+          window.crmSelectedArchive.year = monthVal.split('-')[0];
+          var ySel = document.getElementById('crm-archive-year-select');
+          if (ySel) ySel.value = window.crmSelectedArchive.year;
+        } else {
+          window.crmSelectedArchive.mode = window.crmSelectedArchive.year ? 'year' : 'all';
+        }
+
+        document.querySelectorAll('.btn-period-quick').forEach(function(b) {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.color = 'var(--text-muted)';
+        });
+
+        window.renderCrmArchiveDays();
+        window.applyCrmContactsFilter();
+      };
+
+      window.handleCrmExactDateChange = function(dateStr) {
+        if (!dateStr) {
+          window.resetCrmPeriodFilter();
+          return;
+        }
+
+        var parts = dateStr.split('-');
+        var yr = parts[0];
+        var ym = yr + '-' + parts[1];
+
+        window.crmSelectedArchive = {
+          mode: 'exact',
+          year: yr,
+          month: ym,
+          day: dateStr,
+          exactDate: dateStr
+        };
+
+        var ySel = document.getElementById('crm-archive-year-select');
+        if (ySel) ySel.value = yr;
+        window.updateCrmArchiveMonthsForYear(yr);
+        var mSel = document.getElementById('crm-archive-month-select');
+        if (mSel) mSel.value = ym;
+
+        document.querySelectorAll('.btn-period-quick').forEach(function(b) {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.color = 'var(--text-muted)';
+        });
+
+        window.renderCrmArchiveDays();
+        window.applyCrmContactsFilter();
+      };
+
+      window.selectCrmArchiveWholeMonth = function(ym) {
+        window.crmSelectedArchive = {
+          mode: 'month',
+          year: ym.split('-')[0],
+          month: ym,
+          day: null,
+          exactDate: null
+        };
+        var mSel = document.getElementById('crm-archive-month-select');
+        if (mSel) mSel.value = ym;
+        var ySel = document.getElementById('crm-archive-year-select');
+        if (ySel) ySel.value = window.crmSelectedArchive.year;
+
+        document.querySelectorAll('.btn-period-quick').forEach(function(b) {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.color = 'var(--text-muted)';
+        });
+
+        window.renderCrmArchiveDays();
+        window.applyCrmContactsFilter();
+      };
+
+      window.selectCrmArchiveDay = function(ymd) {
+        var ym = ymd.substring(0, 7);
+        window.crmSelectedArchive = {
+          mode: 'day',
+          year: ymd.split('-')[0],
+          month: ym,
+          day: ymd,
+          exactDate: null
+        };
+
+        var exactInput = document.getElementById('crm-archive-exact-date');
+        if (exactInput) exactInput.value = ymd;
+
+        document.querySelectorAll('.btn-period-quick').forEach(function(b) {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.color = 'var(--text-muted)';
+        });
+
+        window.renderCrmArchiveDays();
+        window.applyCrmContactsFilter();
+      };
+
+      window.resetCrmPeriodFilter = function() {
+        window.setCrmPeriodFilter('all');
+      };
+
+      window.broadcastFilteredContacts = function() {
+        var visibleContacts = window.crmFilteredContacts || [];
+        if (visibleContacts.length === 0) {
+          if (typeof showToast === 'function') showToast("Aucun contact dans le filtre actuel.", "warning");
+          return;
+        }
+
+        var quota = (typeof getPlanQuota === 'function') ? getPlanQuota() : { max: 30, planName: 'Pro' };
+        var maxAllowed = quota.max || 30;
+
+        var visiblePhones = new Set(visibleContacts.slice(0, maxAllowed).map(function(c) {
+          return String(c.phone_number || '').replace(/\D/g, '');
+        }));
+
+        var allBoxes = document.querySelectorAll('.crm-select-contact');
+        var selectedCount = 0;
+        allBoxes.forEach(function(cb) {
+          var pNorm = String(cb.getAttribute('data-phone') || '').replace(/\D/g, '');
+          if (visiblePhones.has(pNorm)) {
+            cb.checked = true;
+            selectedCount++;
+          } else {
+            cb.checked = false;
+          }
+        });
+
+        if (typeof window.updateCrmSelectionUI === 'function') {
+          window.updateCrmSelectionUI();
+        }
+
+        window.activeBroadcastRecipients = visibleContacts.slice(0, maxAllowed).map(function(c) {
+          return {
+            phone: c.phone_number || '',
+            name: c.name || 'Client'
+          };
+        });
+
+        if (typeof window.openCrmBroadcastModal === 'function') {
+          window.openCrmBroadcastModal();
+        }
+
+        if (typeof showToast === 'function') {
+          showToast(selectedCount + ' contacts archivés sélectionnés pour votre relance WhatsApp !', 'success');
+        }
+      };
+
+      window.applyCrmContactsFilter = function() {
+        var tbody = document.getElementById('contacts-table-body');
+        if (!tbody) return;
+
+        var contacts = window.crmLoadedContacts || [];
+        var searchInput = document.getElementById('contacts-search-input');
+        var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        var tagFilter = window.crmActiveTagFilter || 'all';
+        var archive = window.crmSelectedArchive || { mode: 'all' };
+
+        var filtered = contacts.filter(function(c) {
+          // 1. Filtre recherche textuelle
+          if (query) {
+            var nameMatch = (c.name || '').toLowerCase().includes(query);
+            var phoneMatch = String(c.phone_number || '').includes(query);
+            var tagMatch = Array.isArray(c.tags) && c.tags.some(function(t) { return String(t).toLowerCase().includes(query); });
+            if (!nameMatch && !phoneMatch && !tagMatch) return false;
+          }
+
+          // 2. Filtre Tag
+          if (tagFilter && tagFilter !== 'all') {
+            var cTags = Array.isArray(c.tags) ? c.tags : [];
+            var hasTag = cTags.some(function(t) {
+              return String(t).toLowerCase().includes(tagFilter.toLowerCase());
+            });
+            // Si pas de tags précis, match prospect chaud par défaut ou fallback
+            if (!hasTag && tagFilter === 'Chaud' && c.unread_count > 0) hasTag = true;
+            if (!hasTag) return false;
+          }
+
+          // 3. Filtre Temporel / Archive
+          if (archive.mode && archive.mode !== 'all') {
+            var d = getCrmContactDate(c);
+            if (!d) return false;
+            var y = String(d.getFullYear());
+            var ym = formatCrmYm(d);
+            var ymd = formatCrmYmd(d);
+
+            if (archive.mode === 'today' || archive.mode === 'yesterday' || archive.mode === 'day' || archive.mode === 'exact') {
+              if (ymd !== archive.day) return false;
+            } else if (archive.mode === 'this_month' || archive.mode === 'month') {
+              if (ym !== archive.month) return false;
+            } else if (archive.mode === 'year') {
+              if (y !== archive.year) return false;
+            }
+          }
+
+          return true;
+        });
+
+        window.crmFilteredContacts = filtered;
+
+        // Mise à jour badge compteur
+        var totalBadge = document.getElementById('crm-archive-total-badge');
+        if (totalBadge) {
+          totalBadge.textContent = filtered.length + ' / ' + contacts.length + ' contact' + (contacts.length > 1 ? 's' : '');
+        }
+
+        // Gestion du bandeau actif de relance
+        var banner = document.getElementById('crm-archive-active-banner');
+        var bannerLabel = document.getElementById('crm-archive-active-label');
+        if (banner && bannerLabel) {
+          if (archive.mode && archive.mode !== 'all') {
+            var labelDesc = '';
+            if (archive.mode === 'today') {
+              labelDesc = 'Contacts d\'aujourd\'hui (' + filtered.length + ' contact' + (filtered.length > 1 ? 's' : '') + ')';
+            } else if (archive.mode === 'yesterday') {
+              labelDesc = 'Contacts d\'hier (' + filtered.length + ' contact' + (filtered.length > 1 ? 's' : '') + ')';
+            } else if (archive.day) {
+              var dP = archive.day.split('-');
+              var mName = window.CRM_MONTH_NAMES[parseInt(dP[1], 10) - 1] || dP[1];
+              var dayFmt = (parseInt(dP[2], 10) === 1 ? '1er' : parseInt(dP[2], 10)) + ' ' + mName + ' ' + dP[0];
+              labelDesc = 'Contacts ayant écrit le ' + dayFmt + ' (' + filtered.length + ' contact' + (filtered.length > 1 ? 's' : '') + ')';
+            } else if (archive.month) {
+              var mP = archive.month.split('-');
+              var mName = window.CRM_MONTH_NAMES[parseInt(mP[1], 10) - 1] || mP[1];
+              labelDesc = 'Contacts du mois de ' + mName + ' ' + mP[0] + ' (' + filtered.length + ' contact' + (filtered.length > 1 ? 's' : '') + ')';
+            } else if (archive.year) {
+              labelDesc = 'Contacts de l\'année ' + archive.year + ' (' + filtered.length + ' contact' + (filtered.length > 1 ? 's' : '') + ')';
+            }
+            bannerLabel.textContent = labelDesc;
+            banner.style.display = 'flex';
+          } else {
+            banner.style.display = 'none';
+          }
+        }
+
+        // Rendu du tableau
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 32px 20px; color: var(--text-muted);">' +
+            '<i class="fa-solid fa-folder-open" style="font-size: 28px; opacity: 0.4; margin-bottom: 8px; display: block;"></i>' +
+            '<p style="margin: 0 0 8px 0; font-size: 13.5px; color: #fff;">Aucun contact trouvé pour cette sélection temporelle.</p>' +
+            '<button type="button" class="btn btn-xs btn-secondary-glass" onclick="window.resetCrmPeriodFilter()" style="margin-top: 4px; padding: 5px 12px; cursor: pointer;">' +
+            '<i class="fa-solid fa-rotate-left"></i> Afficher tous les contacts' +
+            '</button>' +
+          '</td></tr>';
+          window.updateCrmSelectionUI();
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(function(c) {
+          var safeName = (c.name || 'Inconnu').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          var safeInitial = (safeName.charAt(0) || 'I').toUpperCase();
+          var safePhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone_number) : (typeof formatPhoneClean === 'function' ? formatPhoneClean(c.phone_number) : c.phone_number);
+          var safeRawPhone = String(c.phone_number || '').replace(/"/g, '&quot;');
+          var safeDate = new Date(c.updated_at || Date.now()).toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+
+          return '<tr>' +
+            '<td style="text-align: center; width: 44px;">' +
+              '<input type="checkbox" class="crm-select-contact" ' +
+                'data-phone="' + safeRawPhone + '" ' +
+                'data-name="' + safeName + '" ' +
+                'style="cursor: pointer; width: 18px; height: 18px; accent-color: #25D366; vertical-align: middle;" ' +
+                'onchange="window.handleCrmContactSelectionChange(event)" />' +
+            '</td>' +
+            '<td>' +
+              '<div style="display: flex; align-items: center; gap: 10px;">' +
+                '<div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">' + safeInitial + '</div>' +
+                '<span style="font-weight: 500;">' + safeName + '</span>' +
+              '</div>' +
+            '</td>' +
+            '<td><strong style="font-family: monospace; font-size: 13px; color: var(--text-primary);">' + safePhone + '</strong></td>' +
+            '<td>' + safeDate + '</td>' +
+            '<td><span class="badge badge-gray">Prospect</span></td>' +
+            '<td>N/A</td>' +
+            '<td>' +
+              '<div style="display: flex; gap: 8px;">' +
+                '<button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px;" title="Discuter" onclick="if(window.openChatWithContact) window.openChatWithContact(\'' + safeRawPhone + '\', \'' + safeName + '\')"><i class="fa-solid fa-message"></i></button>' +
+                '<button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px; color: var(--whatsapp-green);" title="Diffuser à ce contact" onclick="if(window.openSingleBroadcastModal) window.openSingleBroadcastModal(\'' + safeRawPhone + '\', \'' + safeName + '\')"><i class="fa-solid fa-paper-plane"></i></button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+
+        window.updateCrmSelectionUI();
+      };
+
       window.renderContactsInfallible = async function() {
         var tbody = document.getElementById('contacts-table-body');
         if (!tbody) return;
@@ -5247,6 +5900,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           var data = await res.json();
 
           if (data && data.success && Array.isArray(data.contacts) && data.contacts.length > 0) {
+            window.crmLoadedContacts = data.contacts;
             if (typeof MOCK_DATA !== 'undefined') MOCK_DATA.contacts = data.contacts;
 
             // Mise à jour badge compteur latéral
@@ -5257,44 +5911,18 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
               badge.style.display = 'inline-block';
             }
 
-            tbody.innerHTML = data.contacts.map(function(c) {
-              var safeName = (c.name || 'Inconnu').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-              var safeInitial = (safeName.charAt(0) || 'I').toUpperCase();
-              var safePhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone_number) : formatPhoneClean(c.phone_number);
-              var safeRawPhone = String(c.phone_number || '').replace(/"/g, '&quot;');
-              var safeDate = new Date(c.updated_at || Date.now()).toLocaleDateString('fr-FR');
+            // Indexer les archives temporelles
+            window.buildCrmArchiveIndices(data.contacts);
 
-              return '<tr>' +
-                '<td style="text-align: center; width: 44px;">' +
-                  '<input type="checkbox" class="crm-select-contact" ' +
-                    'data-phone="' + safeRawPhone + '" ' +
-                    'data-name="' + safeName + '" ' +
-                    'style="cursor: pointer; width: 18px; height: 18px; accent-color: #25D366; vertical-align: middle;" ' +
-                    'onchange="window.handleCrmContactSelectionChange(event)" />' +
-                '</td>' +
-                '<td>' +
-                  '<div style="display: flex; align-items: center; gap: 10px;">' +
-                    '<div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">' + safeInitial + '</div>' +
-                    '<span style="font-weight: 500;">' + safeName + '</span>' +
-                  '</div>' +
-                '</td>' +
-                '<td><strong style="font-family: monospace; font-size: 13px; color: var(--text-primary);">' + safePhone + '</strong></td>' +
-                '<td>' + safeDate + '</td>' +
-                '<td><span class="badge badge-gray">Prospect</span></td>' +
-                '<td>N/A</td>' +
-                '<td>' +
-                  '<div style="display: flex; gap: 8px;">' +
-                    '<button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px;" title="Discuter" onclick="if(window.openChatWithContact) window.openChatWithContact(\'' + safeRawPhone + '\', \'' + safeName + '\')"><i class="fa-solid fa-message"></i></button>' +
-                    '<button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px; color: var(--whatsapp-green);" title="Diffuser à ce contact" onclick="if(window.openSingleBroadcastModal) window.openSingleBroadcastModal(\'' + safeRawPhone + '\', \'' + safeName + '\')"><i class="fa-solid fa-paper-plane"></i></button>' +
-                  '</div>' +
-                '</td>' +
-              '</tr>';
-            }).join('');
-
-            window.updateCrmSelectionUI();
+            // Appliquer le filtre courant
+            window.applyCrmContactsFilter();
           } else {
+            window.crmLoadedContacts = [];
+            window.crmFilteredContacts = [];
             var badgeEmpty = document.getElementById('nav-badge-contacts');
             if (badgeEmpty) { badgeEmpty.textContent = '0'; badgeEmpty.className = 'badge badge-subtle'; }
+            var totalBadge = document.getElementById('crm-archive-total-badge');
+            if (totalBadge) totalBadge.textContent = '0 contact';
             tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">' +
               'Votre base CRM est prête. Vos prospects WhatsApp seront enregistrés automatiquement dès leur premier message.</td></tr>';
           }
@@ -6010,6 +6638,6 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   </script>
 
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261024_v65"></script>
+  <script src="js/pwa.js?v=20261024_v66"></script>
 </body>
 </html>
