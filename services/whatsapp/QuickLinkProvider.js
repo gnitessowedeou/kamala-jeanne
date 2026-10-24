@@ -249,14 +249,14 @@ class QuickLinkProvider extends WhatsAppProvider {
    * Envoie un message avec tous les garde-fous stricts.
    */
   async sendMessage(userId, to, message, options = {}) {
-    // Garde-fou 2 : Interdiction absolue des diffusions de masse et relances marketing en mode rapide
-    if (options.isBroadcast || options.category === MESSAGE_CATEGORIES.MARKETING) {
-      throw new Error("GARDE-FOU ANTI-BAN : Les diffusions de masse et relances marketing sont désactivées en mode rapide pour protéger votre numéro contre les blocages Meta. Utilisez le Mode Officiel pour diffuser en toute sécurité.");
+    // Garde-fou 2 : Interdiction des diffusions de masse sauvages non ciblées en mode rapide
+    if ((options.isBroadcast || options.category === MESSAGE_CATEGORIES.MARKETING) && !options.isCrmBroadcast) {
+      throw new Error("GARDE-FOU ANTI-BAN : Les diffusions de masse non ciblées sont désactivées en mode rapide. Utilisez la Diffusion Ciblée CRM ou le Mode Officiel.");
     }
 
-    // Garde-fou 3 : Vérification de l'initiateur (Réponse uniquement aux clients ayant écrit)
+    // Garde-fou 3 : Vérification de l'initiateur (Réponse uniquement aux clients ayant écrit ou sélectionnés dans le CRM)
     const isSelfTest = Boolean(options.isSelfTest);
-    if (!isSelfTest && !options.skipInitiatorCheck) {
+    if (!isSelfTest && !options.skipInitiatorCheck && !options.isCrmBroadcast) {
       const isInitiator = this.hasClientInitiated(userId, to);
       if (!isInitiator) {
         throw new Error(`GARDE-FOU ANTI-BAN : Envoi sortant refusé vers ${to}. Le mode rapide n'autorise que les réponses aux prospects ayant envoyé un premier message.`);
@@ -298,13 +298,15 @@ class QuickLinkProvider extends WhatsAppProvider {
     // Attente simulant la rédaction humaine
     await new Promise(r => setTimeout(r, typingJitterMs));
 
-    // Délivrance du message
+    // Délivrance du message (Support texte pur ou Média avec légende)
     let delivered = false;
     let messageId = null;
 
     if (targetChat && typeof targetChat.sendMessage === 'function') {
       try {
-        const res = await targetChat.sendMessage(message);
+        const res = options.media
+          ? await targetChat.sendMessage(options.media, { caption: message })
+          : await targetChat.sendMessage(message);
         if (res) {
           delivered = true;
           messageId = res.id ? (res.id._serialized || res.id.id) : `quick_${Date.now()}`;
@@ -317,12 +319,19 @@ class QuickLinkProvider extends WhatsAppProvider {
     if (!delivered) {
       let formattedTarget = to;
       if (!formattedTarget.includes('@')) {
-        formattedTarget = `${formattedTarget.replace(/\D/g, '')}@c.us`;
+        const clean = formattedTarget.replace(/\D/g, '');
+        if (clean.length > 13 && !clean.startsWith('229') && !clean.startsWith('226') && !clean.startsWith('225') && !clean.startsWith('228') && !clean.startsWith('221') && !clean.startsWith('33')) {
+          formattedTarget = `${clean}@lid`;
+        } else {
+          formattedTarget = `${clean}@c.us`;
+        }
       } else if (formattedTarget.includes('@s.whatsapp.net')) {
         formattedTarget = formattedTarget.replace('@s.whatsapp.net', '@c.us');
       }
 
-      const res = await client.sendMessage(formattedTarget, message);
+      const res = options.media
+        ? await client.sendMessage(formattedTarget, options.media, { caption: message })
+        : await client.sendMessage(formattedTarget, message);
       if (res) {
         delivered = true;
         messageId = res.id ? (res.id._serialized || res.id.id) : `quick_${Date.now()}`;

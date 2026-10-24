@@ -1358,6 +1358,15 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
       if (contact) {
         if (contact.number) cleanPhone = String(contact.number).replace(/\D/g, '');
         if (contact.pushname || contact.name) cName = contact.pushname || contact.name;
+        if (typeof contact.getFormattedNumber === 'function' && (!cleanPhone || cleanPhone.length > 13)) {
+          try {
+            const fn = await contact.getFormattedNumber();
+            if (fn) {
+              const fnClean = fn.replace(/\D/g, '');
+              if (fnClean && fnClean.length >= 8 && fnClean.length <= 13) cleanPhone = fnClean;
+            }
+          } catch(e) {}
+        }
       }
     } catch (e) {}
 
@@ -1366,6 +1375,27 @@ async function handleIncomingWhatsAppMessage(msg, isSelfTest, client, userId) {
     }
     if (!cleanPhone && msg.from) {
       cleanPhone = String(msg.from).split('@')[0].replace(/\D/g, '');
+    }
+
+    // Résolution approfondie LID -> Numéro de téléphone réel via WhatsApp Web
+    if (client && typeof client.getContactLidAndPhone === 'function') {
+      const lidCandidate = (msg.from && msg.from.includes('@lid')) 
+        ? msg.from 
+        : ((cleanPhone && cleanPhone.length > 13) ? `${cleanPhone}@lid` : null);
+      if (lidCandidate) {
+        try {
+          const resolved = await client.getContactLidAndPhone([lidCandidate]);
+          if (resolved && resolved[0] && resolved[0].pn) {
+            const realPn = resolved[0].pn.split('@')[0].replace(/\D/g, '');
+            if (realPn && realPn.length >= 8) {
+              console.log(`[WA/LID] Conversion automatique LID ${lidCandidate} -> Numéro réel +${realPn}`);
+              cleanPhone = realPn;
+            }
+          }
+        } catch (lidErr) {
+          console.warn("[WA/LID] Notice résolution LID:", lidErr.message);
+        }
+      }
     }
 
     const rawSender = isSelfTest ? (client.info ? client.info.wid.user : 'Moi') : (cleanPhone || 'Inconnu');
@@ -2554,6 +2584,225 @@ app.post('/api/whatsapp/send', authMiddleware, async (req, res) => {
   }
 });
 
+// =============================================================================
+// DIFFUSION CIBLÉE CRM WHATSAPP (AVEC CADENCEMENT ANTI-BAN ET SUPPORT PHOTO)
+// =============================================================================
+
+/**
+ * Envoi unitaire dans le cadre d'une diffusion ciblée CRM (permet le suivi live sur le dashboard)
+ */
+app.post('/api/whatsapp/crm-broadcast-send-one', authMiddleware, async (req, res) => {
+  const { userId, phone, name, message, photo } = req.body;
+  if (!userId || !phone || (!message && !photo)) {
+    return res.status(400).json({ error: "Paramètres manquants (userId, phone, message ou photo requis)." });
+  }
+
+  const client = waClients[userId];
+  const isConn = client && (waStatuses[userId] === WHATSAPP_STATUS.CONNECTED || waStatuses[userId] === 'AUTHENTICATED');
+  if (!client || !isConn) {
+    return res.status(400).json({ error: "Session WhatsApp non connectée." });
+  }
+
+  try {
+    const rawPhone = String(phone).trim();
+    const contactName = String(name || 'Client').trim();
+
+    // Personnalisation dynamique avec {nom} et {prenom}
+    const personalizedText = String(message || '')
+      .replace(/{nom}/gi, contactName)
+      .replace(/{prenom}/gi, contactName.split(' ')[0] || contactName);
+
+    // Résolution du destinataire WhatsApp
+    let targetJid = rawPhone;
+    if (!targetJid.includes('@')) {
+      const cleanDigits = targetJid.replace(/\D/g, '');
+      if (cleanDigits.length > 13 && !cleanDigits.startsWith('229') && !cleanDigits.startsWith('228') && !cleanDigits.startsWith('226') && !cleanDigits.startsWith('225') && !cleanDigits.startsWith('221') && !cleanDigits.startsWith('33')) {
+        targetJid = `${cleanDigits}@lid`;
+      } else {
+        targetJid = `${cleanDigits}@c.us`;
+      }
+    }
+
+    // Préparation de la photo si transmise
+    let pMedia = null;
+    if (photo) {
+      try {
+        if (photo.data && photo.mimetype) {
+          const cleanBase64 = photo.data.includes(',') ? photo.data.split(',')[1] : photo.data;
+          pMedia = new MessageMedia(photo.mimetype, cleanBase64, photo.filename || 'article.jpg');
+        } else if (photo.url) {
+          if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) {
+            pMedia = await MessageMedia.fromUrl(photo.url, { unsafeMime: true });
+          } else if (fs.existsSync(photo.url)) {
+            pMedia = MessageMedia.fromFilePath(photo.url);
+          }
+        }
+      } catch (mediaErr) {
+        console.warn(`[CRM/BROADCAST] Notice chargement photo pour ${targetJid}:`, mediaErr.message);
+      }
+    }
+
+    // Envoi via WhatsApp
+    let sentMsg = null;
+    if (pMedia) {
+      sentMsg = await client.sendMessage(targetJid, pMedia, { caption: personalizedText });
+    } else {
+      sentMsg = await client.sendMessage(targetJid, personalizedText);
+    }
+
+    const messageId = sentMsg ? (sentMsg.id?._serialized || sentMsg.id?.id) : `crm_${Date.now()}`;
+
+    // Historisation dans Supabase et cache
+    try {
+      const cleanDigits = rawPhone.replace(/\D/g, '');
+      await saveCustomerSession(
+        userId,
+        cleanDigits,
+        contactName,
+        '',
+        `[Diffusion CRM] ${personalizedText}${pMedia ? ' 📷 [Photo]' : ''}`,
+        [],
+        new Date().toISOString()
+      );
+    } catch (hErr) {}
+
+    console.log(`[CRM/BROADCAST] Message envoyé à ${contactName} (${rawPhone}) [ID: ${messageId}]`);
+    res.json({ success: true, messageId, recipient: rawPhone, name: contactName });
+  } catch (err) {
+    console.warn(`[CRM/BROADCAST] Échec envoi à ${phone}:`, err.message);
+    res.status(500).json({ error: err.message || "Échec de l'envoi" });
+  }
+});
+
+/**
+ * Envoi groupé côté serveur avec cadencement anti-ban automatique et vérification stricte du forfait
+ */
+app.post('/api/whatsapp/crm-broadcast', authMiddleware, async (req, res) => {
+  const { userId, recipients, message, photo } = req.body;
+  if (!userId || !Array.isArray(recipients) || recipients.length === 0 || (!message && !photo)) {
+    return res.status(400).json({ error: "Paramètres manquants (userId, recipients et message/photo requis)." });
+  }
+
+  // 1. Quota selon forfait utilisateur (Basique: 10, Pro: 30, Entreprise: 40)
+  let planLimit = 10;
+  let userPlan = 'basic';
+  if (supabase && userId) {
+    try {
+      const { data } = await supabase.from('profiles').select('plan, credits').eq('id', userId).maybeSingle();
+      if (data && data.plan) {
+        userPlan = String(data.plan).toLowerCase();
+        if (userPlan.includes('ent') || userPlan.includes('biz') || userPlan.includes('business')) {
+          planLimit = 40;
+        } else if (userPlan.includes('pro')) {
+          planLimit = 30;
+        } else {
+          planLimit = 10;
+        }
+      }
+    } catch (e) {}
+  }
+
+  const targetRecipients = recipients.slice(0, planLimit);
+
+  // 2. Vérification session
+  const client = waClients[userId];
+  const isConn = client && (waStatuses[userId] === WHATSAPP_STATUS.CONNECTED || waStatuses[userId] === 'AUTHENTICATED');
+  if (!client || !isConn) {
+    return res.status(400).json({ error: "Votre session WhatsApp n'est pas connectée." });
+  }
+
+  // 3. Préparation photo éventuelle
+  let pMedia = null;
+  if (photo) {
+    try {
+      if (photo.data && photo.mimetype) {
+        const cleanBase64 = photo.data.includes(',') ? photo.data.split(',')[1] : photo.data;
+        pMedia = new MessageMedia(photo.mimetype, cleanBase64, photo.filename || 'article.jpg');
+      } else if (photo.url) {
+        if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) {
+          pMedia = await MessageMedia.fromUrl(photo.url, { unsafeMime: true });
+        } else if (fs.existsSync(photo.url)) {
+          pMedia = MessageMedia.fromFilePath(photo.url);
+        }
+      }
+    } catch (mediaErr) {
+      console.warn("[CRM/BROADCAST] Notice chargement média photo:", mediaErr.message);
+    }
+  }
+
+  const results = [];
+  console.log(`[CRM/BROADCAST] Traitement par lot pour ${userId}: ${targetRecipients.length} contacts (Forfait ${userPlan}, Quota ${planLimit})`);
+
+  for (let i = 0; i < targetRecipients.length; i++) {
+    const item = targetRecipients[i];
+    const rawPhone = String(item.phone || '').trim();
+    const contactName = String(item.name || 'Client').trim();
+
+    if (!rawPhone) {
+      results.push({ phone: rawPhone, name: contactName, success: false, error: 'Numéro manquant' });
+      continue;
+    }
+
+    const personalizedText = String(message || '')
+      .replace(/{nom}/gi, contactName)
+      .replace(/{prenom}/gi, contactName.split(' ')[0] || contactName);
+
+    let targetJid = rawPhone;
+    if (!targetJid.includes('@')) {
+      const cleanDigits = targetJid.replace(/\D/g, '');
+      if (cleanDigits.length > 13 && !cleanDigits.startsWith('229') && !cleanDigits.startsWith('228') && !cleanDigits.startsWith('226') && !cleanDigits.startsWith('225') && !cleanDigits.startsWith('221') && !cleanDigits.startsWith('33')) {
+        targetJid = `${cleanDigits}@lid`;
+      } else {
+        targetJid = `${cleanDigits}@c.us`;
+      }
+    }
+
+    try {
+      // Temporisation anti-ban SafeSend entre 2.5s et 4s (sauf premier message)
+      if (i > 0) {
+        const jitter = Math.floor(Math.random() * 1500) + 2500;
+        await new Promise(r => setTimeout(r, jitter));
+      }
+
+      let sentMsg = null;
+      if (pMedia) {
+        sentMsg = await client.sendMessage(targetJid, pMedia, { caption: personalizedText });
+      } else {
+        sentMsg = await client.sendMessage(targetJid, personalizedText);
+      }
+
+      const msgId = sentMsg ? (sentMsg.id?._serialized || sentMsg.id?.id) : `crm_${Date.now()}_${i}`;
+
+      try {
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+        await saveCustomerSession(
+          userId,
+          cleanDigits,
+          contactName,
+          '',
+          `[Diffusion CRM] ${personalizedText}${pMedia ? ' 📷 [Photo]' : ''}`,
+          [],
+          new Date().toISOString()
+        );
+      } catch (hErr) {}
+
+      results.push({ phone: rawPhone, name: contactName, success: true, messageId: msgId });
+    } catch (err) {
+      console.warn(`[CRM/BROADCAST] Erreur sur ${rawPhone}:`, err.message);
+      results.push({ phone: rawPhone, name: contactName, success: false, error: err.message });
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length;
+  res.json({
+    success: true,
+    total: targetRecipients.length,
+    sent: successCount,
+    failed: targetRecipients.length - successCount,
+    results
+  });
+});
+
 // === 5. CONFIGURATION IA ===
 app.get('/api/ai/config/:userId', authMiddleware, async (req, res) => {
   try {
@@ -3740,6 +3989,52 @@ app.get('/api/contacts/:userId', authMiddleware, async (req, res) => {
             history
           };
         });
+
+        // Résolution automatique en arrière-plan des LIDs vers les vrais numéros de téléphone WhatsApp
+        const client = waClients[userId];
+        if (client && typeof client.getContactLidAndPhone === 'function') {
+          const lidIndices = [];
+          const lidQueries = [];
+          for (let i = 0; i < sanitizedContacts.length; i++) {
+            const rawPhone = String(sanitizedContacts[i].phone_number || '').trim();
+            const clean = rawPhone.replace(/\D/g, '');
+            if (rawPhone.includes('@lid') || (clean.length > 13 && !clean.startsWith('229') && !clean.startsWith('228') && !clean.startsWith('226') && !clean.startsWith('225') && !clean.startsWith('221') && !clean.startsWith('33'))) {
+              lidIndices.push(i);
+              lidQueries.push(rawPhone.includes('@') ? rawPhone : `${clean}@lid`);
+            }
+          }
+
+          if (lidQueries.length > 0) {
+            try {
+              const resolvedList = await client.getContactLidAndPhone(lidQueries);
+              if (Array.isArray(resolvedList)) {
+                for (let k = 0; k < resolvedList.length; k++) {
+                  const resItem = resolvedList[k];
+                  const cIdx = lidIndices[k];
+                  if (resItem && resItem.pn && cIdx !== undefined) {
+                    const realPn = resItem.pn.split('@')[0].replace(/\D/g, '');
+                    if (realPn && realPn.length >= 8) {
+                      const prevPhone = sanitizedContacts[cIdx].phone_number;
+                      sanitizedContacts[cIdx].phone_number = realPn;
+                      if (supabase) {
+                        supabase.from('contacts')
+                          .update({ phone_number: realPn })
+                          .eq('user_id', userId)
+                          .eq('phone_number', prevPhone)
+                          .then(() => {
+                            console.log(`[CRM/LID] Numéro résolu et synchronisé Supabase: ${prevPhone} -> ${realPn}`);
+                          })
+                          .catch(() => {});
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (resErr) {
+              console.warn('[CRM/LID] Notice getContactLidAndPhone:', resErr.message);
+            }
+          }
+        }
 
         res.json({ success: true, contacts: sanitizedContacts });
     } catch (err) {

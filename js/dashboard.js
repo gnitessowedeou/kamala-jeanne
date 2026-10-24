@@ -207,25 +207,54 @@ function sanitizeUrl(url) {
 function formatWhatsAppDisplayNumber(phone) {
   if (!phone) return '<span style="color: var(--text-muted);">Inconnu</span>';
   const clean = String(phone).replace(/[^0-9]/g, '');
-  if (clean.length > 13 && !clean.startsWith('229') && !clean.startsWith('226') && !clean.startsWith('225') && !clean.startsWith('221') && !clean.startsWith('33')) {
-    return `<span class="badge badge-subtle" title="Identifiant WhatsApp Multi-Device (LID)">WA ID: ${clean.substring(0, 4)}...${clean.substring(clean.length - 4)}</span>`;
-  }
+  if (!clean) return '<span style="color: var(--text-muted);">Inconnu</span>';
+
+  // Formatages spécifiques par pays partenaires
   if (clean.startsWith('229') && clean.length >= 11) {
+    // Bénin: +229 XX XX XX XX
     return `+229 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
   }
+  if (clean.startsWith('228') && clean.length >= 11) {
+    // Togo: +228 XX XX XX XX
+    return `+228 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
   if (clean.startsWith('226') && clean.length >= 11) {
+    // Burkina Faso: +226 XX XX XX XX
     return `+226 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
   }
   if (clean.startsWith('225') && clean.length >= 12) {
-    return `+225 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+    // Côte d'Ivoire: +225 XX XX XX XX XX
+    return `+225 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9, 11)} ${clean.slice(11)}`;
   }
   if (clean.startsWith('221') && clean.length >= 11) {
+    // Sénégal: +221 XX XXX XX XX
     return `+221 ${clean.slice(3, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  }
+  if (clean.startsWith('223') && clean.length >= 11) {
+    // Mali: +223 XX XX XX XX
+    return `+223 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('227') && clean.length >= 11) {
+    // Niger: +227 XX XX XX XX
+    return `+227 ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+  if (clean.startsWith('237') && clean.length >= 11) {
+    // Cameroun: +237 X XX XX XX XX
+    return `+237 ${clean.slice(3, 4)} ${clean.slice(4, 6)} ${clean.slice(6, 8)} ${clean.slice(8, 10)} ${clean.slice(10)}`;
+  }
+  if (clean.startsWith('33') && clean.length >= 11) {
+    // France: +33 X XX XX XX XX
+    return `+33 ${clean.slice(2, 3)} ${clean.slice(3, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)} ${clean.slice(9)}`;
+  }
+
+  // Formatage international standard lisible
+  if (clean.length >= 10 && clean.length <= 13) {
+    return `+${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6, 9)} ${clean.substring(9)}`;
   }
   if (clean.length >= 8) {
     return `+${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
   }
-  return clean ? `+${clean}` : 'Inconnu';
+  return `+${clean}`;
 }
 
 function formatRelativeTime(dateInput) {
@@ -2162,6 +2191,9 @@ async function loadOverviewRealData() {
 
     if (contactsRes && contactsRes.success && Array.isArray(contactsRes.contacts)) {
       MOCK_DATA.contacts = contactsRes.contacts;
+      if (typeof updateContactsBadge === 'function') {
+        updateContactsBadge(contactsRes.contacts.length);
+      }
     }
 
     if (chatsRes && Array.isArray(chatsRes.chats)) {
@@ -2206,6 +2238,14 @@ async function syncWhatsAppInbox() {
       } else {
         sidebarBadge.style.display = "none";
       }
+    }
+
+    // Synchronisation dynamique du badge Contacts & CRM
+    if (typeof updateContactsBadge === 'function') {
+      const cCount = (Array.isArray(MOCK_DATA.contacts) && MOCK_DATA.contacts.length > 0)
+        ? MOCK_DATA.contacts.length
+        : (Array.isArray(data.chats) ? data.chats.length : 0);
+      updateContactsBadge(cCount);
     }
 
     // 2. Synchronisation des discussions réelles
@@ -2843,7 +2883,393 @@ function updateDynamicKpis(contactsCount) {
     if (kpiSalesNote) kpiSalesNote.textContent = "Messages IA traites au total";
 }
 
+// ==============================================================================
+// GESTION DU BADGE COMPTEUR "CONTACTS & CRM" DANS LA BARRE LATÉRALE
+// ==============================================================================
+function updateContactsBadge(count) {
+  const badge = document.getElementById("nav-badge-contacts");
+  if (!badge) return;
+  const num = typeof count === 'number' ? count : (Array.isArray(MOCK_DATA.contacts) ? MOCK_DATA.contacts.length : 0);
+  badge.textContent = num;
+  if (num > 0) {
+    badge.className = "badge badge-green";
+    badge.style.display = "inline-block";
+  } else {
+    badge.className = "badge badge-subtle";
+    badge.textContent = "0";
+  }
+}
 
+// ==============================================================================
+// GESTIONNAIRE DE SÉLECTION CRM & DIFFUSIONS CIBLÉES (Limites Forfait & Anti-Ban)
+// ==============================================================================
+let selectedCrmPhotoData = null;
+
+function getCrmBroadcastLimit() {
+  const plan = String(currentSubscriptionState?.plan || 'basic').toLowerCase();
+  if (plan.includes('ent') || plan.includes('biz') || plan.includes('business')) {
+    return { max: 40, planName: 'Entreprise' };
+  }
+  if (plan.includes('pro')) {
+    return { max: 30, planName: 'Pro' };
+  }
+  return { max: 10, planName: 'Basique' };
+}
+
+function getSelectedCrmContacts() {
+  const checkboxes = document.querySelectorAll('.crm-select-contact:checked');
+  const list = [];
+  checkboxes.forEach(cb => {
+    list.push({
+      phone: cb.getAttribute('data-phone') || '',
+      name: cb.getAttribute('data-name') || 'Client'
+    });
+  });
+  return list;
+}
+
+function handleCrmContactSelectionChange(e) {
+  const quota = getCrmBroadcastLimit();
+  const selected = getSelectedCrmContacts();
+
+  if (selected.length > quota.max) {
+    if (e && e.target) {
+      e.target.checked = false;
+    }
+    showToast(`Limite Forfait ${quota.planName} atteinte : max ${quota.max} contacts par diffusion.`, 'warning');
+    return;
+  }
+
+  updateCrmSelectionUI();
+}
+
+function toggleSelectAllCrmContacts(checked) {
+  const quota = getCrmBroadcastLimit();
+  const checkboxes = Array.from(document.querySelectorAll('.crm-select-contact'));
+
+  if (!checked) {
+    checkboxes.forEach(cb => { cb.checked = false; });
+  } else {
+    let count = 0;
+    checkboxes.forEach(cb => {
+      const tr = cb.closest('tr');
+      if (tr && tr.style.display === 'none') {
+        cb.checked = false;
+        return;
+      }
+      if (count < quota.max) {
+        cb.checked = true;
+        count++;
+      } else {
+        cb.checked = false;
+      }
+    });
+
+    if (checkboxes.length > quota.max) {
+      showToast(`Sélection automatique limitée à ${quota.max} contacts selon votre Forfait ${quota.planName}.`, 'info');
+    }
+  }
+
+  updateCrmSelectionUI();
+}
+
+function clearCrmContactSelection() {
+  const checkboxes = document.querySelectorAll('.crm-select-contact');
+  checkboxes.forEach(cb => { cb.checked = false; });
+  const selectAll = document.getElementById('crm-select-all');
+  if (selectAll) selectAll.checked = false;
+  updateCrmSelectionUI();
+}
+
+function updateCrmSelectionUI() {
+  const quota = getCrmBroadcastLimit();
+  const selected = getSelectedCrmContacts();
+  const count = selected.length;
+
+  const countBadge = document.getElementById('crm-selected-count-badge');
+  if (countBadge) countBadge.textContent = count;
+
+  const banner = document.getElementById('crm-selection-banner');
+  const bannerText = document.getElementById('crm-selected-text');
+  const bannerQuota = document.getElementById('crm-plan-quota-info');
+
+  if (banner && bannerText && bannerQuota) {
+    if (count > 0) {
+      banner.style.display = 'flex';
+      bannerText.textContent = `${count} contact${count > 1 ? 's' : ''} sélectionné${count > 1 ? 's' : ''}`;
+      bannerQuota.textContent = `Limite Forfait ${quota.planName} : max ${quota.max} contacts`;
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  const selectAll = document.getElementById('crm-select-all');
+  const allCheckboxes = document.querySelectorAll('.crm-select-contact');
+  if (selectAll && allCheckboxes.length > 0) {
+    selectAll.checked = (count > 0 && count === Math.min(allCheckboxes.length, quota.max));
+  }
+}
+
+function openCrmBroadcastModal() {
+  const selected = getSelectedCrmContacts();
+  if (selected.length === 0) {
+    showToast("Veuillez cocher au moins un contact dans le tableau pour lancer une diffusion.", "warning");
+    return;
+  }
+
+  const quota = getCrmBroadcastLimit();
+  const modal = document.getElementById('crm-broadcast-modal');
+  if (!modal) return;
+
+  const planBadge = document.getElementById('crm-modal-plan-badge');
+  if (planBadge) planBadge.textContent = `Forfait ${quota.planName} : max ${quota.max}`;
+
+  const recipientCount = document.getElementById('crm-modal-recipient-count');
+  if (recipientCount) recipientCount.textContent = `${selected.length} / ${quota.max}`;
+
+  const submitText = document.getElementById('crm-submit-btn-text');
+  if (submitText) submitText.textContent = `Lancer la Diffusion (${selected.length})`;
+
+  const listContainer = document.getElementById('crm-modal-recipients-list');
+  if (listContainer) {
+    listContainer.innerHTML = selected.map(c => `
+      <span class="badge badge-subtle" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08);">
+        <i class="fa-solid fa-user" style="color: var(--whatsapp-green); font-size: 10px;"></i>
+        <strong>${escapeHtml(c.name)}</strong>
+        <span style="color: var(--text-muted); font-family: monospace;">(${escapeHtml(formatWhatsAppDisplayNumber(c.phone))})</span>
+      </span>
+    `).join('');
+  }
+
+  const progressBox = document.getElementById('crm-broadcast-progress-box');
+  if (progressBox) progressBox.style.display = 'none';
+  const progressLog = document.getElementById('crm-progress-log');
+  if (progressLog) progressLog.innerHTML = '';
+  const progressFill = document.getElementById('crm-progress-bar-fill');
+  if (progressFill) progressFill.style.width = '0%';
+
+  const submitBtn = document.getElementById('btn-submit-crm-broadcast');
+  if (submitBtn) submitBtn.disabled = false;
+
+  modal.style.display = 'flex';
+}
+
+function closeCrmBroadcastModal() {
+  const modal = document.getElementById('crm-broadcast-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openSingleBroadcastModal(phone, name) {
+  const checkboxes = document.querySelectorAll('.crm-select-contact');
+  checkboxes.forEach(cb => {
+    cb.checked = (cb.getAttribute('data-phone') === phone);
+  });
+  updateCrmSelectionUI();
+  openCrmBroadcastModal();
+}
+
+function openChatWithContact(phone, name) {
+  window.location.hash = "#inbox";
+}
+
+function toggleCrmPhotoSection(show) {
+  const box = document.getElementById('crm-photo-uploader-box');
+  if (box) box.style.display = show ? 'flex' : 'none';
+  const hint = document.getElementById('crm-text-caption-hint');
+  if (hint) hint.style.display = show ? 'inline' : 'none';
+  if (!show) removeCrmSelectedPhoto();
+}
+
+function handleCrmPhotoFileSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("La photo ne doit pas dépasser 5 Mo.", "error");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const base64Data = evt.target.result;
+    selectedCrmPhotoData = {
+      data: base64Data,
+      mimetype: file.type || 'image/jpeg',
+      filename: file.name
+    };
+
+    const previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+    const previewImg = document.getElementById('crm-photo-preview-img');
+    const previewName = document.getElementById('crm-photo-preview-name');
+    const previewSize = document.getElementById('crm-photo-preview-size');
+    const dropzone = document.getElementById('crm-photo-dropzone');
+
+    if (previewImg) previewImg.src = base64Data;
+    if (previewName) previewName.textContent = file.name;
+    if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
+    if (previewWrapper) previewWrapper.style.display = 'flex';
+    if (dropzone) dropzone.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleCrmPhotoUrlInput(url) {
+  const cleanUrl = (url || '').trim();
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    selectedCrmPhotoData = { url: cleanUrl };
+    const previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+    const previewImg = document.getElementById('crm-photo-preview-img');
+    const previewName = document.getElementById('crm-photo-preview-name');
+    const previewSize = document.getElementById('crm-photo-preview-size');
+    const dropzone = document.getElementById('crm-photo-dropzone');
+
+    if (previewImg) previewImg.src = cleanUrl;
+    if (previewName) previewName.textContent = "Image Web distante";
+    if (previewSize) previewSize.textContent = "Lien URL";
+    if (previewWrapper) previewWrapper.style.display = 'flex';
+    if (dropzone) dropzone.style.display = 'none';
+  }
+}
+
+function removeCrmSelectedPhoto() {
+  selectedCrmPhotoData = null;
+  const fileInput = document.getElementById('crm-broadcast-photo-file');
+  if (fileInput) fileInput.value = '';
+  const urlInput = document.getElementById('crm-broadcast-photo-url');
+  if (urlInput) urlInput.value = '';
+  const previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+  if (previewWrapper) previewWrapper.style.display = 'none';
+  const dropzone = document.getElementById('crm-photo-dropzone');
+  if (dropzone) dropzone.style.display = 'block';
+}
+
+function insertCrmVariable(varName) {
+  const textarea = document.getElementById('crm-broadcast-text');
+  if (!textarea) return;
+  const start = textarea.selectionStart || 0;
+  const end = textarea.selectionEnd || 0;
+  const text = textarea.value;
+  textarea.value = text.substring(0, start) + varName + text.substring(end);
+  textarea.focus();
+  textarea.selectionStart = textarea.selectionEnd = start + varName.length;
+}
+
+async function handleCrmBroadcastSubmit(e) {
+  if (e) e.preventDefault();
+
+  const selected = getSelectedCrmContacts();
+  if (selected.length === 0) {
+    showToast("Aucun contact sélectionné pour la diffusion.", "warning");
+    return;
+  }
+
+  const messageText = (document.getElementById('crm-broadcast-text')?.value || '').trim();
+  const attachPhotoChecked = document.getElementById('crm-broadcast-attach-photo')?.checked;
+  const photoPayload = attachPhotoChecked ? selectedCrmPhotoData : null;
+
+  if (!messageText && !photoPayload) {
+    showToast("Veuillez saisir un message ou joindre une photo.", "warning");
+    return;
+  }
+
+  const userId = getAppUserId();
+  if (!userId) {
+    showToast("Utilisateur non authentifié.", "error");
+    return;
+  }
+
+  const submitBtn = document.getElementById('btn-submit-crm-broadcast');
+  const cancelBtn = document.getElementById('btn-cancel-crm-broadcast');
+  const progressBox = document.getElementById('crm-broadcast-progress-box');
+  const progressStatus = document.getElementById('crm-progress-status-label');
+  const progressPercent = document.getElementById('crm-progress-percent');
+  const progressFill = document.getElementById('crm-progress-bar-fill');
+  const progressLog = document.getElementById('crm-progress-log');
+
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours...'; }
+  if (cancelBtn) cancelBtn.disabled = true;
+  if (progressBox) progressBox.style.display = 'flex';
+
+  const total = selected.length;
+  let sentCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < total; i++) {
+    const contact = selected[i];
+    const displayPhone = formatWhatsAppDisplayNumber(contact.phone);
+    const pct = Math.round(((i) / total) * 100);
+
+    if (progressStatus) progressStatus.textContent = `Envoi vers ${contact.name} (${i + 1}/${total})...`;
+    if (progressPercent) progressPercent.textContent = `${pct}%`;
+    if (progressFill) progressFill.style.width = `${pct}%`;
+
+    try {
+      const res = await fetch(API_URL + '/api/whatsapp/crm-broadcast-send-one', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          userId,
+          phone: contact.phone,
+          name: contact.name,
+          message: messageText,
+          photo: photoPayload
+        })
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        sentCount++;
+        if (progressLog) {
+          progressLog.innerHTML += `<div style="color: #4ade80;">[${i + 1}/${total}] &check; ${escapeHtml(contact.name)} (${escapeHtml(displayPhone)}) - Envoyé</div>`;
+          progressLog.scrollTop = progressLog.scrollHeight;
+        }
+      } else {
+        failCount++;
+        const errMsg = resData.error || 'Erreur d\'envoi';
+        if (progressLog) {
+          progressLog.innerHTML += `<div style="color: #f87171;">[${i + 1}/${total}] &cross; ${escapeHtml(contact.name)} - ${escapeHtml(errMsg)}</div>`;
+          progressLog.scrollTop = progressLog.scrollHeight;
+        }
+      }
+    } catch (err) {
+      failCount++;
+      if (progressLog) {
+        progressLog.innerHTML += `<div style="color: #f87171;">[${i + 1}/${total}] &cross; ${escapeHtml(contact.name)} - Erreur réseau</div>`;
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+    }
+
+    // Temporisation humaine anti-ban de 3s entre chaque message
+    if (i < total - 1) {
+      if (progressStatus) progressStatus.textContent = `Temporisation anti-ban active (3s)...`;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+
+  if (progressPercent) progressPercent.textContent = '100%';
+  if (progressFill) progressFill.style.width = '100%';
+  if (progressStatus) progressStatus.textContent = `Terminé : ${sentCount} envoyé(s), ${failCount} échec(s)`;
+
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Diffusion Terminée';
+  }
+  if (cancelBtn) cancelBtn.disabled = false;
+
+  showToast(`Diffusion ciblée terminée : ${sentCount} message(s) envoyé(s) avec succès !`, sentCount > 0 ? 'success' : 'error');
+
+  setTimeout(() => {
+    clearCrmContactSelection();
+    closeCrmBroadcastModal();
+    if (submitBtn) {
+      submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span id="crm-submit-btn-text">Lancer la Diffusion (0)</span>';
+    }
+  }, 2200);
+}
+
+// ==============================================================================
+// 9.1 RENDU DU TABLEAU DES CONTACTS CRM AVEC SÉLECTION MULTIPLE
+// ==============================================================================
 async function renderContacts() {
     const tbody = document.getElementById("contacts-table-body");
     if (!tbody) return;
@@ -2865,35 +3291,50 @@ async function renderContacts() {
             renderKpis();
             renderOverviewRecentChats();
             renderActivityFeed();
+            updateContactsBadge(data.contacts.length);
+
             tbody.innerHTML = data.contacts.map(c => {
               const safeName = escapeHtml(c.name || 'Inconnu');
               const safeInitial = escapeHtml((c.name || 'I')[0].toUpperCase());
               const safePhone = formatWhatsAppDisplayNumber(c.phone_number);
+              const safeRawPhone = escapeHtml(String(c.phone_number || ''));
               const safeDate = escapeHtml(new Date(c.updated_at).toLocaleDateString());
               return `
               <tr>
+                <td style="text-align: center; width: 44px;">
+                  <input type="checkbox" class="crm-select-contact" 
+                    data-phone="${safeRawPhone}" 
+                    data-name="${safeName}" 
+                    style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--whatsapp-green);" 
+                    onchange="handleCrmContactSelectionChange(event)" />
+                </td>
                 <td>
                   <div style="display: flex; align-items: center; gap: 10px;">
                     <div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">${safeInitial}</div>
                     <span>${safeName}</span>
                   </div>
                 </td>
-                <td>${safePhone}</td>
+                <td><strong style="font-family: monospace; font-size: 13px; color: var(--text-primary);">${safePhone}</strong></td>
                 <td>${safeDate}</td>
                 <td><span class="badge badge-gray">Prospect</span></td>
                 <td>N/A</td>
                 <td>
                   <div style="display: flex; gap: 8px;">
-                    <button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px;" title="Discuter"><i class="fa-solid fa-message"></i></button>
+                    <button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px;" title="Discuter" onclick="openChatWithContact('${safeRawPhone}', '${safeName}')"><i class="fa-solid fa-message"></i></button>
+                    <button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px; color: var(--whatsapp-green);" title="Diffuser à ce contact" onclick="openSingleBroadcastModal('${safeRawPhone}', '${safeName}')"><i class="fa-solid fa-paper-plane"></i></button>
                   </div>
                 </td>
               </tr>
             `;}).join("");
+
+            updateCrmSelectionUI();
         } else {
+            updateContactsBadge(0);
+            updateCrmSelectionUI();
             tbody.innerHTML = `
               <tr>
-                <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
-                  Votre base CRM est prete. Vos prospects WhatsApp seront enregistres automatiquement des leur premier message.
+                <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                  Votre base CRM est prête. Vos prospects WhatsApp seront enregistrés automatiquement dès leur premier message.
                 </td>
               </tr>
             `;
@@ -8982,5 +9423,25 @@ window.handleProductPhotoSlot = handleProductPhotoSlot;
 window.removeProductPhotoSlot = removeProductPhotoSlot;
 window.toggleUrlInputSlot = toggleUrlInputSlot;
 window.handleDirectUrlSlot = handleDirectUrlSlot;
+
+// Exports CRM & Diffusion Ciblée
+window.updateContactsBadge = updateContactsBadge;
+window.getCrmBroadcastLimit = getCrmBroadcastLimit;
+window.getSelectedCrmContacts = getSelectedCrmContacts;
+window.handleCrmContactSelectionChange = handleCrmContactSelectionChange;
+window.toggleSelectAllCrmContacts = toggleSelectAllCrmContacts;
+window.clearCrmContactSelection = clearCrmContactSelection;
+window.updateCrmSelectionUI = updateCrmSelectionUI;
+window.openCrmBroadcastModal = openCrmBroadcastModal;
+window.closeCrmBroadcastModal = closeCrmBroadcastModal;
+window.openSingleBroadcastModal = openSingleBroadcastModal;
+window.openChatWithContact = openChatWithContact;
+window.toggleCrmPhotoSection = toggleCrmPhotoSection;
+window.handleCrmPhotoFileSelected = handleCrmPhotoFileSelected;
+window.handleCrmPhotoUrlInput = handleCrmPhotoUrlInput;
+window.removeCrmSelectedPhoto = removeCrmSelectedPhoto;
+window.insertCrmVariable = insertCrmVariable;
+window.handleCrmBroadcastSubmit = handleCrmBroadcastSubmit;
+
 
 
