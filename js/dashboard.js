@@ -3677,10 +3677,26 @@ async function handleCrmBroadcastSubmit(e) {
       }
     }
 
-    // Temporisation humaine anti-ban de 3s entre chaque message
+    // Temporisation humaine anti-ban de 15s à 25s entre chaque message
     if (i < total - 1) {
-      if (progressStatus) progressStatus.textContent = `Temporisation anti-ban active (3s)...`;
-      await new Promise(r => setTimeout(r, 3000));
+      const delayMode = document.getElementById('crm-broadcast-delay-mode')?.value || 'safe';
+      let minSec = 15;
+      let maxSec = 25;
+      if (delayMode === 'ultra') {
+        minSec = 25;
+        maxSec = 35;
+      } else if (delayMode === 'moderate') {
+        minSec = 10;
+        maxSec = 15;
+      }
+      const waitSec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
+
+      for (let sec = waitSec; sec > 0; sec--) {
+        if (progressStatus) {
+          progressStatus.innerHTML = `<span style="color: #4ade80;"><i class="fa-solid fa-shield-halved fa-beat"></i> Temporisation SafeSend™ :</span> prochain envoi dans <strong>${sec}s</strong>...`;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
   }
 

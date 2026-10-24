@@ -2836,9 +2836,9 @@ app.post('/api/whatsapp/crm-broadcast', authMiddleware, async (req, res) => {
     }
 
     try {
-      // Temporisation anti-ban SafeSend entre 2.5s et 4s (sauf premier message)
+      // Temporisation anti-ban SafeSend entre 15s et 25s (sauf premier message)
       if (i > 0) {
-        const jitter = Math.floor(Math.random() * 1500) + 2500;
+        const jitter = Math.floor(Math.random() * (25000 - 15000 + 1)) + 15000;
         await new Promise(r => setTimeout(r, jitter));
       }
 
