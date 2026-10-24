@@ -4,7 +4,7 @@
  * Stratégie de mise en cache ultra-rapide avec priorité réseau pour les données dynamiques
  */
 
-const CACHE_NAME = 'vandias-pwa-v1';
+const CACHE_NAME = 'vandias-pwa-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -98,7 +98,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Fichiers statiques (CSS, JS, Images, Polices) -> Stale-While-Revalidate
+  // 4. Scripts JS et styles CSS de l'application -> Network-First (priorité réseau immédiate)
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.search.includes('v=')) {
+    event.respondWith(
+      fetch(req)
+        .then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkRes;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // 5. Autres fichiers statiques (Images, Polices) -> Stale-While-Revalidate
   event.respondWith(
     caches.match(req).then((cachedResponse) => {
       const fetchPromise = fetch(req)

@@ -29,10 +29,20 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261015_v47">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261015_v47">
-  <link rel="stylesheet" href="css/auth.css?v=20261015_v47">
-  <link rel="stylesheet" href="css/pwa.css?v=20261023_v1">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v59">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v59">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v59">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v59">
+
+  <style>
+    .crm-select-contact, #crm-select-all {
+      cursor: pointer !important;
+      width: 18px !important;
+      height: 18px !important;
+      accent-color: #25D366 !important;
+      vertical-align: middle !important;
+    }
+  </style>
 
   <!-- Auth Guard synchrone : interdiction absolue d'accès sans compte enregistré -->
   <script>
@@ -4684,10 +4694,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261019_v55"></script>
+  <script src="js/i18n.js?v=20261024_v60"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261019_v55"></script>
-  <script src="js/dashboard.js?v=20261019_v55"></script>
+  <script src="js/auth.js?v=20261024_v60"></script>
+  <script src="js/dashboard.js?v=20261024_v60"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -5044,9 +5054,220 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       }
     });
 
-</script>
+  </script>
+
+  <!-- =========================================================================
+       INFAILLIBLE CRM CONTACTS & CHECKBOX SELECTION CONTROLLER
+       ========================================================================= -->
+  <script>
+    (function() {
+      function formatPhoneClean(phone) {
+        if (!phone) return '<span style="color: var(--text-muted);">Inconnu</span>';
+        var clean = String(phone).replace(/[^0-9]/g, '');
+        if (!clean) return '<span style="color: var(--text-muted);">Inconnu</span>';
+        if (clean.startsWith('225') && clean.length >= 12) {
+          return '+225 ' + clean.slice(3, 5) + ' ' + clean.slice(5, 7) + ' ' + clean.slice(7, 9) + ' ' + clean.slice(9, 11) + ' ' + clean.slice(11);
+        }
+        if (clean.startsWith('229') && clean.length >= 11) {
+          return '+229 ' + clean.slice(3, 5) + ' ' + clean.slice(5, 7) + ' ' + clean.slice(7, 9) + ' ' + clean.slice(9);
+        }
+        if (clean.startsWith('228') && clean.length >= 11) {
+          return '+228 ' + clean.slice(3, 5) + ' ' + clean.slice(5, 7) + ' ' + clean.slice(7, 9) + ' ' + clean.slice(9);
+        }
+        if (clean.length >= 10) {
+          return '+' + clean.substring(0, 3) + ' ' + clean.substring(3, 6) + ' ' + clean.substring(6, 9) + ' ' + clean.substring(9);
+        }
+        return '+' + clean;
+      }
+
+      function getPlanQuota() {
+        var u = {};
+        try { u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}'); } catch(e) {}
+        var plan = ((u && u.plan && u.plan.name) || (u && u.plan) || '').toLowerCase();
+        if (plan.includes('ent') || plan.includes('biz') || plan.includes('business')) {
+          return { max: 40, planName: 'Entreprise' };
+        }
+        if (plan.includes('pro')) {
+          return { max: 30, planName: 'Pro' };
+        }
+        return { max: 10, planName: 'Basique' };
+      }
+
+      window.handleCrmContactSelectionChange = function(e) {
+        var quota = getPlanQuota();
+        var selected = document.querySelectorAll('.crm-select-contact:checked');
+        if (selected.length > quota.max) {
+          if (e && e.target) e.target.checked = false;
+          if (typeof showToast === 'function') {
+            showToast('Limite Forfait ' + quota.planName + ' atteinte : max ' + quota.max + ' contacts par diffusion.', 'warning');
+          }
+          return;
+        }
+        window.updateCrmSelectionUI();
+      };
+
+      window.toggleSelectAllCrmContacts = function(checked) {
+        var quota = getPlanQuota();
+        var checkboxes = Array.from(document.querySelectorAll('.crm-select-contact'));
+        if (!checked) {
+          checkboxes.forEach(function(cb) { cb.checked = false; });
+        } else {
+          var count = 0;
+          checkboxes.forEach(function(cb) {
+            var tr = cb.closest('tr');
+            if (tr && tr.style.display === 'none') {
+              cb.checked = false;
+              return;
+            }
+            if (count < quota.max) {
+              cb.checked = true;
+              count++;
+            } else {
+              cb.checked = false;
+            }
+          });
+          if (checkboxes.length > quota.max && typeof showToast === 'function') {
+            showToast('Sélection automatique limitée à ' + quota.max + ' contacts selon votre Forfait ' + quota.planName + '.', 'info');
+          }
+        }
+        window.updateCrmSelectionUI();
+      };
+
+      window.clearCrmContactSelection = function() {
+        var checkboxes = document.querySelectorAll('.crm-select-contact');
+        checkboxes.forEach(function(cb) { cb.checked = false; });
+        var selectAll = document.getElementById('crm-select-all');
+        if (selectAll) selectAll.checked = false;
+        window.updateCrmSelectionUI();
+      };
+
+      window.updateCrmSelectionUI = function() {
+        var quota = getPlanQuota();
+        var selected = document.querySelectorAll('.crm-select-contact:checked');
+        var count = selected.length;
+
+        var countBadge = document.getElementById('crm-selected-count-badge');
+        if (countBadge) countBadge.textContent = count;
+
+        var banner = document.getElementById('crm-selection-banner');
+        var bannerText = document.getElementById('crm-selected-text');
+        var bannerQuota = document.getElementById('crm-plan-quota-info');
+
+        if (banner && bannerText && bannerQuota) {
+          if (count > 0) {
+            banner.style.display = 'flex';
+            bannerText.textContent = count + ' contact' + (count > 1 ? 's' : '') + ' sélectionné' + (count > 1 ? 's' : '');
+            bannerQuota.textContent = 'Limite Forfait ' + quota.planName + ' : max ' + quota.max + ' contacts';
+          } else {
+            banner.style.display = 'none';
+          }
+        }
+
+        var selectAll = document.getElementById('crm-select-all');
+        var allCheckboxes = document.querySelectorAll('.crm-select-contact');
+        if (selectAll && allCheckboxes.length > 0) {
+          selectAll.checked = (count > 0 && count === Math.min(allCheckboxes.length, quota.max));
+        }
+      };
+
+      window.renderContactsInfallible = async function() {
+        var tbody = document.getElementById('contacts-table-body');
+        if (!tbody) return;
+
+        var userId = null;
+        try {
+          var u = JSON.parse(localStorage.getItem('vendia_current_user') || '{}');
+          if (u && u.id) userId = u.id;
+        } catch(e) {}
+        if (!userId && typeof getAppUserId === 'function') {
+          try { userId = getAppUserId(); } catch(e) {}
+        }
+        if (!userId) return;
+
+        try {
+          var apiUrl = window.API_URL || 'https://kamala-jeanne-production.up.railway.app';
+          var headers = (typeof getAuthHeaders === 'function') ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+          var res = await fetch(apiUrl + '/api/contacts/' + userId, { headers: headers });
+          var data = await res.json();
+
+          if (data && data.success && Array.isArray(data.contacts) && data.contacts.length > 0) {
+            if (typeof MOCK_DATA !== 'undefined') MOCK_DATA.contacts = data.contacts;
+
+            // Mise à jour badge compteur latéral
+            var badge = document.getElementById('nav-badge-contacts');
+            if (badge) {
+              badge.textContent = data.contacts.length;
+              badge.className = 'badge badge-green';
+              badge.style.display = 'inline-block';
+            }
+
+            tbody.innerHTML = data.contacts.map(function(c) {
+              var safeName = (c.name || 'Inconnu').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              var safeInitial = (safeName.charAt(0) || 'I').toUpperCase();
+              var safePhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone_number) : formatPhoneClean(c.phone_number);
+              var safeRawPhone = String(c.phone_number || '').replace(/"/g, '&quot;');
+              var safeDate = new Date(c.updated_at || Date.now()).toLocaleDateString('fr-FR');
+
+              return '<tr>' +
+                '<td style="text-align: center; width: 44px;">' +
+                  '<input type="checkbox" class="crm-select-contact" ' +
+                    'data-phone="' + safeRawPhone + '" ' +
+                    'data-name="' + safeName + '" ' +
+                    'style="cursor: pointer; width: 18px; height: 18px; accent-color: #25D366; vertical-align: middle;" ' +
+                    'onchange="window.handleCrmContactSelectionChange(event)" />' +
+                '</td>' +
+                '<td>' +
+                  '<div style="display: flex; align-items: center; gap: 10px;">' +
+                    '<div class="conv-avatar" style="width: 32px; height: 32px; font-size: 11px;">' + safeInitial + '</div>' +
+                    '<span style="font-weight: 500;">' + safeName + '</span>' +
+                  '</div>' +
+                '</td>' +
+                '<td><strong style="font-family: monospace; font-size: 13px; color: var(--text-primary);">' + safePhone + '</strong></td>' +
+                '<td>' + safeDate + '</td>' +
+                '<td><span class="badge badge-gray">Prospect</span></td>' +
+                '<td>N/A</td>' +
+                '<td>' +
+                  '<div style="display: flex; gap: 8px;">' +
+                    '<button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px;" title="Discuter" onclick="if(window.openChatWithContact) window.openChatWithContact(\'' + safeRawPhone + '\', \'' + safeName + '\')"><i class="fa-solid fa-message"></i></button>' +
+                    '<button class="btn-secondary-glass" style="padding: 4px 8px; font-size: 11px; color: var(--whatsapp-green);" title="Diffuser à ce contact" onclick="if(window.openSingleBroadcastModal) window.openSingleBroadcastModal(\'' + safeRawPhone + '\', \'' + safeName + '\')"><i class="fa-solid fa-paper-plane"></i></button>' +
+                  '</div>' +
+                '</td>' +
+              '</tr>';
+            }).join('');
+
+            window.updateCrmSelectionUI();
+          } else {
+            var badgeEmpty = document.getElementById('nav-badge-contacts');
+            if (badgeEmpty) { badgeEmpty.textContent = '0'; badgeEmpty.className = 'badge badge-subtle'; }
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">' +
+              'Votre base CRM est prête. Vos prospects WhatsApp seront enregistrés automatiquement dès leur premier message.</td></tr>';
+          }
+        } catch(err) {
+          console.warn('[CRM INFALLIBLE] Notice fetch contacts:', err);
+        }
+      };
+
+      // Attacher universellement
+      window.renderContacts = window.renderContactsInfallible;
+
+      // Exécution immédiate et écouteurs d'événements
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(window.renderContactsInfallible, 300);
+        });
+      } else {
+        setTimeout(window.renderContactsInfallible, 300);
+      }
+
+      window.addEventListener('hashchange', function() {
+        if (window.location.hash === '#contacts') {
+          setTimeout(window.renderContactsInfallible, 100);
+        }
+      });
+    })();
+  </script>
 
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261023_v2"></script>
+  <script src="js/pwa.js?v=20261024_v60"></script>
 </body>
 </html>

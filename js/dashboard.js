@@ -1387,6 +1387,8 @@ function showView(viewId, customTitle = null) {
     syncAffiliateModule();
   } else if (viewId === "catalog") {
     if (typeof loadCatalogProducts === "function") loadCatalogProducts();
+  } else if (viewId === "contacts") {
+    if (typeof renderContacts === "function") renderContacts();
   }
 }
 
@@ -9425,6 +9427,8 @@ window.toggleUrlInputSlot = toggleUrlInputSlot;
 window.handleDirectUrlSlot = handleDirectUrlSlot;
 
 // Exports CRM & Diffusion Ciblée
+window.renderContacts = renderContacts;
+window.formatWhatsAppDisplayNumber = formatWhatsAppDisplayNumber;
 window.updateContactsBadge = updateContactsBadge;
 window.getCrmBroadcastLimit = getCrmBroadcastLimit;
 window.getSelectedCrmContacts = getSelectedCrmContacts;
