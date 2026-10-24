@@ -29,10 +29,10 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261024_v61">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v61">
-  <link rel="stylesheet" href="css/auth.css?v=20261024_v61">
-  <link rel="stylesheet" href="css/pwa.css?v=20261024_v61">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v62">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v62">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v62">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v62">
 
   <style>
     .crm-select-contact, #crm-select-all {
@@ -4701,10 +4701,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261024_v61"></script>
+  <script src="js/i18n.js?v=20261024_v62"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261024_v61"></script>
-  <script src="js/dashboard.js?v=20261024_v61"></script>
+  <script src="js/auth.js?v=20261024_v62"></script>
+  <script src="js/dashboard.js?v=20261024_v62"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -5354,31 +5354,85 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
         var file = e.target.files && e.target.files[0];
         if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) {
-          if (typeof showToast === 'function') showToast("L'affiche ne doit pas dépasser 5 Mo.", "error");
+        if (file.size > 20 * 1024 * 1024) {
+          if (typeof showToast === 'function') showToast("Le fichier ne doit pas dépasser 20 Mo.", "error");
           return;
         }
 
+        var previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+        var previewImg = document.getElementById('crm-photo-preview-img');
+        var previewName = document.getElementById('crm-photo-preview-name');
+        var previewSize = document.getElementById('crm-photo-preview-size');
+        var dropzone = document.getElementById('crm-photo-dropzone');
+
+        if (previewName) previewName.textContent = file.name;
+        if (previewSize) previewSize.textContent = "Optimisation HD en cours...";
+        if (previewWrapper) previewWrapper.style.display = 'flex';
+        if (dropzone) dropzone.style.display = 'none';
+
         var reader = new FileReader();
         reader.onload = function(evt) {
-          var base64Data = evt.target.result;
-          window.selectedCrmPhotoData = {
-            data: base64Data,
-            mimetype: file.type || 'image/jpeg',
-            filename: file.name
+          var rawData = evt.target.result;
+          var img = new Image();
+          img.onload = function() {
+            try {
+              var maxDim = 1280;
+              var width = img.width;
+              var height = img.height;
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
+              }
+              var canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              var ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+
+              var compressedData = canvas.toDataURL('image/jpeg', 0.84);
+              var approxKo = Math.round((compressedData.length * 3 / 4) / 1024);
+
+              var photoObj = {
+                data: compressedData,
+                mimetype: 'image/jpeg',
+                filename: (file.name ? file.name.replace(/\.[^/.]+$/, "") : "affiche") + ".jpg"
+              };
+              window.selectedCrmPhotoData = photoObj;
+              if (typeof selectedCrmPhotoData !== 'undefined') selectedCrmPhotoData = photoObj;
+
+              if (previewImg) previewImg.src = compressedData;
+              if (previewSize) previewSize.textContent = approxKo + ' Ko (HD Optimisée WhatsApp)';
+            } catch (canvasErr) {
+              var photoObj = {
+                data: rawData,
+                mimetype: file.type || 'image/jpeg',
+                filename: file.name
+              };
+              window.selectedCrmPhotoData = photoObj;
+              if (typeof selectedCrmPhotoData !== 'undefined') selectedCrmPhotoData = photoObj;
+              if (previewImg) previewImg.src = rawData;
+              if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
+            }
           };
-
-          var previewWrapper = document.getElementById('crm-photo-preview-wrapper');
-          var previewImg = document.getElementById('crm-photo-preview-img');
-          var previewName = document.getElementById('crm-photo-preview-name');
-          var previewSize = document.getElementById('crm-photo-preview-size');
-          var dropzone = document.getElementById('crm-photo-dropzone');
-
-          if (previewImg) previewImg.src = base64Data;
-          if (previewName) previewName.textContent = file.name;
-          if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
-          if (previewWrapper) previewWrapper.style.display = 'flex';
-          if (dropzone) dropzone.style.display = 'none';
+          img.onerror = function() {
+            var photoObj = {
+              data: rawData,
+              mimetype: file.type || 'image/jpeg',
+              filename: file.name
+            };
+            window.selectedCrmPhotoData = photoObj;
+            if (typeof selectedCrmPhotoData !== 'undefined') selectedCrmPhotoData = photoObj;
+            if (previewImg) previewImg.src = rawData;
+            if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
+          };
+          img.src = rawData;
         };
         reader.readAsDataURL(file);
       };
@@ -5386,7 +5440,9 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       window.handleCrmPhotoUrlInput = function(url) {
         var cleanUrl = (url || '').trim();
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-          window.selectedCrmPhotoData = { url: cleanUrl };
+          var photoObj = { url: cleanUrl };
+          window.selectedCrmPhotoData = photoObj;
+          if (typeof selectedCrmPhotoData !== 'undefined') selectedCrmPhotoData = photoObj;
           var previewWrapper = document.getElementById('crm-photo-preview-wrapper');
           var previewImg = document.getElementById('crm-photo-preview-img');
           var previewName = document.getElementById('crm-photo-preview-name');
@@ -5405,6 +5461,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
 
       window.removeCrmSelectedPhoto = function() {
         window.selectedCrmPhotoData = null;
+        if (typeof selectedCrmPhotoData !== 'undefined') selectedCrmPhotoData = null;
         var fileInput = document.getElementById('crm-broadcast-photo-file');
         if (fileInput) fileInput.value = '';
         var urlInput = document.getElementById('crm-broadcast-photo-url');
@@ -5513,7 +5570,7 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
             if (res.ok && resData.success) {
               sentCount++;
               if (progressLog) {
-                progressLog.innerHTML += '<div style="color: #4ade80;">[' + (i + 1) + '/' + total + '] ✓ ' + contact.name + ' (' + displayPhone + ') - Envoyé</div>';
+                progressLog.innerHTML += '<div style="color: #4ade80;">[' + (i + 1) + '/' + total + '] ✓ ' + contact.name + ' (' + displayPhone + ') - ' + (resData.hasMedia ? '📷 Affiche &amp; Message délivrés' : 'Message délivré') + '</div>';
                 progressLog.scrollTop = progressLog.scrollHeight;
               }
             } else {
@@ -5597,6 +5654,6 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   </script>
 
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261024_v61"></script>
+  <script src="js/pwa.js?v=20261024_v62"></script>
 </body>
 </html>

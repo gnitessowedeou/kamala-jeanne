@@ -1546,6 +1546,10 @@ function setupModals() {
 }
 
 function openBroadcastModal() {
+  if (typeof openCrmBroadcastModal === 'function') {
+    openCrmBroadcastModal();
+    return;
+  }
   const modal = document.getElementById("broadcast-modal");
   if (modal) modal.classList.add("active");
 }
@@ -3098,31 +3102,85 @@ function handleCrmPhotoFileSelected(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
 
-  if (file.size > 5 * 1024 * 1024) {
-    showToast("La photo ne doit pas dépasser 5 Mo.", "error");
+  if (file.size > 20 * 1024 * 1024) {
+    showToast("Le fichier ne doit pas dépasser 20 Mo.", "error");
     return;
   }
 
+  const previewWrapper = document.getElementById('crm-photo-preview-wrapper');
+  const previewImg = document.getElementById('crm-photo-preview-img');
+  const previewName = document.getElementById('crm-photo-preview-name');
+  const previewSize = document.getElementById('crm-photo-preview-size');
+  const dropzone = document.getElementById('crm-photo-dropzone');
+
+  if (previewName) previewName.textContent = file.name;
+  if (previewSize) previewSize.textContent = "Optimisation HD en cours...";
+  if (previewWrapper) previewWrapper.style.display = 'flex';
+  if (dropzone) dropzone.style.display = 'none';
+
   const reader = new FileReader();
   reader.onload = function(evt) {
-    const base64Data = evt.target.result;
-    selectedCrmPhotoData = {
-      data: base64Data,
-      mimetype: file.type || 'image/jpeg',
-      filename: file.name
+    const rawData = evt.target.result;
+    const img = new Image();
+    img.onload = function() {
+      try {
+        const maxDim = 1280;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedData = canvas.toDataURL('image/jpeg', 0.84);
+        const approxKo = Math.round((compressedData.length * 3 / 4) / 1024);
+
+        const photoObj = {
+          data: compressedData,
+          mimetype: 'image/jpeg',
+          filename: (file.name ? file.name.replace(/\.[^/.]+$/, "") : "affiche") + ".jpg"
+        };
+        selectedCrmPhotoData = photoObj;
+        window.selectedCrmPhotoData = photoObj;
+
+        if (previewImg) previewImg.src = compressedData;
+        if (previewSize) previewSize.textContent = `${approxKo} Ko (HD Optimisée WhatsApp)`;
+      } catch (canvasErr) {
+        const photoObj = {
+          data: rawData,
+          mimetype: file.type || 'image/jpeg',
+          filename: file.name
+        };
+        selectedCrmPhotoData = photoObj;
+        window.selectedCrmPhotoData = photoObj;
+        if (previewImg) previewImg.src = rawData;
+        if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
+      }
     };
-
-    const previewWrapper = document.getElementById('crm-photo-preview-wrapper');
-    const previewImg = document.getElementById('crm-photo-preview-img');
-    const previewName = document.getElementById('crm-photo-preview-name');
-    const previewSize = document.getElementById('crm-photo-preview-size');
-    const dropzone = document.getElementById('crm-photo-dropzone');
-
-    if (previewImg) previewImg.src = base64Data;
-    if (previewName) previewName.textContent = file.name;
-    if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
-    if (previewWrapper) previewWrapper.style.display = 'flex';
-    if (dropzone) dropzone.style.display = 'none';
+    img.onerror = function() {
+      const photoObj = {
+        data: rawData,
+        mimetype: file.type || 'image/jpeg',
+        filename: file.name
+      };
+      selectedCrmPhotoData = photoObj;
+      window.selectedCrmPhotoData = photoObj;
+      if (previewImg) previewImg.src = rawData;
+      if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(0) + ' Ko';
+    };
+    img.src = rawData;
   };
   reader.readAsDataURL(file);
 }
@@ -3130,7 +3188,9 @@ function handleCrmPhotoFileSelected(e) {
 function handleCrmPhotoUrlInput(url) {
   const cleanUrl = (url || '').trim();
   if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-    selectedCrmPhotoData = { url: cleanUrl };
+    const photoObj = { url: cleanUrl };
+    selectedCrmPhotoData = photoObj;
+    window.selectedCrmPhotoData = photoObj;
     const previewWrapper = document.getElementById('crm-photo-preview-wrapper');
     const previewImg = document.getElementById('crm-photo-preview-img');
     const previewName = document.getElementById('crm-photo-preview-name');
@@ -3142,11 +3202,14 @@ function handleCrmPhotoUrlInput(url) {
     if (previewSize) previewSize.textContent = "Lien URL";
     if (previewWrapper) previewWrapper.style.display = 'flex';
     if (dropzone) dropzone.style.display = 'none';
+  } else if (!cleanUrl) {
+    removeCrmSelectedPhoto();
   }
 }
 
 function removeCrmSelectedPhoto() {
   selectedCrmPhotoData = null;
+  window.selectedCrmPhotoData = null;
   const fileInput = document.getElementById('crm-broadcast-photo-file');
   if (fileInput) fileInput.value = '';
   const urlInput = document.getElementById('crm-broadcast-photo-url');
@@ -3233,7 +3296,7 @@ async function handleCrmBroadcastSubmit(e) {
       if (res.ok && resData.success) {
         sentCount++;
         if (progressLog) {
-          progressLog.innerHTML += `<div style="color: #4ade80;">[${i + 1}/${total}] &check; ${escapeHtml(contact.name)} (${escapeHtml(displayPhone)}) - Envoyé</div>`;
+          progressLog.innerHTML += `<div style="color: #4ade80;">[${i + 1}/${total}] &check; ${escapeHtml(contact.name)} (${escapeHtml(displayPhone)}) - ${resData.hasMedia ? '📷 Affiche & Message délivrés' : 'Message délivré'}</div>`;
           progressLog.scrollTop = progressLog.scrollHeight;
         }
       } else {

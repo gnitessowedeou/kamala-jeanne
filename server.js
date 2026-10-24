@@ -219,7 +219,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // En-t�tes HTTP de s�curit� (Protection XSS, Clickjacking, MIME-Sniffing)
 app.use((req, res, next) => {
@@ -2589,6 +2590,111 @@ app.post('/api/whatsapp/send', authMiddleware, async (req, res) => {
 // =============================================================================
 
 /**
+ * Assainissement universel et création d'une instance MessageMedia à partir d'une photo/affiche
+ */
+async function prepareMediaFromPhoto(photo) {
+  if (!photo) return null;
+  try {
+    // Cas 1: URL Web directe (string ou objet)
+    if (typeof photo === 'string' && (photo.startsWith('http://') || photo.startsWith('https://'))) {
+      return await MessageMedia.fromUrl(photo, { unsafeMime: true });
+    }
+    if (photo.url && typeof photo.url === 'string') {
+      if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) {
+        return await MessageMedia.fromUrl(photo.url, { unsafeMime: true });
+      } else if (fs.existsSync(photo.url)) {
+        return MessageMedia.fromFilePath(photo.url);
+      }
+    }
+
+    // Cas 2: Base64 (Objet { data, mimetype, filename } ou String directe)
+    let rawBase64 = '';
+    let mimeType = 'image/jpeg';
+    let fileName = 'affiche.jpg';
+
+    if (typeof photo === 'string') {
+      if (photo.includes(';base64,')) {
+        const parts = photo.split(';base64,');
+        mimeType = parts[0].replace(/^data:/, '').trim() || 'image/jpeg';
+        rawBase64 = parts[1] || '';
+      } else if (photo.includes(',')) {
+        rawBase64 = photo.split(',')[1] || '';
+      } else {
+        rawBase64 = photo;
+      }
+    } else if (photo && typeof photo === 'object') {
+      const dataStr = photo.data || '';
+      if (dataStr.includes(';base64,')) {
+        const parts = dataStr.split(';base64,');
+        mimeType = photo.mimetype || parts[0].replace(/^data:/, '').trim() || 'image/jpeg';
+        rawBase64 = parts[1] || '';
+      } else if (dataStr.includes(',')) {
+        rawBase64 = dataStr.split(',')[1] || '';
+        mimeType = photo.mimetype || 'image/jpeg';
+      } else {
+        rawBase64 = dataStr;
+        mimeType = photo.mimetype || 'image/jpeg';
+      }
+      if (photo.filename) fileName = photo.filename;
+    }
+
+    if (rawBase64) {
+      // Nettoyage strict des retours à la ligne (\r, \n) et espaces blancs résiduels
+      const cleanBase64 = rawBase64.replace(/\s+/g, '').trim();
+      if (cleanBase64.length > 0) {
+        if (mimeType.toLowerCase() === 'image/jpg') mimeType = 'image/jpeg';
+        return new MessageMedia(mimeType, cleanBase64, fileName);
+      }
+    }
+  } catch (err) {
+    console.warn('[MEDIA/PREPARE] Notice préparation média photo :', err.message);
+  }
+  return null;
+}
+
+/**
+ * Envoi fiable avec support média, chat.sendMessage prioritaire et secours automatique
+ */
+async function sendWhatsAppMessageWithMedia(client, targetJid, pMedia, text) {
+  let sentMsg = null;
+  const captionText = String(text || '').trim();
+
+  if (pMedia) {
+    // Tentative 1: via l'objet Chat (la méthode la plus stable dans WhatsApp Web pour attacher des médias)
+    try {
+      if (typeof client.getChatById === 'function') {
+        const chat = await client.getChatById(targetJid).catch(() => null);
+        if (chat && typeof chat.sendMessage === 'function') {
+          sentMsg = await chat.sendMessage(pMedia, captionText ? { caption: captionText } : {});
+        }
+      }
+    } catch (chatErr) {
+      console.warn(`[CRM/BROADCAST] Notice chat.sendMessage (${targetJid}):`, chatErr.message);
+    }
+
+    // Tentative 2: via client.sendMessage direct
+    if (!sentMsg) {
+      try {
+        sentMsg = await client.sendMessage(targetJid, pMedia, captionText ? { caption: captionText } : {});
+      } catch (mediaErr) {
+        console.warn(`[CRM/BROADCAST] Échec envoi média vers ${targetJid}:`, mediaErr.message);
+        // Si l'envoi de l'image a été rejeté par WhatsApp mais qu'un texte existe, secours texte seul
+        if (captionText) {
+          console.log(`[CRM/BROADCAST] Envoi texte de secours vers ${targetJid}...`);
+          sentMsg = await client.sendMessage(targetJid, captionText);
+        } else {
+          throw mediaErr;
+        }
+      }
+    }
+  } else {
+    sentMsg = await client.sendMessage(targetJid, captionText);
+  }
+
+  return sentMsg;
+}
+
+/**
  * Envoi unitaire dans le cadre d'une diffusion ciblée CRM (permet le suivi live sur le dashboard)
  */
 app.post('/api/whatsapp/crm-broadcast-send-one', authMiddleware, async (req, res) => {
@@ -2614,47 +2720,29 @@ app.post('/api/whatsapp/crm-broadcast-send-one', authMiddleware, async (req, res
 
     // Résolution du destinataire WhatsApp
     let targetJid = rawPhone;
+    const cleanDigits = rawPhone.replace(/\D/g, '');
     if (!targetJid.includes('@')) {
-      const cleanDigits = targetJid.replace(/\D/g, '');
-      if (cleanDigits.length > 13 && !cleanDigits.startsWith('229') && !cleanDigits.startsWith('228') && !cleanDigits.startsWith('226') && !cleanDigits.startsWith('225') && !cleanDigits.startsWith('221') && !cleanDigits.startsWith('33')) {
-        targetJid = `${cleanDigits}@lid`;
-      } else {
+      if (typeof client.getNumberId === 'function' && cleanDigits.length >= 8) {
+        try {
+          const numberDetails = await client.getNumberId(cleanDigits);
+          if (numberDetails && numberDetails._serialized) {
+            targetJid = numberDetails._serialized;
+          }
+        } catch (e) {}
+      }
+      if (!targetJid.includes('@')) {
         targetJid = `${cleanDigits}@c.us`;
       }
     }
 
-    // Préparation de la photo si transmise
-    let pMedia = null;
-    if (photo) {
-      try {
-        if (photo.data && photo.mimetype) {
-          const cleanBase64 = photo.data.includes(',') ? photo.data.split(',')[1] : photo.data;
-          pMedia = new MessageMedia(photo.mimetype, cleanBase64, photo.filename || 'article.jpg');
-        } else if (photo.url) {
-          if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) {
-            pMedia = await MessageMedia.fromUrl(photo.url, { unsafeMime: true });
-          } else if (fs.existsSync(photo.url)) {
-            pMedia = MessageMedia.fromFilePath(photo.url);
-          }
-        }
-      } catch (mediaErr) {
-        console.warn(`[CRM/BROADCAST] Notice chargement photo pour ${targetJid}:`, mediaErr.message);
-      }
-    }
-
-    // Envoi via WhatsApp
-    let sentMsg = null;
-    if (pMedia) {
-      sentMsg = await client.sendMessage(targetJid, pMedia, { caption: personalizedText });
-    } else {
-      sentMsg = await client.sendMessage(targetJid, personalizedText);
-    }
+    // Préparation et envoi média photo / affiche
+    const pMedia = await prepareMediaFromPhoto(photo);
+    const sentMsg = await sendWhatsAppMessageWithMedia(client, targetJid, pMedia, personalizedText);
 
     const messageId = sentMsg ? (sentMsg.id?._serialized || sentMsg.id?.id) : `crm_${Date.now()}`;
 
     // Historisation dans Supabase et cache
     try {
-      const cleanDigits = rawPhone.replace(/\D/g, '');
       await saveCustomerSession(
         userId,
         cleanDigits,
@@ -2666,8 +2754,8 @@ app.post('/api/whatsapp/crm-broadcast-send-one', authMiddleware, async (req, res
       );
     } catch (hErr) {}
 
-    console.log(`[CRM/BROADCAST] Message envoyé à ${contactName} (${rawPhone}) [ID: ${messageId}]`);
-    res.json({ success: true, messageId, recipient: rawPhone, name: contactName });
+    console.log(`[CRM/BROADCAST] Message envoyé à ${contactName} (${rawPhone}) [ID: ${messageId}] ${pMedia ? '📷 [Avec Image]' : ''}`);
+    res.json({ success: true, messageId, recipient: rawPhone, name: contactName, hasMedia: Boolean(pMedia) });
   } catch (err) {
     console.warn(`[CRM/BROADCAST] Échec envoi à ${phone}:`, err.message);
     res.status(500).json({ error: err.message || "Échec de l'envoi" });
@@ -2712,26 +2800,10 @@ app.post('/api/whatsapp/crm-broadcast', authMiddleware, async (req, res) => {
   }
 
   // 3. Préparation photo éventuelle
-  let pMedia = null;
-  if (photo) {
-    try {
-      if (photo.data && photo.mimetype) {
-        const cleanBase64 = photo.data.includes(',') ? photo.data.split(',')[1] : photo.data;
-        pMedia = new MessageMedia(photo.mimetype, cleanBase64, photo.filename || 'article.jpg');
-      } else if (photo.url) {
-        if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) {
-          pMedia = await MessageMedia.fromUrl(photo.url, { unsafeMime: true });
-        } else if (fs.existsSync(photo.url)) {
-          pMedia = MessageMedia.fromFilePath(photo.url);
-        }
-      }
-    } catch (mediaErr) {
-      console.warn("[CRM/BROADCAST] Notice chargement média photo:", mediaErr.message);
-    }
-  }
+  const pMedia = await prepareMediaFromPhoto(photo);
 
   const results = [];
-  console.log(`[CRM/BROADCAST] Traitement par lot pour ${userId}: ${targetRecipients.length} contacts (Forfait ${userPlan}, Quota ${planLimit})`);
+  console.log(`[CRM/BROADCAST] Traitement par lot pour ${userId}: ${targetRecipients.length} contacts (Forfait ${userPlan}, Quota ${planLimit}) ${pMedia ? '📷 [Avec Image]' : ''}`);
 
   for (let i = 0; i < targetRecipients.length; i++) {
     const item = targetRecipients[i];
@@ -2748,11 +2820,17 @@ app.post('/api/whatsapp/crm-broadcast', authMiddleware, async (req, res) => {
       .replace(/{prenom}/gi, contactName.split(' ')[0] || contactName);
 
     let targetJid = rawPhone;
+    const cleanDigits = rawPhone.replace(/\D/g, '');
     if (!targetJid.includes('@')) {
-      const cleanDigits = targetJid.replace(/\D/g, '');
-      if (cleanDigits.length > 13 && !cleanDigits.startsWith('229') && !cleanDigits.startsWith('228') && !cleanDigits.startsWith('226') && !cleanDigits.startsWith('225') && !cleanDigits.startsWith('221') && !cleanDigits.startsWith('33')) {
-        targetJid = `${cleanDigits}@lid`;
-      } else {
+      if (typeof client.getNumberId === 'function' && cleanDigits.length >= 8) {
+        try {
+          const numberDetails = await client.getNumberId(cleanDigits);
+          if (numberDetails && numberDetails._serialized) {
+            targetJid = numberDetails._serialized;
+          }
+        } catch (e) {}
+      }
+      if (!targetJid.includes('@')) {
         targetJid = `${cleanDigits}@c.us`;
       }
     }
@@ -2764,17 +2842,10 @@ app.post('/api/whatsapp/crm-broadcast', authMiddleware, async (req, res) => {
         await new Promise(r => setTimeout(r, jitter));
       }
 
-      let sentMsg = null;
-      if (pMedia) {
-        sentMsg = await client.sendMessage(targetJid, pMedia, { caption: personalizedText });
-      } else {
-        sentMsg = await client.sendMessage(targetJid, personalizedText);
-      }
-
+      const sentMsg = await sendWhatsAppMessageWithMedia(client, targetJid, pMedia, personalizedText);
       const msgId = sentMsg ? (sentMsg.id?._serialized || sentMsg.id?.id) : `crm_${Date.now()}_${i}`;
 
       try {
-        const cleanDigits = rawPhone.replace(/\D/g, '');
         await saveCustomerSession(
           userId,
           cleanDigits,
@@ -2786,7 +2857,7 @@ app.post('/api/whatsapp/crm-broadcast', authMiddleware, async (req, res) => {
         );
       } catch (hErr) {}
 
-      results.push({ phone: rawPhone, name: contactName, success: true, messageId: msgId });
+      results.push({ phone: rawPhone, name: contactName, success: true, messageId: msgId, hasMedia: Boolean(pMedia) });
     } catch (err) {
       console.warn(`[CRM/BROADCAST] Erreur sur ${rawPhone}:`, err.message);
       results.push({ phone: rawPhone, name: contactName, success: false, error: err.message });
