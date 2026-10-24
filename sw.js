@@ -4,7 +4,7 @@
  * Stratégie de mise en cache ultra-rapide avec priorité réseau pour les données dynamiques
  */
 
-const CACHE_NAME = 'vandias-pwa-v3';
+const CACHE_NAME = 'vandias-pwa-v4';
 
 const STATIC_ASSETS = [
   '/',
