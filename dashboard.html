@@ -29,10 +29,10 @@
   <meta name="apple-mobile-web-app-title" content="VANDIAS">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261024_v63">
-  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v63">
-  <link rel="stylesheet" href="css/auth.css?v=20261024_v63">
-  <link rel="stylesheet" href="css/pwa.css?v=20261024_v63">
+  <link rel="stylesheet" href="css/style.css?v=20261024_v64">
+  <link rel="stylesheet" href="css/dashboard.css?v=20261024_v64">
+  <link rel="stylesheet" href="css/auth.css?v=20261024_v64">
+  <link rel="stylesheet" href="css/pwa.css?v=20261024_v64">
 
   <style>
     .crm-select-contact, #crm-select-all {
@@ -4130,16 +4130,53 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           
           <!-- Destinataires Sélectionnés & Quota Forfait -->
           <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 14px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
               <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-users" style="color: var(--whatsapp-green);"></i>
                 Destinataires sélectionnés (<span id="crm-modal-recipient-count">0</span>)
               </span>
-              <span class="badge badge-green" id="crm-modal-plan-badge" style="font-size: 11px;">Forfait Pro : 30 max</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge badge-green" id="crm-modal-plan-badge" style="font-size: 11px;">Forfait Pro : 30 max</span>
+                <button type="button" id="btn-toggle-add-recipient" onclick="toggleCrmAddRecipientPicker()" class="btn btn-sm" style="font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; background: rgba(37, 211, 102, 0.15); color: #25d366; border: 1px solid rgba(37, 211, 102, 0.35); border-radius: 6px; cursor: pointer; font-weight: 600;" title="Ajouter d'autres contacts à la diffusion">
+                  <i class="fa-solid fa-user-plus"></i> + Ajouter un contact
+                </button>
+              </div>
             </div>
-            <!-- Liste des badges de contacts sélectionnés -->
-            <div id="crm-modal-recipients-list" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 95px; overflow-y: auto; padding: 4px 0;">
-              <!-- Injecté par JS -->
+
+            <!-- Liste des badges de contacts sélectionnés avec croix de suppression -->
+            <div id="crm-modal-recipients-list" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 110px; overflow-y: auto; padding: 4px 0;">
+              <!-- Injecté dynamiquement par JS -->
+            </div>
+
+            <!-- Panneau repliable pour Ajouter / Augmenter des destinataires -->
+            <div id="crm-add-recipient-panel" style="display: none; margin-top: 10px; padding: 10px 12px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 8px; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-address-book" style="color: var(--whatsapp-green);"></i> Ajouter des contacts supplémentaires
+                </span>
+                <button type="button" onclick="toggleCrmAddRecipientPicker(false)" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px;">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <!-- Champ de recherche dans les contacts existants -->
+              <div style="position: relative;">
+                <input type="text" id="crm-recipient-search-input" placeholder="🔍 Rechercher dans vos contacts CRM (nom ou numéro)..." oninput="filterCrmAvailableContacts(this.value)" style="width: 100%; padding: 7px 10px; font-size: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle); border-radius: 6px; color: #fff; outline: none; box-sizing: border-box;" />
+              </div>
+
+              <!-- Liste filtrable des contacts disponibles avec bouton + Ajouter -->
+              <div id="crm-available-contacts-list" style="max-height: 125px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px;">
+                <!-- Rempli dynamiquement -->
+              </div>
+
+              <!-- Ajout direct manuel d'un numéro WhatsApp -->
+              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 8px; display: flex; gap: 6px; align-items: center;">
+                <input type="text" id="crm-direct-add-name" placeholder="Nom (ex: Paul)" style="flex: 1; padding: 6px 8px; font-size: 11px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); border-radius: 6px; color: #fff;" />
+                <input type="text" id="crm-direct-add-phone" placeholder="N° WhatsApp (+225...)" style="flex: 1.3; padding: 6px 8px; font-size: 11px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); border-radius: 6px; color: #fff;" />
+                <button type="button" onclick="addDirectCrmRecipient()" class="btn btn-sm" style="font-size: 11px; padding: 6px 12px; background: var(--whatsapp-green); color: #000; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap;">
+                  <i class="fa-solid fa-plus"></i> Ajouter
+                </button>
+              </div>
             </div>
           </div>
 
@@ -4701,10 +4738,10 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Native i18n Multi-Language Engine (FR, EN, ES, PT, AR) -->
-  <script src="js/i18n.js?v=20261024_v63"></script>
+  <script src="js/i18n.js?v=20261024_v64"></script>
   <!-- Dashboard JavaScript Logic -->
-  <script src="js/auth.js?v=20261024_v63"></script>
-  <script src="js/dashboard.js?v=20261024_v63"></script>
+  <script src="js/auth.js?v=20261024_v64"></script>
+  <script src="js/dashboard.js?v=20261024_v64"></script>
 
   <!-- INLINE INFALLIBLE CONTROLLERS FOR MODALS & BILLING -->
   <script>
@@ -5261,6 +5298,242 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       // GESTION INFAILLIBLE DE LA MODALE DIFFUSION CIBLÉE CRM (TEXTE + IMAGE)
       // =========================================================================
       window.selectedCrmPhotoData = null;
+      window.activeBroadcastRecipients = [];
+
+      window.renderCrmBroadcastRecipientsPills = function() {
+        var listContainer = document.getElementById('crm-modal-recipients-list');
+        var recipientCount = document.getElementById('crm-modal-recipient-count');
+        var submitBtn = document.getElementById('btn-submit-crm-broadcast');
+        var submitText = document.getElementById('crm-submit-btn-text');
+
+        var quota = (typeof getPlanQuota === 'function') ? getPlanQuota() : { max: 30, planName: 'Pro' };
+        var selected = Array.isArray(window.activeBroadcastRecipients) ? window.activeBroadcastRecipients : [];
+
+        if (recipientCount) recipientCount.textContent = selected.length + ' / ' + quota.max;
+
+        if (submitBtn) {
+          submitBtn.disabled = (selected.length === 0);
+        }
+        if (submitText) {
+          submitText.textContent = 'Lancer la Diffusion (' + selected.length + ')';
+        }
+
+        if (!listContainer) return;
+
+        if (selected.length === 0) {
+          listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 6px; font-style: italic; width: 100%; display: flex; align-items: center; gap: 6px;">' +
+            '<i class="fa-solid fa-circle-info" style="color: #60a5fa;"></i> Aucun contact sélectionné. Cliquez sur <strong>+ Ajouter un contact</strong> pour en ajouter.' +
+          '</div>';
+          return;
+        }
+
+        listContainer.innerHTML = selected.map(function(c) {
+          var displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone) : (typeof formatPhoneClean === 'function' ? formatPhoneClean(c.phone) : c.phone);
+          var safePhone = String(c.phone || '').replace(/"/g, '&quot;');
+          var safeName = String(c.name || 'Client').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return '<span class="badge badge-subtle crm-recipient-pill" data-phone="' + safePhone + '" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.04);">' +
+            '<i class="fa-solid fa-user" style="color: var(--whatsapp-green); font-size: 10px;"></i>' +
+            '<strong style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + safeName + '</strong> ' +
+            '<span style="color: var(--text-muted); font-family: monospace; font-size: 10px;">(' + displayPhone + ')</span>' +
+            '<button type="button" class="btn-remove-recipient" onclick="removeCrmBroadcastRecipient(\'' + safePhone + '\')" title="Retirer ce destinataire" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0 0 0 3px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: all 0.15s;" onmouseover="this.style.color=\'#ef4444\'; this.style.transform=\'scale(1.2)\';" onmouseout="this.style.color=\'#f87171\'; this.style.transform=\'scale(1)\';">' +
+              '<i class="fa-solid fa-xmark"></i>' +
+            '</button>' +
+          '</span>';
+        }).join('');
+      };
+
+      window.removeCrmBroadcastRecipient = function(phone) {
+        if (!Array.isArray(window.activeBroadcastRecipients)) return;
+
+        var normPhone = String(phone).replace(/\D/g, '');
+        window.activeBroadcastRecipients = window.activeBroadcastRecipients.filter(function(c) {
+          var cNorm = String(c.phone || '').replace(/\D/g, '');
+          return cNorm !== normPhone;
+        });
+
+        // Décocher la case correspondante dans le tableau CRM
+        var allBoxes = document.querySelectorAll('.crm-select-contact');
+        allBoxes.forEach(function(cb) {
+          var cbNorm = String(cb.getAttribute('data-phone') || '').replace(/\D/g, '');
+          if (cbNorm === normPhone) {
+            cb.checked = false;
+          }
+        });
+
+        if (typeof window.updateCrmSelectionUI === 'function') {
+          window.updateCrmSelectionUI();
+        }
+
+        window.renderCrmBroadcastRecipientsPills();
+
+        // Rafraîchir le volet d'ajout s'il est ouvert
+        var panel = document.getElementById('crm-add-recipient-panel');
+        if (panel && panel.style.display !== 'none') {
+          var query = document.getElementById('crm-recipient-search-input')?.value || '';
+          window.filterCrmAvailableContacts(query);
+        }
+      };
+
+      window.toggleCrmAddRecipientPicker = function(forceState) {
+        var panel = document.getElementById('crm-add-recipient-panel');
+        if (!panel) return;
+        var isOpen = (typeof forceState === 'boolean') ? forceState : (panel.style.display === 'none' || panel.style.display === '');
+        panel.style.display = isOpen ? 'flex' : 'none';
+        if (isOpen) {
+          var searchInput = document.getElementById('crm-recipient-search-input');
+          if (searchInput) {
+            searchInput.value = '';
+            setTimeout(function() { searchInput.focus(); }, 100);
+          }
+          window.filterCrmAvailableContacts('');
+        }
+      };
+
+      window.filterCrmAvailableContacts = function(query) {
+        var container = document.getElementById('crm-available-contacts-list');
+        if (!container) return;
+
+        var q = (query || '').toLowerCase().trim();
+        var selected = Array.isArray(window.activeBroadcastRecipients) ? window.activeBroadcastRecipients : [];
+        var selectedNormPhones = new Set(selected.map(function(c) {
+          return String(c.phone || '').replace(/\D/g, '');
+        }));
+
+        var pool = [];
+        var seen = new Set();
+
+        // 1) Depuis le tableau HTML
+        var allBoxes = document.querySelectorAll('.crm-select-contact');
+        allBoxes.forEach(function(cb) {
+          var phone = cb.getAttribute('data-phone') || '';
+          var name = cb.getAttribute('data-name') || 'Client';
+          var norm = String(phone).replace(/\D/g, '');
+          if (norm && !seen.has(norm)) {
+            seen.add(norm);
+            pool.push({ phone: phone, name: name });
+          }
+        });
+
+        // 2) Depuis MOCK_DATA.contacts
+        if (typeof MOCK_DATA !== 'undefined' && Array.isArray(MOCK_DATA.contacts)) {
+          MOCK_DATA.contacts.forEach(function(c) {
+            var phone = c.phone_number || '';
+            var name = c.name || 'Client';
+            var norm = String(phone).replace(/\D/g, '');
+            if (norm && !seen.has(norm)) {
+              seen.add(norm);
+              pool.push({ phone: phone, name: name });
+            }
+          });
+        }
+
+        var available = pool.filter(function(c) {
+          var norm = String(c.phone || '').replace(/\D/g, '');
+          return !selectedNormPhones.has(norm);
+        });
+
+        if (q) {
+          available = available.filter(function(c) {
+            return (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q));
+          });
+        }
+
+        if (available.length === 0) {
+          container.innerHTML = '<div style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 10px; font-style: italic;">' +
+            (q ? 'Aucun contact ne correspond à votre recherche.' : 'Tous vos contacts CRM sont déjà sélectionnés.') +
+          '</div>';
+          return;
+        }
+
+        container.innerHTML = available.map(function(c) {
+          var displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone) : (typeof formatPhoneClean === 'function' ? formatPhoneClean(c.phone) : c.phone);
+          var safePhone = String(c.phone || '').replace(/"/g, '&quot;');
+          var safeName = String(c.name || 'Client').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return '<div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255, 255, 255, 0.03); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">' +
+            '<div style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' +
+              '<i class="fa-solid fa-user" style="color: var(--text-muted); font-size: 10px;"></i>' +
+              '<span style="font-size: 12px; color: #fff; font-weight: 500;">' + safeName + '</span>' +
+              '<span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">(' + displayPhone + ')</span>' +
+            '</div>' +
+            '<button type="button" onclick="addCrmBroadcastRecipient(\'' + safePhone + '\', \'' + safeName.replace(/'/g, "\\'") + '\')" class="btn btn-xs" style="background: rgba(37,211,102,0.18); color: var(--whatsapp-green); border: 1px solid rgba(37,211,102,0.35); padding: 3px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;">' +
+              '<i class="fa-solid fa-plus"></i> Ajouter' +
+            '</button>' +
+          '</div>';
+        }).join('');
+      };
+
+      window.addCrmBroadcastRecipient = function(phone, name) {
+        if (!phone) return;
+        if (!Array.isArray(window.activeBroadcastRecipients)) {
+          window.activeBroadcastRecipients = [];
+        }
+
+        var quota = (typeof getPlanQuota === 'function') ? getPlanQuota() : { max: 30, planName: 'Pro' };
+        if (window.activeBroadcastRecipients.length >= quota.max) {
+          if (typeof showToast === 'function') {
+            showToast('Limite atteinte : votre Forfait ' + quota.planName + ' autorise jusqu\'à ' + quota.max + ' contacts.', 'warning');
+          } else {
+            alert('Limite atteinte (' + quota.max + ' contacts max pour le Forfait ' + quota.planName + ').');
+          }
+          return;
+        }
+
+        var normPhone = String(phone).replace(/\D/g, '');
+        var alreadyIn = window.activeBroadcastRecipients.some(function(c) {
+          return String(c.phone || '').replace(/\D/g, '') === normPhone;
+        });
+
+        if (alreadyIn) {
+          if (typeof showToast === 'function') showToast('Ce contact est déjà dans la liste.', 'info');
+          return;
+        }
+
+        window.activeBroadcastRecipients.push({
+          phone: phone,
+          name: name || 'Client'
+        });
+
+        // Cocher la case dans le tableau
+        var allBoxes = document.querySelectorAll('.crm-select-contact');
+        allBoxes.forEach(function(cb) {
+          var cbNorm = String(cb.getAttribute('data-phone') || '').replace(/\D/g, '');
+          if (cbNorm === normPhone) {
+            cb.checked = true;
+          }
+        });
+
+        if (typeof window.updateCrmSelectionUI === 'function') {
+          window.updateCrmSelectionUI();
+        }
+
+        window.renderCrmBroadcastRecipientsPills();
+
+        var q = document.getElementById('crm-recipient-search-input')?.value || '';
+        window.filterCrmAvailableContacts(q);
+
+        if (typeof showToast === 'function') {
+          showToast(name + ' ajouté à la diffusion.', 'success');
+        }
+      };
+
+      window.addDirectCrmRecipient = function() {
+        var nameInput = document.getElementById('crm-direct-add-name');
+        var phoneInput = document.getElementById('crm-direct-add-phone');
+
+        var name = (nameInput?.value || '').trim() || 'Client';
+        var phone = (phoneInput?.value || '').trim();
+
+        var cleanPhone = phone.replace(/\D/g, '');
+        if (!cleanPhone || cleanPhone.length < 6) {
+          if (typeof showToast === 'function') showToast('Veuillez entrer un numéro de téléphone valide.', 'warning');
+          return;
+        }
+
+        window.addCrmBroadcastRecipient(phone, name);
+
+        if (nameInput) nameInput.value = '';
+        if (phoneInput) phoneInput.value = '';
+      };
 
       window.openCrmBroadcastModal = function(autoSelectAll) {
         var checkboxes = document.querySelectorAll('.crm-select-contact:checked');
@@ -5272,11 +5545,12 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           });
         });
 
+        var quota = getPlanQuota();
+        var maxAllowed = (quota && quota.max) ? quota.max : 30;
+
         // Si aucun contact n'est coché (ex: clic depuis la vue Diffusions de Masse) :
         // Sélection automatique des contacts de la base jusqu'au quota du forfait !
         if (selected.length === 0) {
-          var quota = getPlanQuota();
-          var maxAllowed = (quota && quota.max) ? quota.max : 30;
           var allBoxes = document.querySelectorAll('.crm-select-contact');
 
           if (allBoxes.length > 0) {
@@ -5311,30 +5585,20 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           return;
         }
 
-        var quota = getPlanQuota();
+        window.activeBroadcastRecipients = selected.slice();
+
         var modal = document.getElementById('crm-broadcast-modal');
         if (!modal) return;
 
         var planBadge = document.getElementById('crm-modal-plan-badge');
         if (planBadge) planBadge.textContent = 'Forfait ' + quota.planName + ' : max ' + quota.max;
 
-        var recipientCount = document.getElementById('crm-modal-recipient-count');
-        if (recipientCount) recipientCount.textContent = selected.length + ' / ' + quota.max;
+        // Rendu des badges avec bouton croix de suppression
+        window.renderCrmBroadcastRecipientsPills();
 
-        var submitText = document.getElementById('crm-submit-btn-text');
-        if (submitText) submitText.textContent = 'Lancer la Diffusion (' + selected.length + ')';
-
-        var listContainer = document.getElementById('crm-modal-recipients-list');
-        if (listContainer) {
-          listContainer.innerHTML = selected.map(function(c) {
-            var displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone) : formatPhoneClean(c.phone);
-            return '<span class="badge badge-subtle" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08);">' +
-              '<i class="fa-solid fa-user" style="color: var(--whatsapp-green); font-size: 10px;"></i>' +
-              '<strong>' + c.name + '</strong> ' +
-              '<span style="color: var(--text-muted); font-family: monospace;">(' + displayPhone + ')</span>' +
-            '</span>';
-          }).join('');
-        }
+        // Réinitialiser le panneau d'ajout
+        var addPanel = document.getElementById('crm-add-recipient-panel');
+        if (addPanel) addPanel.style.display = 'none';
 
         var progressBox = document.getElementById('crm-broadcast-progress-box');
         if (progressBox) progressBox.style.display = 'none';
@@ -5369,6 +5633,8 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
           modal.style.pointerEvents = 'none';
           document.body.style.overflow = '';
         }
+        var addPanel = document.getElementById('crm-add-recipient-panel');
+        if (addPanel) addPanel.style.display = 'none';
       };
 
       window.openSingleBroadcastModal = function(phone, name) {
@@ -5516,14 +5782,19 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
       window.handleCrmBroadcastSubmit = async function(e) {
         if (e && e.preventDefault) e.preventDefault();
 
-        var checkboxes = document.querySelectorAll('.crm-select-contact:checked');
-        var selected = [];
-        checkboxes.forEach(function(cb) {
-          selected.push({
-            phone: cb.getAttribute('data-phone') || '',
-            name: cb.getAttribute('data-name') || 'Client'
+        var selected = (Array.isArray(window.activeBroadcastRecipients) && window.activeBroadcastRecipients.length > 0)
+          ? window.activeBroadcastRecipients
+          : [];
+
+        if (selected.length === 0) {
+          var checkboxes = document.querySelectorAll('.crm-select-contact:checked');
+          checkboxes.forEach(function(cb) {
+            selected.push({
+              phone: cb.getAttribute('data-phone') || '',
+              name: cb.getAttribute('data-name') || 'Client'
+            });
           });
-        });
+        }
 
         if (selected.length === 0) {
           if (typeof showToast === 'function') showToast("Aucun contact sélectionné pour la diffusion.", "warning");
@@ -5711,6 +5982,6 @@ Ton objectif est de comprendre le projet du prospect, donner une fourchette indi
   </script>
 
   <!-- PWA Service Worker & Mobile App Handler -->
-  <script src="js/pwa.js?v=20261024_v63"></script>
+  <script src="js/pwa.js?v=20261024_v64"></script>
 </body>
 </html>

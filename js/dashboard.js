@@ -3141,6 +3141,223 @@ function updateCrmSelectionUI() {
   }
 }
 
+function renderCrmBroadcastRecipientsPills() {
+  const listContainer = document.getElementById('crm-modal-recipients-list');
+  const recipientCount = document.getElementById('crm-modal-recipient-count');
+  const submitBtn = document.getElementById('btn-submit-crm-broadcast');
+  const submitText = document.getElementById('crm-submit-btn-text');
+
+  const quota = getCrmBroadcastLimit();
+  const selected = Array.isArray(window.activeBroadcastRecipients) ? window.activeBroadcastRecipients : [];
+
+  if (recipientCount) recipientCount.textContent = `${selected.length} / ${quota.max}`;
+  if (submitBtn) submitBtn.disabled = (selected.length === 0);
+  if (submitText) submitText.textContent = `Lancer la Diffusion (${selected.length})`;
+
+  if (!listContainer) return;
+
+  if (selected.length === 0) {
+    listContainer.innerHTML = `
+      <div style="color: var(--text-muted); font-size: 12px; padding: 6px; font-style: italic; width: 100%; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-circle-info" style="color: #60a5fa;"></i> Aucun contact sélectionné. Cliquez sur <strong>+ Ajouter un contact</strong> pour en ajouter.
+      </div>
+    `;
+    return;
+  }
+
+  listContainer.innerHTML = selected.map(c => {
+    const displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone) : (typeof formatPhoneClean === 'function' ? formatPhoneClean(c.phone) : c.phone);
+    const safePhone = escapeHtml(c.phone || '');
+    const safeName = escapeHtml(c.name || 'Client');
+    return `
+      <span class="badge badge-subtle crm-recipient-pill" data-phone="${safePhone}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.04);">
+        <i class="fa-solid fa-user" style="color: var(--whatsapp-green); font-size: 10px;"></i>
+        <strong style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${safeName}</strong>
+        <span style="color: var(--text-muted); font-family: monospace; font-size: 10px;">(${displayPhone})</span>
+        <button type="button" class="btn-remove-recipient" onclick="removeCrmBroadcastRecipient('${safePhone}')" title="Retirer ce destinataire" style="background: none; border: none; color: #f87171; cursor: pointer; padding: 0 0 0 3px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: all 0.15s;" onmouseover="this.style.color='#ef4444'; this.style.transform='scale(1.2)';" onmouseout="this.style.color='#f87171'; this.style.transform='scale(1)';">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </span>
+    `;
+  }).join('');
+}
+
+function removeCrmBroadcastRecipient(phone) {
+  if (!Array.isArray(window.activeBroadcastRecipients)) return;
+
+  const normPhone = String(phone).replace(/\D/g, '');
+  window.activeBroadcastRecipients = window.activeBroadcastRecipients.filter(c => {
+    const cNorm = String(c.phone || '').replace(/\D/g, '');
+    return cNorm !== normPhone;
+  });
+
+  // Décocher la case correspondante dans le tableau CRM
+  const allBoxes = document.querySelectorAll('.crm-select-contact');
+  allBoxes.forEach(cb => {
+    const cbNorm = String(cb.getAttribute('data-phone') || '').replace(/\D/g, '');
+    if (cbNorm === normPhone) {
+      cb.checked = false;
+    }
+  });
+
+  if (typeof updateCrmSelectionUI === 'function') updateCrmSelectionUI();
+  renderCrmBroadcastRecipientsPills();
+
+  const panel = document.getElementById('crm-add-recipient-panel');
+  if (panel && panel.style.display !== 'none') {
+    const query = document.getElementById('crm-recipient-search-input')?.value || '';
+    filterCrmAvailableContacts(query);
+  }
+}
+
+function toggleCrmAddRecipientPicker(forceState) {
+  const panel = document.getElementById('crm-add-recipient-panel');
+  if (!panel) return;
+  const isOpen = (typeof forceState === 'boolean') ? forceState : (panel.style.display === 'none' || panel.style.display === '');
+  panel.style.display = isOpen ? 'flex' : 'none';
+  if (isOpen) {
+    const searchInput = document.getElementById('crm-recipient-search-input');
+    if (searchInput) {
+      searchInput.value = '';
+      setTimeout(() => searchInput.focus(), 100);
+    }
+    filterCrmAvailableContacts('');
+  }
+}
+
+function filterCrmAvailableContacts(query) {
+  const container = document.getElementById('crm-available-contacts-list');
+  if (!container) return;
+
+  const q = (query || '').toLowerCase().trim();
+  const selected = Array.isArray(window.activeBroadcastRecipients) ? window.activeBroadcastRecipients : [];
+  const selectedNormPhones = new Set(selected.map(c => String(c.phone || '').replace(/\D/g, '')));
+
+  const pool = [];
+  const seen = new Set();
+
+  const allBoxes = document.querySelectorAll('.crm-select-contact');
+  allBoxes.forEach(cb => {
+    const phone = cb.getAttribute('data-phone') || '';
+    const name = cb.getAttribute('data-name') || 'Client';
+    const norm = String(phone).replace(/\D/g, '');
+    if (norm && !seen.has(norm)) {
+      seen.add(norm);
+      pool.push({ phone, name });
+    }
+  });
+
+  if (typeof MOCK_DATA !== 'undefined' && Array.isArray(MOCK_DATA.contacts)) {
+    MOCK_DATA.contacts.forEach(c => {
+      const phone = c.phone_number || '';
+      const name = c.name || 'Client';
+      const norm = String(phone).replace(/\D/g, '');
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        pool.push({ phone, name });
+      }
+    });
+  }
+
+  let available = pool.filter(c => {
+    const norm = String(c.phone || '').replace(/\D/g, '');
+    return !selectedNormPhones.has(norm);
+  });
+
+  if (q) {
+    available = available.filter(c => {
+      return (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q));
+    });
+  }
+
+  if (available.length === 0) {
+    container.innerHTML = `
+      <div style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 10px; font-style: italic;">
+        ${q ? 'Aucun contact ne correspond à votre recherche.' : 'Tous vos contacts CRM sont déjà sélectionnés.'}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = available.map(c => {
+    const displayPhone = (typeof formatWhatsAppDisplayNumber === 'function') ? formatWhatsAppDisplayNumber(c.phone) : (typeof formatPhoneClean === 'function' ? formatPhoneClean(c.phone) : c.phone);
+    const safePhone = escapeHtml(c.phone || '');
+    const safeName = escapeHtml(c.name || 'Client');
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255, 255, 255, 0.03); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <i class="fa-solid fa-user" style="color: var(--text-muted); font-size: 10px;"></i>
+          <span style="font-size: 12px; color: #fff; font-weight: 500;">${safeName}</span>
+          <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">(${displayPhone})</span>
+        </div>
+        <button type="button" onclick="addCrmBroadcastRecipient('${safePhone}', '${safeName.replace(/'/g, "\\'")}')" class="btn btn-xs" style="background: rgba(37,211,102,0.18); color: var(--whatsapp-green); border: 1px solid rgba(37,211,102,0.35); padding: 3px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;">
+          <i class="fa-solid fa-plus"></i> Ajouter
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function addCrmBroadcastRecipient(phone, name) {
+  if (!phone) return;
+  if (!Array.isArray(window.activeBroadcastRecipients)) {
+    window.activeBroadcastRecipients = [];
+  }
+
+  const quota = getCrmBroadcastLimit();
+  if (window.activeBroadcastRecipients.length >= quota.max) {
+    showToast(`Limite atteinte : votre Forfait ${quota.planName} autorise jusqu'à ${quota.max} contacts.`, "warning");
+    return;
+  }
+
+  const normPhone = String(phone).replace(/\D/g, '');
+  const alreadyIn = window.activeBroadcastRecipients.some(c => String(c.phone || '').replace(/\D/g, '') === normPhone);
+
+  if (alreadyIn) {
+    showToast('Ce contact est déjà dans la liste.', 'info');
+    return;
+  }
+
+  window.activeBroadcastRecipients.push({
+    phone: phone,
+    name: name || 'Client'
+  });
+
+  const allBoxes = document.querySelectorAll('.crm-select-contact');
+  allBoxes.forEach(cb => {
+    const cbNorm = String(cb.getAttribute('data-phone') || '').replace(/\D/g, '');
+    if (cbNorm === normPhone) {
+      cb.checked = true;
+    }
+  });
+
+  if (typeof updateCrmSelectionUI === 'function') updateCrmSelectionUI();
+  renderCrmBroadcastRecipientsPills();
+
+  const q = document.getElementById('crm-recipient-search-input')?.value || '';
+  filterCrmAvailableContacts(q);
+  showToast(`${name} ajouté à la diffusion.`, 'success');
+}
+
+function addDirectCrmRecipient() {
+  const nameInput = document.getElementById('crm-direct-add-name');
+  const phoneInput = document.getElementById('crm-direct-add-phone');
+
+  const name = (nameInput?.value || '').trim() || 'Client';
+  const phone = (phoneInput?.value || '').trim();
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone || cleanPhone.length < 6) {
+    showToast('Veuillez entrer un numéro de téléphone valide.', 'warning');
+    return;
+  }
+
+  addCrmBroadcastRecipient(phone, name);
+
+  if (nameInput) nameInput.value = '';
+  if (phoneInput) phoneInput.value = '';
+}
+
 function openCrmBroadcastModal(autoSelectAll = false) {
   let selected = getSelectedCrmContacts();
   const quota = getCrmBroadcastLimit();
@@ -3177,28 +3394,18 @@ function openCrmBroadcastModal(autoSelectAll = false) {
     return;
   }
 
+  window.activeBroadcastRecipients = selected.slice();
+
   const modal = document.getElementById('crm-broadcast-modal');
   if (!modal) return;
 
   const planBadge = document.getElementById('crm-modal-plan-badge');
   if (planBadge) planBadge.textContent = `Forfait ${quota.planName} : max ${quota.max}`;
 
-  const recipientCount = document.getElementById('crm-modal-recipient-count');
-  if (recipientCount) recipientCount.textContent = `${selected.length} / ${quota.max}`;
+  renderCrmBroadcastRecipientsPills();
 
-  const submitText = document.getElementById('crm-submit-btn-text');
-  if (submitText) submitText.textContent = `Lancer la Diffusion (${selected.length})`;
-
-  const listContainer = document.getElementById('crm-modal-recipients-list');
-  if (listContainer) {
-    listContainer.innerHTML = selected.map(c => `
-      <span class="badge badge-subtle" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08);">
-        <i class="fa-solid fa-user" style="color: var(--whatsapp-green); font-size: 10px;"></i>
-        <strong>${escapeHtml(c.name)}</strong>
-        <span style="color: var(--text-muted); font-family: monospace;">(${escapeHtml(formatWhatsAppDisplayNumber(c.phone))})</span>
-      </span>
-    `).join('');
-  }
+  const addPanel = document.getElementById('crm-add-recipient-panel');
+  if (addPanel) addPanel.style.display = 'none';
 
   const progressBox = document.getElementById('crm-broadcast-progress-box');
   if (progressBox) progressBox.style.display = 'none';
@@ -3228,6 +3435,8 @@ function closeCrmBroadcastModal() {
     modal.style.pointerEvents = 'none';
     document.body.style.overflow = '';
   }
+  const addPanel = document.getElementById('crm-add-recipient-panel');
+  if (addPanel) addPanel.style.display = 'none';
 }
 
 function openSingleBroadcastModal(phone, name) {
@@ -9694,6 +9903,12 @@ window.handleCrmBroadcastSubmit = handleCrmBroadcastSubmit;
 window.syncBroadcastStats = syncBroadcastStats;
 window.renderBroadcastCampaigns = renderBroadcastCampaigns;
 window.recordBroadcastCampaign = recordBroadcastCampaign;
+window.renderCrmBroadcastRecipientsPills = renderCrmBroadcastRecipientsPills;
+window.removeCrmBroadcastRecipient = removeCrmBroadcastRecipient;
+window.toggleCrmAddRecipientPicker = toggleCrmAddRecipientPicker;
+window.filterCrmAvailableContacts = filterCrmAvailableContacts;
+window.addCrmBroadcastRecipient = addCrmBroadcastRecipient;
+window.addDirectCrmRecipient = addDirectCrmRecipient;
 
 
 
